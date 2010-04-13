@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Spell Tabular Files Editor Plugin
+Bundle-SymbolicName: com.astra.ses.spell.dev.tabeditor;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.tabbed.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.ui.ide,
+ org.eclipse.core.resources
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Export-Package: com.astra.ses.spell.tabbed.ui.editor
+Bundle-Vendor: SES Engineering, Luxembourg S.A.R.L.

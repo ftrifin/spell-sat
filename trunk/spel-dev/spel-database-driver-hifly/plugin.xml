@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+<plugin
+>
+   <extension
+         id="com.astra.ses.spell.dev.database.DatabaseInterfaceHifly"
+         name="Hifly Database Interface"
+         point="com.astra.ses.spell.dev.database.DatabaseInterface">
+      <DatabaseInterface
+            class="com.astra.ses.spell.dev.database.hifly.HiflyDatabaseDriver"
+            description="hifly ASCII database driver"
+            name="Hifly Database Interface">
+      </DatabaseInterface>
+   </extension>
+</plugin>

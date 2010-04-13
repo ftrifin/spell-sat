@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+
+<configuration>
+    <property name="AppName">SPELL</property>
+    <property name="UseTraces">YES</property>
+    <property name="ShowDebug">YES</property>
+    <property name="DebugLevel">PROC</property>
+    <property name="ConnectAtStartup">YES</property>
+    <property name="InitialServer">S0</property>
+    <property name="InitialContext">STD</property>
+    <property name="ResponseTimeout">8000</property>
+    <property name="OpenTimeout">22000</property>
+    <property name="ProceduresEditor"></property>
+    <property name="IpcPingPeriod">5</property>
+
+    <presentations>
+        <presentation name="Tabular" default="yes"/>
+        <presentation name="Text"/>
+    </presentations>
+
+    <appearance>
+        <fonts>
+            <font id='MASTERC' face="Courier New" size="10" style="norm"/>
+            <font id='CODE' face="Courier New" size="9" style="norm"/>
+            <font id='TEXT' face="Courier New" size="9" style="norm"/>
+	    <font id='HEADER' face="header" size="12" style="norm"/>
+            <font id='BANNER' face="Arial" size="25" style="bold"/>
+	    <font id='GUI_BOLD' face="dialog" size="9" style="bold"/>
+	    <font id='GUI_NORM' face="dialog" size="9" style="norm"/>
+        </fonts>
+        <colors>
+            <statuscolors>
+                <color id="SUCCESS">60:220:100</color>
+                <color id="WARNING">245:230:20</color>
+                <color id="ERROR">255:115:115</color>
+                <color id="FAILED">255:115:115</color>
+                <color id="IN PROGRESS">0:128:200</color>
+                <color id="SKIPPED">245:230:20</color>
+                <color id="TIMEOUT">245:230:20</color>
+                <color id="CANCELLED">245:230:20</color>
+                <color id="WAITING">245:230:20</color>
+                <color id="UNKNOWN">255:255:255</color>
+            </statuscolors>
+            <guicolors>
+                <color id="TEXTVIEW_FG">0:0:0</color>
+                <color id="TEXTVIEW_BG">225:235:240</color>
+                <color id="CONSOLE_FG">255:255:255</color>
+                <color id="CONSOLE_BG">0:0:0</color>
+                <color id="CONTEXT_ON">245:230:20</color>
+                <color id="CONTEXT_ERROR">255:115:115</color>
+                <color id="TABLE_BG">255:255:255</color>
+                <color id="TABLE_BG2">230:240:230</color>
+                <color id="ITEMS">0:0:0</color>
+                <color id="HIGHLIGHT">80:165:255</color>
+            </guicolors>
+            <proccolors>
+                <color id="LOADED">225:235:240</color>
+                <color id="RUNNING">185:255:215</color>
+                <color id="PAUSED">225:255:185</color>
+                <color id="STEPPING">185:255:215</color>
+                <color id="ABORTED">255:185:185</color>
+                <color id="ERROR">255:185:185</color>
+                <color id="FINISHED">220:185:255</color>
+                <color id="WAITING">255:255:179</color>
+                <color id="BUSY">225:255:185</color>
+                <color id="UNINIT">255:255:255</color>
+                <color id="UNKNOWN">255:255:255</color>
+            </proccolors>
+        </colors>
+    </appearance>
+    
+    <servers>
+        <server>
+            <id>S0</id>
+            <name>LOCAL</name>
+            <host>localhost</host>
+            <port>9988</port>
+            <role>MONITORING</role>
+        </server>
+        <server>
+            <id>S1</id>
+            <name>N12 EGATEC3</name>
+            <host>egatec3.hf.btz.aia.lu</host>
+            <port>9980</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S1B</id>
+            <name>N12B EGATEC3</name>
+            <host>egatec3.hf.btz.aia.lu</host>
+            <port>9981</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S2</id>
+            <name>S12A EGATEC3</name>
+            <host>egatec3.hf.btz.aia.lu</host>
+            <port>9982</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S3</id>
+            <name>S12B EGATEC3</name>
+            <host>egatec3.hf.btz.aia.lu</host>
+            <port>9983</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S4</id>
+            <name>S12C EGATEC3</name>
+            <host>egatec3.hf.btz.aia.lu</host>
+            <port>9984</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S5</id>
+            <name>N12 EGATEC4</name>
+            <host>egatec4.hf.btz.aia.lu</host>
+            <port>9980</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S5B</id>
+            <name>N12B EGATEC4</name>
+            <host>egatec4.hf.btz.aia.lu</host>
+            <port>9981</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S6</id>
+            <name>S12D EGATEC4</name>
+            <host>egatec4.hf.btz.aia.lu</host>
+            <port>9985</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S7</id>
+            <name>S12E EGATEC4</name>
+            <host>egatec4.hf.btz.aia.lu</host>
+            <port>9986</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>S8</id>
+            <name>S12F EGATEC4</name>
+            <host>egatec4.hf.btz.aia.lu</host>
+            <port>9987</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+        <server>
+            <id>EGADEV2</id>
+            <name>EGADEV2</name>
+            <host>egadev2.hf.btz.aia.lu</host>
+            <port>9988</port>
+            <user>spell</user>
+            <role>COMMANDING</role>
+        </server>
+
+    </servers>
+</configuration>
