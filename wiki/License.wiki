@@ -1,8 +1,8 @@
 #summary SPELL Licensing
 
 SPELL is a project released under the GNU General Public License version 3 originally
-initiated by SES ENGINEERING, Luxembourg S.A.R.L. in 2008. For convenience and legal
-reasons, some of the components of SPELL are nevetheless distributed under the GNU Lesser
+initiated by SES ENGINEERING, Luxembourg S.A.R.L. in 2007. For convenience and legal
+reasons, some of the components of SPELL are nevertheless distributed under the GNU Lesser
 General Public License version 3 or the Eclipse Public License (for the use of Eclipse
 RCP). All of them are Open Source licenses.
 
@@ -22,9 +22,11 @@ The licensing is therefore split as follows:
 
  _This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details._
 
- _You should have received a copy of the GNU Lesser General Public License along with this library. If not, see http://www.gnu.org/licenses/lgpl.html. _
+ _You should have received a copy of the GNU Lesser General Public  License and GNU General Public License (to which the GNU Lesser General Public License refers) along with this library. If not, see <http://www.gnu.org/licenses/>. _
 
     * The SPEL-GUI and SPEL-Dev applications are under the Eclipse Public License v1.0, see http://www.eclipse.org/legal/epl-v10.html
+
+ _By using this software in any way, you are agreeing to be bound by the terms of this license._
 
  _All rights reserved. This program and the accompanying materials are made available under the terms of the Eclipse Public License v1.0 which accompanies this distribution, and is available at http://www.eclipse.org/legal/epl-v10.html _
 
