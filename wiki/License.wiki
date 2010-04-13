@@ -1,4 +1,4 @@
-#SPELL Licensing
+#summary SPELL Licensing
 
 SPELL is a project released under the GNU General Public License version 3 originally
 initiated by SES ENGINEERING, Luxembourg S.A.R.L. in 2008. For convenience and legal
