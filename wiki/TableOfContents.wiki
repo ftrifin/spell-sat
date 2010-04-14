@@ -4,4 +4,4 @@
  * [Licensing]
  * [ContactUs Contact us]
 
-For more information, please contact <a href='mail:thomas.nowak@ses.com'>Thomas G. Nowak</a>
+For more information, please contact<br/>Thomas G. Nowak (thomas.nowak at ses.com)
