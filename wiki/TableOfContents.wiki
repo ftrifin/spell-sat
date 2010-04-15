@@ -2,6 +2,11 @@
 
  * [Overview]
  * [Licensing]
+ * [downloads Downloads]
+ * [issues/list Issues]
+ * [source/checkout Source code]
  * [ContactUs Contact us]
 
-For more information, please contact<br/>Thomas G. Nowak<br/>(thomas.nowak at ses.com)
+For more information, please contact<br/>
+Thomas Nowak<br/>
+(thomas.nowak at ses.com)
