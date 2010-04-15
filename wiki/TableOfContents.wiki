@@ -2,9 +2,9 @@
 
  * [Overview]
  * [Licensing]
- * [downloads Downloads]
- * [issues/list Issues]
- * [source/checkout Source code]
+ * [http://code.google.com/p/spell-sat/downloads/list Downloads]
+ * [http://code.google.com/p/spell-sat/issues/list Issues]
+ * [http://code.google.com/p/spell-sat/source/checkout Source code]
  * [ContactUs Contact us]
 
 For more information, please contact<br/>
