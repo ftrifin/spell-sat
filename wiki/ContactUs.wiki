@@ -1,0 +1,8 @@
+#summary Contact information
+#sidebar TableOfContents
+
+= Steering Committee =
+
+Nominations for committee membership should be sent to Thomas Nowak (thomas.nowak at ses.com).
+
+
