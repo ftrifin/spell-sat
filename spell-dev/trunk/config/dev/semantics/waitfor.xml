@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+		<required>
+		</required>
+		<allowed>
+			<modifier name="Message" type="string,name"/>
+			<modifier name="Interval" type="time,num,list,name" requires="Message"/>
+			<modifier name="Delay" type="time,num,string,name"/>
+			<modifier name="Until" type="time,num,string,name"/>
+			<modifier name="OnFalse" type="constant,name" values="ABORT,REPEAT,SKIP,CANCEL,NOACTION" combined="true"/>
+			<modifier name="OnFailure" type="constant,name" values="ABORT,REPEAT,SKIP,CANCEL,NOACTION" combined="true"/>
+			<modifier name="HandleError" type="bool,name"/>
+			<modifier name="PromptUser" type="bool,name"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+		</required>
+		<allowed>
+			<argument position="0" type="string,time,num,list,name"/>
+		</allowed>
+	</arguments>
+</rule>
+

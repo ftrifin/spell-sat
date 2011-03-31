@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<configuration>
+	<!-- Database default properties -->
+	<!-- Database runtime properties may be changed in the project 
+		properties page-->
+        <database>
+        		<!-- Driver name -->
+                <driver></driver>
+                <!-- Database path. Only local paths are allowed -->
+				<path></path>
+        </database>
+        <!-- END Database default properties -->
+	<!-- Project structure -->
+	<project>
+
+		<folder type="procedure" name="Procedures">
+			<package>Bus</package>
+			<package>Mission</package>
+			<package>Payload</package>
+			<package>Validation</package>
+		</folder>
+		
+		<folder type="file" name="InputFiles">
+		    <folder type="file" name="SpacecraftDB" />
+            <folder type="file" name="ManeuvreMessage" />
+		</folder>
+		
+        <folder type="file" name="Simulator" />
+		
+        <folder type="file" name="UserLib" />
+
+	</project>
+	<!-- END Project structure -->
+
+	<known-sats>STD1,STD2,STD3,STD4</known-sats>
+
+	<known-functions>
+		int, float, bin, hex,
+		abs, min, max, sin, cos, asin, acos, tan, atan, pow, round,
+		len, str, repr, globals, vars, locals, list, dict, eval,
+		keys, range, sorted, TIME, set, type
+	</known-functions>
+
+	<discouraged-functions>
+		open, file, print, close, time, sleep, append, eval
+	</discouraged-functions>
+
+</configuration>

@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Subclipse contributions removal inside SPELL
+Bundle-SymbolicName: com.astra.ses.spell.dev.activity.subclipse;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Fragment-Host: org.tigris.subversion.subclipse.ui
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6

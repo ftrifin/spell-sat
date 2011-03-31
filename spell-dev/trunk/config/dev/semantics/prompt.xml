@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+		<required>
+		</required>
+		<allowed>
+			<modifier name="Type" type="constant,name" values="NUM,LIST,ALPHA" combined="true" />
+			<modifier name="options" type="list,name" requires="Type"/>
+			<modifier name="ValueType" type="constant,name" values="STRING,DATETIME,NUM"/>
+			<modifier name="Default" type="any" requires="Timeout"/>
+			<modifier name="Timeout" type="string,time,num,name"/>
+			<modifier name="config" type="dict,name"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+			<argument position="0" type="string,name"/>
+		</required>
+		<allowed>
+			<argument position="1" type="any"/>
+			<argument position="2" type="constant,name" values="NUM,LIST,ALPHA" combined="true"/>
+		</allowed>
+	</arguments>
+</rule>
+

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+		<required>
+			<modifier name="command" type="any" alternatives="sequence,group"/>
+			<modifier name="sequence" type="any" alternatives="command,group"/>
+			<modifier name="group" type="list,name" alternatives="command,sequence"/>
+		</required>
+		<allowed>
+			<modifier name="verify" type="list,name"/>
+			<modifier name="args" type="list,name"/>
+			<modifier name="Wait" type="bool,name"/>
+			<modifier name="Timeout" type="time,string,num,name"/>
+			<modifier name="Delay" type="time,string,num,name" requires="verify"/>
+			<modifier name="Retries" type="num,name" requires="verify"/>
+			<modifier name="OnFalse" type="constant,name" values="ABORT,RECHECK,REPEAT,SKIP,RESEND,CANCEL,NOACTION" combined="true"/>
+			<modifier name="OnFailure" type="constant,name" values="ABORT,RECHECK,REPEAT,SKIP,RESEND,CANCEL,NOACTION" combined="true"/>
+			<modifier name="PromptUser" type="bool,name"/>
+			<modifier name="HandleError" type="bool,name"/>
+			<modifier name="Verbosity" type="num,name"/>
+			<modifier name="config" type="dict,name"/>
+			<modifier name="Tolerance" type="num,name"/>
+			<modifier name="AdjLimits" type="bool,name"/>
+			<modifier name="LoadOnly" type="bool,name"/>
+			<modifier name="addInfo" type="string,name"/>
+			<modifier name="ValueFormat" type="name,constant" values="RAW,ENG" combined="false"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+		</required>
+		<allowed>
+		</allowed>
+	</arguments>
+</rule>
+

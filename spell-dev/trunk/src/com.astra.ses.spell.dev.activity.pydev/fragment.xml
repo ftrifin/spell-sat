@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="org.eclipse.ui.activities">
+      <activity
+            description="Hide contributions made from pydev plugins"
+            id="com.astra.ses.spell.dev.activity.hidepydev"
+            name="Hide PyDev contributions">
+         <enabledWhen>
+            <not>
+	            <test
+	                  forcePluginActivation="false"
+	                  property="com.astra.ses.spell.dev.perspective.spell">
+	            </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.hidepydev"
+            isEqualityPattern="false"
+            pattern="org.python.pydev.*">
+      </activityPatternBinding>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.hidepydev"
+            isEqualityPattern="false"
+            pattern=".*pydev*">
+      </activityPatternBinding>
+   </extension>
+
+</fragment>

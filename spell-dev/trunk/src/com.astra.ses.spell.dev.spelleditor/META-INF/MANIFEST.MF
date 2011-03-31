@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Language Editor
+Bundle-SymbolicName: com.astra.ses.spell.dev.spelleditor;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.dev.spelleditor.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.ui.editors,
+ org.python.pydev,
+ org.eclipse.jface.text,
+ org.python.pydev.core,
+ org.eclipse.core.resources,
+ org.eclipse.core.expressions,
+ com.astra.ses.spell.language;bundle-version="1.0.0",
+ com.astra.ses.spell.dev.database;bundle-version="1.0.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Export-Package: com.astra.ses.spell.dev.spelleditor.beautifier,
+ com.astra.ses.spell.dev.spelleditor.dnd.droplet,
+ com.astra.ses.spell.dev.spelleditor.utils
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.

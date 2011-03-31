@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="com.astra.ses.spell.dev.scheck.SpellCallChecker">
+      <SpellFunctionChecker
+            description="GetTM checking rule registration"
+            name="GetTM checker"
+            spellFunction="GetTM">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Prompt checking rule registration"
+            name="Prompt checker"
+            spellFunction="Prompt">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Send checking rule registration"
+            name="Send checker"
+            spellFunction="Send">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Verify checking rule registration"
+            name="Verify checker"
+            spellFunction="Verify">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Event checking rule registration"
+            name="Event checker"
+            spellFunction="Event">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Abort checking rule registration"
+            name="Abort checker"
+            spellFunction="Abort">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Finish checking rule registration"
+            name="Finish checker"
+            spellFunction="Finish">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Display checking rule registration"
+            name="Display checker"
+            spellFunction="Display">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="WaitFor checking rule registration"
+            name="WaitFor checker"
+            spellFunction="WaitFor">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="Pause checking rule registration"
+            name="Pause checker"
+            spellFunction="Pause">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="BuildTC checking rule registration"
+            name="BuildTC checker"
+            spellFunction="BuildTC">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="SetGroundParameter checking rule registration"
+            name="SetGroundParameter checker"
+            spellFunction="SetGroundParameter">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="SetResource checking rule registration"
+            name="SetResource checker"
+            spellFunction="SetResource">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="GetResource checking rule registration"
+            name="GetResource checker"
+            spellFunction="GetResource">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="StartProc checking rule registration"
+            name="StartProc checker"
+            spellFunction="StartProc">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="LoadDictionary checking rule registration"
+            name="LoadDictionary checker"
+            spellFunction="LoadDictionary">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="SaveDictionary checking rule registration"
+            name="SaveDictionary checker"
+            spellFunction="SaveDictionary">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="CreateDictionary checking rule registration"
+            name="CreateDictionary checker"
+            spellFunction="CreateDictionary">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="SetUserAction checking rule registration"
+            name="SetUserAction checker"
+            spellFunction="SetUserAction">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="EnableUserAction checking rule registration"
+            name="EnableUserAction checker"
+            spellFunction="EnableUserAction">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="DisableUserAction checking rule registration"
+            name="DisableUserAction checker"
+            spellFunction="DisableUserAction">
+      </SpellFunctionChecker>
+      <SpellFunctionChecker
+            description="DismissUserAction checking rule registration"
+            name="DismissUserAction checker"
+            spellFunction="DismissUserAction">
+      </SpellFunctionChecker>
+   </extension>
+
+</fragment>

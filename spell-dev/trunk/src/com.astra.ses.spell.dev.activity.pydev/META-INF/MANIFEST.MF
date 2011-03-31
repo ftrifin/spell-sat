@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: PyDev contributions removal inside SPELL
+Bundle-SymbolicName: com.astra.ses.spell.dev.activity.pydev;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Fragment-Host: org.python.pydev
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6

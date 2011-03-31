@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+		<required>
+		</required>
+		<allowed>
+			<modifier name="Visible" type="bool,name"/>
+			<modifier name="Blocking" type="bool,name"/>
+			<modifier name="Automatic" type="bool,name"/>
+			<modifier name="HandleError" type="bool,name"/>
+			<modifier name="OnFailure" type="constant,name" values="ABORT,REPEAT,SKIP,CANCEL,NOACTION" combined="true"/>
+			<modifier name="args" type="list,name"/>
+			<modifier name="config" type="dict,name"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+			<argument position="0" type="string,name"/>
+		</required>
+		<allowed>
+		</allowed>
+	</arguments>
+</rule>
+

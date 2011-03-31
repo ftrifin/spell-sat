@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Control version tools for SPELL DEV
+Bundle-SymbolicName: com.astra.ses.spell.dev.control.version;singleton:=true
+Bundle-Version: 1.0.0
+Fragment-Host: com.astra.ses.spell.dev
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Require-Bundle: 
+ org.tigris.subversion.subclipse.core,
+ org.tigris.subversion.subclipse.ui,
+ org.eclipse.team.ui,
+ org.eclipse.team.core
+Export-Package: com.astra.ses.spell.dev.wizards.procs.pages

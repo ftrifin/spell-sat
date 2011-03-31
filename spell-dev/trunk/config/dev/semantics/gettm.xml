@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+		<required>
+		</required>
+		<allowed>
+			<modifier name="Wait" type="bool,name"/>
+			<modifier name="Timeout" type="time,string,num,name" requires="Wait"/>
+			<modifier name="ValueFormat" type="constant,name" values="RAW,ENG"/>
+			<modifier name="Extended" type="bool,name"/>
+			<modifier name="HandleError" type="bool,name"/>
+			<modifier name="OnFailure" type="constant,name" values="ABORT,RECHECK,REPEAT,SKIP,CANCEL,NOACTION" combined="true"/>
+			<modifier name="config" type="dict,name"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+			<argument position="0" type="any"/>
+		</required>
+		<allowed>
+		</allowed>
+	</arguments>
+</rule>
+

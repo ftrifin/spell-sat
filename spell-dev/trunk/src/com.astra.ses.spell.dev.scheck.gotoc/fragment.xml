@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="com.astra.ses.spell.dev.scheck.EventRuleChecker">
+      <EventRuleChecker
+            class="com.astra.ses.spell.dev.scheck.event.gotos.GotoConsistencyChecker"
+            description="Semantic check for goto consistency"
+            events="FUNCTION_CALL"
+            id="com.astra.ses.spell.dev.scheck.goto">
+      </EventRuleChecker>
+   </extension>
+
+</fragment>

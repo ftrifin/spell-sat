@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fragment>
+   <extension
+         point="org.eclipse.ui.actionSets">
+      <actionSet
+            description="Control Version System actions"
+            id="com.astra.ses.spell.dev.ControlVersion"
+            label="Subversion"
+            visible="true">
+         <menu
+               id="com.astra.ses.spell.dev.menu.subversion"
+               label="Subversion"
+               path="window">
+            <separator
+                  name="SVNCommands">
+            </separator>
+            <separator
+                  name="SVNShow">
+            </separator>
+         </menu>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.CommitAction"
+               definitionId="org.tigris.subversion.subclipse.ui.commit"
+               icon="images/arrow_right.png"
+               id="com.astra.ses.spell.dev.cvs.Commit"
+               label="Commit changes"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNCommands"
+               style="push"
+               toolbarPath="subversion"
+               tooltip="Commit changes">
+         </action>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.RevertAction"
+               definitionId="org.tigris.subversion.subclipse.ui.revert"
+               icon="images/arrow_left.png"
+               id="com.astra.ses.spell.dev.cvs.Revert"
+               label="Revert changes"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNCommands"
+               style="push"
+               toolbarPath="subversion">
+         </action>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.LockAction"
+               definitionId="org.tigris.subversion.subclipse.ui.lock"
+               icon="images/lock.png"
+               id="com.astra.ses.spell.dev.cvs.Lock"
+               label="Lock"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNCommands"
+               style="push"
+               toolbarPath="subversion">
+         </action>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.UnlockAction"
+               definitionId="org.tigris.subversion.subclipse.ui.unlock"
+               icon="images/lock_open.png"
+               id="com.astra.ses.spell.dev.cvs.unlock"
+               label="Unlock"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNCommands"
+               style="push"
+               toolbarPath="subversion">
+         </action>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.UpdateAction"
+               definitionId="org.tigris.subversion.subclipse.ui.update"
+               icon="images/refresh.png"
+               id="com.astra.ses.spell.dev.cvs.Update"
+               label="Update"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNCommands"
+               style="push"
+               toolbarPath="subversion">
+         </action>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.AddAction"
+               definitionId="org.tigris.subversion.subclipse.ui.add"
+               icon="images/add.png"
+               id="com.astra.ses.spell.dev.cvs.Add"
+               label="Add to version control"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNCommands"
+               style="push"
+               toolbarPath="subversion">
+         </action>
+         <action
+               class="org.tigris.subversion.subclipse.ui.actions.ShowResourceInHistoryAction"
+               definitionId="org.tigris.subversion.subclipse.ui.showresourceinhistoryaction"
+               icon="images/book_open.png"
+               id="com.astra.ses.spell.dev.cvs.ShowHistory"
+               label="Show history"
+               menubarPath="com.astra.ses.spell.dev.menu.subversion/SVNShow"
+               style="push"
+               toolbarPath="subversion">
+         </action>
+      </actionSet>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="com.astra.ses.spell.dev.perspective.development">
+         <actionSet
+               id="com.astra.ses.spell.dev.ControlVersion">
+         </actionSet>
+      </perspectiveExtension>
+   </extension>
+   <extension
+         point="com.astra.ses.spell.dev.workspace.ProcedureCreationExtension">
+      <fileCreationPage
+            description="Procedure CVS actions for Procedure creation"
+            id="com.astra.ses.spell.dev.control.version.wizard.procedure"
+            page="com.astra.ses.spell.dev.wizards.procs.pages.ProcedureControlVersionWizardPage">
+      </fileCreationPage>
+   </extension>
+</fragment>

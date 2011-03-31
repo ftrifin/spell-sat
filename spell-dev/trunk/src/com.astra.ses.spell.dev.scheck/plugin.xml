@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension-point id="com.astra.ses.spell.dev.scheck.StatickRuleChecker" name="Static rule checker" schema="schema/com.astra.ses.spell.dev.scheck.StatickRuleChecker.exsd"/>
+   <extension-point id="com.astra.ses.spell.dev.scheck.EventRuleChecker" name="Event based rule checker" schema="schema/com.astra.ses.spell.dev.scheck.EventRuleChecker.exsd"/>
+   <extension-point id="com.astra.ses.spell.dev.scheck.SpellCallChecker" name="Checker for SPELL function call" schema="schema/com.astra.ses.spell.dev.scheck.sfunctions.SpellCall.exsd"/>
+
+</plugin>
