@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?pde version="3.4"?>
+
+<product name="SPELL Development Environment" id="com.astra.ses.spell.dev.SpellDevProduct" application="com.astra.ses.spell.dev.DevelopmentEnvironment" version="1.0.0" useFeatures="false">
+
+   <aboutInfo>
+      <image path="eclipse_lg.gif"/>
+      <text>
+         SES Procedure Execution Language and Library 
+Graphical SPELL Procedures IDE &quot;SPELL-DEV&quot;
+
+This is a copyrighted work of SES Engineering in collaboration with GMV Aerospace And Defence S.A. 
+(c) 2007,2008,2009
+      </text>
+   </aboutInfo>
+
+   <configIni use="default">
+   </configIni>
+
+   <launcherArgs>
+      <vmArgsMac>-XstartOnFirstThread -Dorg.eclipse.swt.internal.carbon.smallFonts</vmArgsMac>
+   </launcherArgs>
+
+   <windowImages i16="/spel-dev/images/spell16.gif" i32="/spel-dev/images/spell32.gif" i48="/spel-dev/images/spell48.gif" i64="/spel-dev/images/spell64.gif" i128="/spel-dev/images/spell128.gif"/>
+
+   <splash
+      location="com.astra.ses.spell.dev"
+      startupProgressRect="0,315,380,15"
+      startupMessageRect="7,290,380,20"
+      startupForegroundColor="FFFFFF" />
+   <launcher name="spel-dev">
+      <solaris/>
+      <win useIco="false">
+         <bmp
+            winSmallHigh="/spel-dev/images/spell16.bmp"
+            winSmallLow="/spel-dev/images/spell16.bmp"
+            winMediumHigh="/spel-dev/images/spell32.bmp"
+            winMediumLow="/spel-dev/images/spell32.bmp"
+            winLargeHigh="/spel-dev/images/spell48.bmp"
+            winLargeLow="/spel-dev/images/spell48.bmp"/>
+      </win>
+   </launcher>
+
+   <intro introId="org.eclipse.ui.intro.universal"/>
+
+   <vm>
+      <linux>org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JRE 1.6.0-7</linux>
+      <windows>org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JRE 1.6.0-7</windows>
+   </vm>
+
+   <plugins>
+      <plugin id="com.astra.ses.spell.dev"/>
+      <plugin id="com.astra.ses.spell.dev.context"/>
+      <plugin id="com.astra.ses.spell.dev.database"/>
+      <plugin id="com.astra.ses.spell.dev.database.hifly"/>
+      <plugin id="com.astra.ses.spell.dev.database.ui"/>
+      <plugin id="com.astra.ses.spell.dev.tabeditor"/>
+      <plugin id="com.ibm.icu"/>
+      <plugin id="javax.servlet"/>
+      <plugin id="org.apache.commons.logging"/>
+      <plugin id="org.eclipse.compare"/>
+      <plugin id="org.eclipse.compare.core"/>
+      <plugin id="org.eclipse.core.commands"/>
+      <plugin id="org.eclipse.core.contenttype"/>
+      <plugin id="org.eclipse.core.databinding"/>
+      <plugin id="org.eclipse.core.databinding.observable"/>
+      <plugin id="org.eclipse.core.databinding.property"/>
+      <plugin id="org.eclipse.core.expressions"/>
+      <plugin id="org.eclipse.core.filebuffers"/>
+      <plugin id="org.eclipse.core.filesystem"/>
+      <plugin id="org.eclipse.core.filesystem.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.jobs"/>
+      <plugin id="org.eclipse.core.net"/>
+      <plugin id="org.eclipse.core.net.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.resources"/>
+      <plugin id="org.eclipse.core.resources.compatibility" fragment="true"/>
+      <plugin id="org.eclipse.core.resources.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.runtime"/>
+      <plugin id="org.eclipse.core.runtime.compatibility.auth"/>
+      <plugin id="org.eclipse.core.runtime.compatibility.registry" fragment="true"/>
+      <plugin id="org.eclipse.core.variables"/>
+      <plugin id="org.eclipse.ecf"/>
+      <plugin id="org.eclipse.ecf.filetransfer"/>
+      <plugin id="org.eclipse.ecf.identity"/>
+      <plugin id="org.eclipse.ecf.ssl" fragment="true"/>
+      <plugin id="org.eclipse.equinox.app"/>
+      <plugin id="org.eclipse.equinox.common"/>
+      <plugin id="org.eclipse.equinox.p2.artifact.repository"/>
+      <plugin id="org.eclipse.equinox.p2.core"/>
+      <plugin id="org.eclipse.equinox.p2.engine"/>
+      <plugin id="org.eclipse.equinox.p2.jarprocessor"/>
+      <plugin id="org.eclipse.equinox.p2.metadata"/>
+      <plugin id="org.eclipse.equinox.p2.metadata.repository"/>
+      <plugin id="org.eclipse.equinox.p2.repository"/>
+      <plugin id="org.eclipse.equinox.preferences"/>
+      <plugin id="org.eclipse.equinox.registry"/>
+      <plugin id="org.eclipse.equinox.security"/>
+      <plugin id="org.eclipse.equinox.security.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.help"/>
+      <plugin id="org.eclipse.jface"/>
+      <plugin id="org.eclipse.jface.databinding"/>
+      <plugin id="org.eclipse.jface.text"/>
+      <plugin id="org.eclipse.osgi"/>
+      <plugin id="org.eclipse.osgi.services"/>
+      <plugin id="org.eclipse.platform"/>
+      <plugin id="org.eclipse.swt"/>
+      <plugin id="org.eclipse.swt.win32.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.team.core"/>
+      <plugin id="org.eclipse.team.ui"/>
+      <plugin id="org.eclipse.text"/>
+      <plugin id="org.eclipse.ui"/>
+      <plugin id="org.eclipse.ui.console"/>
+      <plugin id="org.eclipse.ui.editors"/>
+      <plugin id="org.eclipse.ui.forms"/>
+      <plugin id="org.eclipse.ui.ide"/>
+      <plugin id="org.eclipse.ui.ide.application"/>
+      <plugin id="org.eclipse.ui.intro"/>
+      <plugin id="org.eclipse.ui.intro.universal"/>
+      <plugin id="org.eclipse.ui.navigator"/>
+      <plugin id="org.eclipse.ui.navigator.resources"/>
+      <plugin id="org.eclipse.ui.views"/>
+      <plugin id="org.eclipse.ui.views.properties.tabbed"/>
+      <plugin id="org.eclipse.ui.win32" fragment="true"/>
+      <plugin id="org.eclipse.ui.workbench"/>
+      <plugin id="org.eclipse.ui.workbench.texteditor"/>
+      <plugin id="org.eclipse.update.configurator"/>
+      <plugin id="org.eclipse.update.core"/>
+      <plugin id="org.mortbay.jetty"/>
+      <plugin id="org.python.pydev"/>
+      <plugin id="org.python.pydev.ast"/>
+      <plugin id="org.python.pydev.core"/>
+      <plugin id="org.python.pydev.parser"/>
+      <plugin id="org.tigris.subversion.clientadapter"/>
+      <plugin id="org.tigris.subversion.clientadapter.javahl"/>
+      <plugin id="org.tigris.subversion.clientadapter.javahl.win32" fragment="true"/>
+      <plugin id="org.tigris.subversion.clientadapter.svnkit"/>
+      <plugin id="org.tigris.subversion.javahl.win32"/>
+      <plugin id="org.tigris.subversion.subclipse.core"/>
+      <plugin id="org.tigris.subversion.subclipse.ui"/>
+      <plugin id="org.tmatesoft.svnkit"/>
+   </plugins>
+
+</product>
