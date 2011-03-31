@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Spell database driver for hifly GCS
+Bundle-SymbolicName: com.astra.ses.spell.dev.database.hifly;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.dev.database.hifly.Activator
+Require-Bundle: org.eclipse.core.runtime,
+ com.astra.ses.spell.dev.database;bundle-version="1.0.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6

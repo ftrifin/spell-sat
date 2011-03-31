@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension-point id="com.astra.ses.spell.dev.context.SpellContextListener" name="Context Changes Listener" schema="schema/com.astra.ses.spell.dev.context.SpellContextListener.exsd"/>
+   <extension
+         id="com.astra.ses.spell.dev.SpellNature"
+         name="Spell Nature"
+         point="org.eclipse.core.resources.natures">
+      <runtime>
+         <run
+               class="com.astra.ses.spell.dev.project.nature.SpellNature">
+         </run>
+      </runtime>
+      <builder
+            id="com.astra.ses.spell.dev.SpellProjectBuilder">
+      </builder>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.dev.SpellProjectBuilder"
+         name="Spell Project Builder"
+         point="org.eclipse.core.resources.builders">
+      <builder
+            callOnEmptyDelta="false"
+            hasNature="true"
+            isConfigurable="true">
+         <run
+               class="com.astra.ses.spell.dev.project.nature.SpellProjectBuilder">
+         </run>
+      </builder>
+   </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="com.astra.ses.spell.dev.context.workspace.SpellWorkspaceManager">
+      </startup>
+   </extension>
+</plugin>
