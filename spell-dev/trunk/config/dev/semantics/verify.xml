@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+		<required>
+		</required>
+		<allowed>
+			<modifier name="Timeout" type="time,num,name"/>
+			<modifier name="Wait" type="bool,name"/>
+			<modifier name="Delay" type="time,num,name"/>
+			<modifier name="Retries" type="num,name"/>
+			<modifier name="OnFalse" type="constant,name" values="ABORT,RECHECK,REPEAT,SKIP,CANCEL,NOACTION" combined="true"/>
+			<modifier name="OnFailure" type="constant,name" values="ABORT,RECHECK,REPEAT,SKIP,CANCEL,NOACTION" combined="true"/>
+			<modifier name="PromptUser" type="bool,name"/>
+			<modifier name="Tolerance" type="num,name"/>
+			<modifier name="HandleError" type="bool,name"/>
+			<modifier name="Verbosity" type="num,name"/>
+			<modifier name="config" type="dict,name"/>
+			<modifier name="ValueFormat" type="name,constant" values="RAW,ENG" combined="false"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+			<argument position="0" type="list,name"/>
+		</required>
+		<allowed>
+			<argument position="1" type="dict,name"/>
+		</allowed>
+	</arguments>
+</rule>
+

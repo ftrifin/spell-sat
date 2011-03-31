@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            class="com.astra.ses.spell.dev.dictionary.editor.DictionaryTextEditor"
+            contributorClass="org.eclipse.ui.editors.text.TextEditorActionContributor"
+            default="true"
+            extensions="imp, db"
+            icon="images/img_database.png"
+            id="com.astra.ses.spell.dev.dictionary.texteditor"
+            name="Dictionary text editor">
+      </editor>
+   </extension>
+   <extension
+         point="org.eclipse.ui.newWizards">
+      <wizard
+            canFinishEarly="false"
+            category="com.astra.ses.spell.dev.wizards"
+            class="com.astra.ses.spell.dev.dictionary.wizard.DictionaryFileWizard"
+            finalPerspective="com.astra.ses.spell.dev.perspective.development"
+            icon="images/img_database.png"
+            id="com.astra.ses.spell.dev.dictionary.newwizard"
+            name="Dictionary file"
+            preferredPerspectives="com.astra.ses.spell.dev.perspective.development">
+      </wizard>
+   </extension>
+   <extension
+         point="org.eclipse.ui.navigator.navigatorContent">
+      <commonWizard
+            menuGroupId="com.astra.ses.spell.views.explorer.newwizards"
+            type="new"
+            wizardId="com.astra.ses.spell.dev.dictionary.newwizard">
+         <enablement>
+            <adapt
+                  type="org.eclipse.core.resources.IContainer">
+            </adapt></enablement>
+      </commonWizard>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editorActions">
+      <editorContribution
+            id="com.astra.ses.spell.dev.spelleditor.menucontribution"
+            targetID="com.astra.ses.spell.dev.dictionary.texteditor">
+         <action
+               class="com.astra.ses.spell.dev.dictionary.editor.actions.FormatDictionaryFile"
+               id="com.astra.ses.spell.dev.dictionary.action.format"
+               label="Format document"
+               menubarPath="edit/editEnd"
+               style="push">
+         </action>
+      </editorContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="com.astra.ses.spell.dev.perspective.development">
+          <newWizardShortcut
+                id="com.astra.ses.spell.dev.dictionary.newwizard">
+          </newWizardShortcut>
+      </perspectiveExtension>
+   </extension>
+</plugin>

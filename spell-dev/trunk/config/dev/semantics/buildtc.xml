@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<rule>
+	<modifiers>
+        <required>
+        </required>
+        <allowed>
+            <modifier name="group" type="list,name"/>
+            <modifier name="sequence" type="any" />
+        	<modifier name="command" type="any" />
+            <modifier name="args" type="list,name"/>
+			<modifier name="config" type="dict,name"/>
+		</allowed>
+	</modifiers>
+
+	<arguments>
+		<required>
+		</required>
+		<allowed>
+			<argument position="0" type="any"/>
+		</allowed>
+	</arguments>
+</rule>
+

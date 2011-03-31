@@ -1,0 +1,19 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Semantics checker UI contributions
+Bundle-SymbolicName: com.astra.ses.spell.dev.scheck.ui;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.dev.scheck.ui.Activator
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.core.expressions;bundle-version="3.4.100",
+ org.eclipse.core.resources;bundle-version="3.5.0",
+ org.eclipse.ui.editors;bundle-version="3.5.0",
+ org.eclipse.ui.ide;bundle-version="3.5.0",
+ org.eclipse.text;bundle-version="3.5.0",
+ org.eclipse.jface.text;bundle-version="3.5.0",
+ com.astra.ses.spell.dev.scheck;bundle-version="1.0.0",
+ com.astra.ses.spell.dev.spelleditor;bundle-version="1.0.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy

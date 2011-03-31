@@ -1,0 +1,17 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Database interface graphical elements
+Bundle-SymbolicName: com.astra.ses.spell.dev.database.ui;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.database.browser.Activator
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.core.resources,
+ org.eclipse.ui,
+ org.eclipse.core.expressions,
+ com.astra.ses.spell.dev,
+ com.astra.ses.spell.dev.spelleditor;bundle-version="1.0.0",
+ com.astra.ses.spell.dev.database;bundle-version="1.0.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Export-Package: com.astra.ses.spell.database.db.ui.actions
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.

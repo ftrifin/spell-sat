@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension-point id="com.astra.ses.spell.dev.database.DatabaseInterface" name="TM/TC Database Interface" schema="schema/com.astra.ses.spell.dev.database.DatabaseInterface.exsd"/>
+   <extension
+         id="com.astra.ses.spell.dev.contextListener"
+         name="Workspace context changes"
+         point="com.astra.ses.spell.dev.workspace.SpellContextListener">
+      <ContextChangesListener
+            class="com.astra.ses.spell.dev.database.DatabaseWorkspaceListener"
+            description="Database plugin listens to workspace changes in order to refresht the current on-usage database"
+            id="com.astra.ses.spell.dev.database.WorkspaceListener">
+      </ContextChangesListener>
+   </extension>
+</plugin>

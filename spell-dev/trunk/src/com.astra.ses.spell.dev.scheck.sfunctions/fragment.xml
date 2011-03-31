@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension-point id="com.astra.ses.spell.dev.scheck.sfunctions.SpellCallChecker" name="Checker for SPELL function call" schema="schema/com.astra.ses.spell.dev.scheck.sfunctions.SpellCall.exsd"/>
+   <extension
+         point="com.astra.ses.spell.dev.scheck.EventRuleChecker">
+      <EventRuleChecker
+            class="com.astra.ses.spell.dev.scheck.event.sfunctions.SpellCallConsistencyChecker"
+            description="Semantic check for SPELL functions"
+            events="FUNCTION_CALL"
+            id="com.astra.ses.spell.dev.scheck.spellfunctions">
+      </EventRuleChecker>
+      <EventRuleChecker
+            class="com.astra.ses.spell.dev.scheck.event.sfunctions.VerifyChecker"
+            description="Semantic check for Verify SPELL function"
+            events="FUNCTION_CALL"
+            id="com.astra.ses.spell.dev.scheck.spellfunctions.verify">
+      </EventRuleChecker>
+      <EventRuleChecker
+            class="com.astra.ses.spell.dev.scheck.event.sfunctions.SendChecker"
+            description="Semantic check for Send SPELL function"
+            events="FUNCTION_CALL"
+            id="com.astra.ses.spell.dev.scheck.spellfunctions.send">
+      </EventRuleChecker>
+      <EventRuleChecker
+            class="com.astra.ses.spell.dev.scheck.event.sfunctions.GetTmChecker"
+            description="Semantic check for GetTM SPELL function"
+            events="FUNCTION_CALL"
+            id="com.astra.ses.spell.dev.scheck.spellfunctions.gettm">
+      </EventRuleChecker>
+   </extension>
+
+</fragment>

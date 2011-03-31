@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Generic IDE contributions removal by SPELL
+Bundle-SymbolicName: com.astra.ses.spell.dev.activity.generic;singleton:=true
+Bundle-Version: 1.0.0
+Fragment-Host: com.astra.ses.spell.dev
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.

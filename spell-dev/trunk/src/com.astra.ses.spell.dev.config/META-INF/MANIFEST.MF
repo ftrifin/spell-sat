@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Development Environment Configuration
+Bundle-SymbolicName: com.astra.ses.spell.dev.config;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.dev.config.Activator
+Require-Bundle: 
+ org.eclipse.core.runtime
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Export-Package: com.astra.ses.spell.dev.config

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="com.astra.ses.spell.dev.scheck.StatickRuleChecker">
+      <StaticRuleChecker
+            class="com.astra.ses.spell.dev.scheck.header.HeaderChecker"
+            description="Static checker for procedure headers"
+            id="com.astra.ses.spell.dev.scheck.header">
+      </StaticRuleChecker>
+   </extension>
+
+</fragment>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="org.eclipse.ui.activities">
+         
+      <!-- ==================================================================-->
+      <activity
+            description="Remove team contributions"
+            id="com.astra.ses.spell.dev.activity.hideTeam"
+            name="Remove generic team contributions">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.hideTeam"
+            isEqualityPattern="false"
+            pattern="org.eclipse.team.ui.*[^&quot;compareWithEachOther&quot;|&quot;GenericHistoryView&quot;]">
+      </activityPatternBinding>
+      <!-- ==================================================================-->
+     
+      <!-- ==================================================================-->
+      <activity
+            description="Remove wizards"
+            id="com.astra.ses.spell.dev.activity.hideWizards"
+            name="Remove preference wizard contributions">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.hideWizards"
+            isEqualityPattern="false"
+            pattern="org.eclipse.ui.ide.*wizards.*">
+      </activityPatternBinding>
+      <!-- ==================================================================-->
+
+      <!-- ==================================================================-->
+      <activity
+            description="Remove project explorer"
+            id="com.astra.ses.spell.dev.activity.hideExplorer"
+            name="Remove project explorer contributions">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.hideExplorer"
+            isEqualityPattern="false"
+            pattern="org.eclipse.ui.*ProjectExplorer*">
+      </activityPatternBinding>
+      <!-- ==================================================================-->
+
+      <!-- ==================================================================-->
+      <activity
+            description="Remove navigator"
+            id="com.astra.ses.spell.dev.activity.hideNavigator"
+            name="Remove navigator contributions">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.hideNavigator"
+            isEqualityPattern="false"
+            pattern="org.eclipse.*Navigator*">
+      </activityPatternBinding>
+      <!-- ==================================================================-->
+
+      <activity
+            description="Remove Help preference pages"
+            id="com.astra.ses.spell.dev.activity.helpPages"
+            name="Help preference pages">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.helpPages"
+            isEqualityPattern="false"
+            pattern="org.eclipse.help.ui.*">
+      </activityPatternBinding>
+      <activity
+            description="Remove Run/Debug preference pages"
+            id="com.astra.ses.spell.dev.activity.runDebugPages"
+            name="Run debug preference pages">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.runDebugPages"
+            isEqualityPattern="false"
+            pattern="org.eclipse.debug.ui.*">
+      </activityPatternBinding>
+      <activity
+            description="Remove Install/update preference pages"
+            id="com.astra.ses.spell.dev.activity.installUpdatePages"
+            name="Install update preference pages">
+         <enabledWhen>
+            <not>
+               <test
+                     forcePluginActivation="false"
+                     property="com.astra.ses.spell.dev.perspective.spell">
+               </test>
+            </not>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.dev.activity.installUpdatePages"
+            isEqualityPattern="false"
+            pattern="org.eclipse.update.ui.*">
+      </activityPatternBinding>
+   </extension>
+
+</fragment>

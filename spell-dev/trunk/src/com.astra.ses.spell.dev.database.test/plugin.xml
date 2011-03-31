@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.dev.database.DatabaseInterfaceTest"
+         name="Test database driver"
+         point="com.astra.ses.spell.dev.database.DatabaseInterface">
+      <DatabaseInterface
+            class="com.astra.ses.spell.dev.database.test.TestDatabaseDriver"
+            description="Test database driver"
+            name="Test database driver">
+      </DatabaseInterface>
+   </extension>
+
+</plugin>
