@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Hifly status listener for Spell
+Bundle-SymbolicName: com.astra.ses.spell.gui.hifly
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.gui.hifly.Activator
+Require-Bundle: org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6

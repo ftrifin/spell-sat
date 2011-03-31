@@ -1,0 +1,99 @@
+<config>
+    <listener>
+        <property name="Log">ENABLED</property>
+        <property name="ListenerPort">9988</property>
+    </listener>
+    
+    <context>
+        <property name="Log">ENABLED</property>
+        <property name="ProcPropertiesSL">PROCEDURE,NAME,AUTHOR,FILE,REVISION,DATE,DOMAINS,PROFILES,DATABASE,CATEGORY,VALIDATED,APPROVED</property>
+        <property name="ProcPropertiesML">DESCRIPTION</property>
+    </context>
+
+    <executor>
+        <property name="Log">ENABLED</property>
+        <property name="ExecDelay">0.3</property>
+        <property name="ExecDelaySO">0.2</property>
+    </executor>
+    
+    <drivers>
+        <driver name = "HIFLY">
+            <id>DRIVER_HIFLY</id>
+            <properties>
+                <property name="ExifUser">OPE_USER</property>
+                <property name="ExifKey">keys/OPE_USER</property>
+            </properties>
+        </driver>
+
+        <driver name = "STANDALONE">
+            <id>DRIVER_DUMMY</id>
+            <properties>
+                <property name="Key">Value</property>
+            </properties>
+        </driver>
+    </drivers>
+
+    <contexts>
+    
+        <context name= "STD - Standalone">
+            <driver>DRIVER_DUMMY</driver>
+            <spacecraft>STD</spacecraft>
+            <family>PRIME</family>
+            <gcs>N/A</gcs>
+            <procpath>STD_PROC_PATH</procpath>
+            <driverinfo>
+                <property name="Key">Value</property>
+            </driverinfo>
+        </context>
+
+        <context name= "A2B - Prime">
+            <driver>DRIVER_HIFLY</driver>
+            <spacecraft>A2B</spacecraft>
+            <family>PRIME</family>
+            <gcs>egatec1</gcs>
+            <procpath>A2B_PROC_PATH</procpath>
+            <driverinfo>
+                <property name="NameServer">egatec1</property>
+                <property name="NamePort">29999</property>
+            </driverinfo>
+        </context>
+
+        <context name= "A2B - Backup">
+            <driver>DRIVER_HIFLY</driver>
+            <spacecraft>A2B</spacecraft>
+            <family>BACKUP</family>
+            <gcs>egatec2</gcs>
+            <procpath>A2B_PROC_PATH</procpath>
+            <driverinfo>
+                <property name="NameServer">egatec2</property>
+                <property name="NamePort">29999</property>
+            </driverinfo>
+        </context>
+
+        <context name= "A1M - Prime">
+            <driver>DRIVER_HIFLY</driver>
+            <spacecraft>A1M</spacecraft>
+            <family>PRIME</family>
+            <gcs>egatec1</gcs>
+            <procpath>A1M_PROC_PATH</procpath>
+            <driverinfo>
+                <property name="NameServer">egatec1</property>
+                <property name="NamePort">29999</property>
+            </driverinfo>
+        </context>
+
+        <context name= "A1M - Backup">
+            <driver>DRIVER_HIFLY</driver>
+            <spacecraft>A1M</spacecraft>
+            <family>BACKUP</family>
+            <gcs>egatec2</gcs>
+            <procpath>A1M_PROC_PATH</procpath>
+            <driverinfo>
+                <property name="NameServer">egatec2</property>
+                <property name="NamePort">29999</property>
+            </driverinfo>
+        </context>
+
+    </contexts>
+    
+</config>

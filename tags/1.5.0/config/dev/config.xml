@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<configuration>
+	<!-- Database default properties -->
+	<!-- Database runtime properties may be changed in the project 
+		properties page-->
+        <database>
+        		<!-- Driver name : hifly, scorpio -->
+                <driver></driver>
+                <!-- Database path. Only local paths are allowed -->
+				<path></path>
+        </database>
+        <!-- END Database default properties -->
+	<!-- Project structure -->
+	<project>
+		<folder type="procedure" name="Procedures">
+			<package>BUS</package>
+			<package>Mission</package>
+			<package>Payload</package>
+			<package>Prod_SES</package>
+			<package>Validation</package>
+		</folder>
+		<folder type="file" name="Input Files">
+			<folder type="file" name="Spacecraft DB" />
+			<folder type="file" name="Maneuvre Message" />
+		</folder>
+		<folder type="file" name="Output Files">
+			<folder type="file" name="As Run" />
+			<folder type="file" name="Maneuvre Log" />
+		</folder>
+		<folder type="file" name="Simulator" />
+		<folder type="file" name="User Lib" />
+	</project>
+	<!-- END Project structure -->
+</configuration>
