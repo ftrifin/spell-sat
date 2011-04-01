@@ -16,19 +16,19 @@ TM0002;			Descr;	[0,1];	['ON','OFF'];	0
 TM0003;			Descr;	[0,1];	['ON','OFF'];	0		
 TM0004;			Descr;	[0,1];	['ON','OFF'];	0		
 
-TM0005;			RLG1 Status 1;	0;	'Go'; 0
-TM0006;			RLG1 Status 2;	0;	'Valid'; 0
-TM0007;			RLG1 Status 3;	0;	'Pass'; 0
-TM0008;			RLG1 Status 4;	0;	'OK'; 0
+TM0005;			EQU1 Status 1;	0;	'Go'; 0
+TM0006;			EQU1 Status 2;	0;	'Valid'; 0
+TM0007;			EQU1 Status 3;	0;	'Pass'; 0
+TM0008;			EQU1 Status 4;	0;	'OK'; 0
 
-TM0009;         RLG1 Status 1;  0;  'Go'; 0
-TM0010;         RLG1 Status 2;  0;  'Valid'; 0
-TM0011;         RLG1 Status 3;  0;  'Pass'; 0
-TM0012;         RLG1 Status 4;  0;  'OK'; 0
+TM0009;         EQU1 Status 1;  0;  'Go'; 0
+TM0010;         EQU1 Status 2;  0;  'Valid'; 0
+TM0011;         EQU1 Status 3;  0;  'Pass'; 0
+TM0012;         EQU1 Status 4;  0;  'OK'; 0
 
-TM0040;			Descr; [0,1]; ['RLG1','RLG2']; 0
-TM0050;			Descr; [0,1]; ['RLG1','RLG2']; 0
-TM0060;			Descr; [0,1]; ['RLG1','RLG2']; 0
+TM0040;			Descr; [0,1]; ['EQU1','EQU2']; 0
+TM0050;			Descr; [0,1]; ['EQU1','EQU2']; 0
+TM0060;			Descr; [0,1]; ['EQU1','EQU2']; 0
 
 [TC ITEMS]
 # TC Mnemonic       TM Mnemonic         Change      
