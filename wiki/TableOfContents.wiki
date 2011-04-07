@@ -8,5 +8,8 @@
  * [ContactUs Contact us]
 
 For more information, please contact<br/>
-Thomas Nowak<br/>
-(thomas.nowak at ses.com)
+_
+Thomas Nowak (thomas.nowak at ses.com)<br/>
+Rafael Chinchilla (rafael.chinchilla.camara at ses.com)<br/>
+Fabien Bouleau (fabien.bouleau at ses.com)
+_
