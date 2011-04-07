@@ -269,6 +269,7 @@ void SPELLexecutorImpl::execute()
 
     // Initial flags when loading (not reloading/recovering)
     m_initStepDone = false;
+    m_executionError = false;
     // Reset flag: we shall not reset executor entities if we are recovering
     bool resetEntities = true;
 
@@ -337,6 +338,7 @@ void SPELLexecutorImpl::execute()
         case EXECUTION_ABORTED:
 			{
 		        m_initStepDone = false;
+		        m_executionError = false;
 				continueExecuting = executorAborted();
 				break;
 			}
@@ -344,6 +346,7 @@ void SPELLexecutorImpl::execute()
 			{
 		        DEBUG("[E] Execution result unknown: " + ISTR(result));
 		        m_initStepDone = false;
+		        m_executionError = false;
 		        unloadDriver(true);
 				continueExecuting = false;
 				break;
@@ -811,7 +814,7 @@ void SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what,
 				}
 
 				DEBUG("[DISPATCH] Python exception");
-
+				m_executionError = true;
                 statusOk = false;
                 break;
             }
@@ -839,7 +842,9 @@ void SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what,
             {
                 DEBUG("[DISPATCH] Return " + procId + ":" + ISTR(lineno) );
 				// Notify the event to the excecution frame
-				m_frame->eventReturn(frame);
+                // Do not do it in case of abort, since the warm start
+                // mechanism shall keep the current frame structure
+				if (!m_executionError) m_frame->eventReturn(frame);
                 m_callstack->event_return( procId, lineno, name );
                 m_controller->event_return( procId, lineno, name );
                 break;

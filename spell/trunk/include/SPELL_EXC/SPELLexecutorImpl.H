@@ -514,6 +514,9 @@ private: //-------------------------------------------------------------------
 
 		/** Next programmed goto target */
 		std::string                  m_gotoTarget;
+
+		/** True if an error crashing the procedure has happened */
+		bool                         m_executionError;
 };
 
 /*@}*/
