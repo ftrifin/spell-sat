@@ -71,7 +71,7 @@ void SPELLwsWarmStartImpl::initialize( const std::string& identifier, const SPEL
 void SPELLwsWarmStartImpl::reset()
 {
 	DEBUG("[WS] Reset mechanism");
-	while(m_frames.size()>0) removeTopFrame();
+	while(m_frames.size()>1) removeTopFrame();
 	m_recursionDepth = 0;
 	m_topFrame = NULL;
 	DEBUG("[WS] Reset mechanism done");
@@ -94,7 +94,8 @@ void SPELLwsWarmStartImpl::notifyReturn()
 {
 	DEBUG("[WS] Notify return");
 	// Remove the frame at the top of the tree, we dont need it anymore
-	removeTopFrame();
+	// But do not remove the very first frame
+	while(m_frames.size()>1) removeTopFrame();
 }
 
 //=============================================================================
@@ -191,7 +192,7 @@ PyFrameObject* SPELLwsWarmStartImpl::fixState()
 		m_topFrame->fixState(newState, isHead);
 	}
 	DEBUG("[WS] State fixed ===============================================");
-
+	PyErr_Clear();
 	return m_topFrame->getFrameObject();
 }
 
