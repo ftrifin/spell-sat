@@ -357,6 +357,7 @@ public class ShellTerminal extends StyledText implements KeyListener,
 	 *************************************************************************/
 	public void paste()
 	{
+		int initialOffset = getCaretOffset();
 		int initialLength = getText().length();
 		boolean pasteEnd = getCaretOffset() > m_lineStart;
 		setRedraw(false);
@@ -377,6 +378,7 @@ public class ShellTerminal extends StyledText implements KeyListener,
 				m_multi = true;
 				addPromptString();
 			}
+			setCaretOffset(getText().length());
 		}
 		else
 		// We will need to adjust the markers because the text will be shifted
@@ -393,6 +395,7 @@ public class ShellTerminal extends StyledText implements KeyListener,
 				addPromptString();
 				resetInput();
 			}
+			setCaretOffset( initialOffset + (newLength - initialLength) );
 		}
 		setRedraw(true);
 	}
@@ -633,21 +636,35 @@ public class ShellTerminal extends StyledText implements KeyListener,
 			break;
 		case KeyCodes.CURSOR_UP:
 		case KeyCodes.CURSOR_DOWN:
-			event.doit = false;
-			break;
 		case KeyCodes.PAGE_UP:
 		case KeyCodes.PAGE_DOWN:
 			event.doit = false;
 			break;
 		default:
-			// Prevent the user from writing in the middle of old text
-			if (getCaretOffset() < m_lineStart + PROMPT_STRING.length())
+			if (isTypingCharacter(event))
 			{
-				setCaretOffset(getText().length());
+				// Prevent the user from writing in the middle of old text
+				if (getCaretOffset() < m_lineStart + PROMPT_STRING.length())
+				{
+					setCaretOffset(getText().length());
+				}
 			}
 		}
 	}
 
+	private boolean isTypingCharacter( VerifyEvent event  )
+	{
+		if (Character.isLetterOrDigit(event.character)) return true;
+		switch(event.keyCode)
+		{
+		case 262144: //CTRL
+		case 131072: //ALT
+		case 65536: // SHIFT
+			return false;
+		}
+		return true;
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 

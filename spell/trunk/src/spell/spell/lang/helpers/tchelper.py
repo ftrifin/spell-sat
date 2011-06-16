@@ -432,8 +432,10 @@ class Send_Helper(WrapperHelper):
                 if operator != eq: continue
 
                 # Do not adjust limits if the condition config dict says the contrary
+                conditionTolerance = None
                 if type(condition[-1])==dict:
                     itemCfg = condition[-1]
+                    conditionTolerance = itemCfg.get(Tolerance)
                     if itemCfg.has_key(AdjLimits) and itemCfg[AdjLimits] == False: continue
                         
                 if type(paramValue)==str: #Status parameters
@@ -443,15 +445,20 @@ class Send_Helper(WrapperHelper):
                     # Adjust the limits accordingly
                     REGISTRY['CIF'].write("    - " + repr(paramName) + " adjusting to expected value: " + paramValue)
                 else: #Analog parameters
-                    # Set the limit to the maximum value
-                    tolerance = self.getConfig(Tolerance)
+                    # if the condition has its own tolerance, use it
+                    if conditionTolerance:
+                        tolerance = conditionTolerance
+                    else:
+                        tolerance = self.getConfig(Tolerance)
                     if tolerance is None: tolerance = 0.1
                     limits = {}
                     limits[LoRed] = paramValue - tolerance
                     limits[LoYel] = paramValue - tolerance
                     limits[HiRed] = paramValue + tolerance
                     limits[HiYel] = paramValue + tolerance
-                    REGISTRY['CIF'].write("    - " + repr(paramName) + " limits set to " + repr(limits))
+                    REGISTRY['CIF'].write("    - " + repr(paramName) + " limits set to ( " + str(limits[LoRed]) +
+                                          " , " + str(limits[LoYel]) + " | " + str(limits[HiYel]) + " , " + str(limits[HiRed]) + " )")
+                    REGISTRY['CIF'].write("      Tolerance used: " + str(tolerance))
                 REGISTRY['TM'].setLimits( paramName, limits, config = self.getConfig() )
 
         # Reset the OnFailure config

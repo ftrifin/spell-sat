@@ -483,7 +483,7 @@ const bool SPELLexecutionFrame::goNextLine()
 //=============================================================================
 // METHOD    : SPELLexecutionFrame::goLabel
 //=============================================================================
-const bool SPELLexecutionFrame::goLabel( const std::string& label )
+const bool SPELLexecutionFrame::goLabel( const std::string& label, bool report )
 {
 	SPELLsafePythonOperations ops;
     DEBUG("[E] Go-to label '" + label + "'")
@@ -495,14 +495,14 @@ const bool SPELLexecutionFrame::goLabel( const std::string& label )
     }
     else
     {
-        return goLine( (*it).second );
+        return goLine( (*it).second, report );
     }
 }
 
 //=============================================================================
 // METHOD    : SPELLexecutionFrame::goLine
 //=============================================================================
-const bool SPELLexecutionFrame::goLine( const int& new_lineno )
+const bool SPELLexecutionFrame::goLine( const int& new_lineno, bool report )
 {
 	SPELLsafePythonOperations ops;
     DEBUG("[E] Go-to line " + ISTR(new_lineno) + " on model " + PSTR(m_model));
@@ -512,7 +512,10 @@ const bool SPELLexecutionFrame::goLine( const int& new_lineno )
         return false;
     }
     DEBUG("[E] Go new line " + ISTR(new_lineno) + " at " + ISTR(new_lasti))
-
+    if (report)
+    {
+    	SPELLexecutor::instance().getCIF().write("Jump to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
+    }
     return setNewLine( new_lineno, new_lasti );
 }
 
@@ -527,7 +530,7 @@ bool SPELLexecutionFrame::programmedGoto( const int& frameLine )
     {
         DEBUG("[GOTO] Programmed jump at line " + ISTR(frameLine) + " to line " + ISTR(target));
         LOG_INFO("Goto " + ISTR(target));
-        gotoSuccess = goLine(target);
+        gotoSuccess = goLine(target, false);
     }
     return gotoSuccess;
 }

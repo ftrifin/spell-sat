@@ -38,10 +38,8 @@
 
 // GLOBALS /////////////////////////////////////////////////////////////////
 
-// For POST
-char* program_compilation_time = __DATE__ " " __TIME__;
-
-static int port = -1;
+static int s_port = -1;
+static int s_numreqs = -1;
 
 //============================================================================
 // Show usage
@@ -49,7 +47,7 @@ static int port = -1;
 void usage( char** argv )
 {
     std::cerr << "Syntax:" << std::endl;
-    std::cerr << "    " << argv[0] << " -p <port>" << std::endl;
+    std::cerr << "    " << argv[0] << " -p <port> -n <num requests>" << std::endl;
     std::cerr << std::endl;
 }
 
@@ -59,18 +57,27 @@ void usage( char** argv )
 int parseArgs( int argc, char** argv )
 {
     int code;
-    while( ( code = getopt(argc, argv, "p:")) != -1)
+    while( ( code = getopt(argc, argv, "p:n:")) != -1)
     {
         switch(code)
         {
         case 'p':
-            port = atoi(optarg);
+            s_port = atoi(optarg);
+            break;
+        case 'n':
+            s_numreqs = atoi(optarg);
             break;
         }
     }
-    if (port == -1)
+    if (s_port == -1)
     {
         std::cerr << "Error: port not provided" << std::endl;
+        usage(argv);
+        return 1;
+    }
+    if (s_numreqs == -1)
+    {
+        std::cerr << "Error: number of requests not provided" << std::endl;
         usage(argv);
         return 1;
     }
@@ -94,7 +101,7 @@ public:
     SPELLipcMessage* processRequest( SPELLipcMessage* msg )
     {
         std::cout << "request received" << std::endl;
-        return SPELLipcHelper::createResponse("dummy", msg );
+        return SPELLipcHelper::createResponse("clientdummy", msg );
     };
 
     void processError( std::string error, std::string reason )
@@ -118,14 +125,21 @@ public:
         try
         {
             int n = 0;
-            while(n<1000)
+            while(n<s_numreqs)
             {
                 SPELLipcMessage* msg = new SPELLipcMessage("dummy");
                 std::cout << "send request " << n << std::endl;
                 msg->set("NUM", ISTR(n));
                 msg->setType(MSG_TYPE_REQUEST);
-                SPELLipcMessage* resp = m_clt->sendRequest(msg);
-                std::cout << "received response " << n << ":" << resp->get("NUM") << std::endl;
+                SPELLipcMessage* resp = m_clt->sendRequest(msg, 5);
+                if (resp)
+                {
+                	std::cout << "    received response " << n << ":" << resp->get("NUM") << std::endl;
+                }
+                else
+                {
+                	std::cout << "    received no response for request " << n << std::endl;
+                }
                 n++;
             }
         }
@@ -143,7 +157,7 @@ int main( int argc, char** argv )
     if ( parseArgs(argc,argv) != 0 ) return 1;
 
     Proxy proxy;
-    SPELLipcClientInterface client("CLT", "localhost", port );
+    SPELLipcClientInterface client("CLT", "localhost", s_port );
     Sender sender( &client );
 
     try
@@ -151,14 +165,14 @@ int main( int argc, char** argv )
         std::cout << "initializing" << std::endl;
         client.initialize(&proxy);
 
-        std::cout << "connecting" << std::endl;
+        std::cout << "connecting to port " << s_port << std::endl;
         client.connectIfc();
         std::cout << "starting interface" << std::endl;
         client.start();
 
         usleep(10000);
 
-        std::cout << "start sending" << std::endl;
+        std::cout << "start sending " << s_numreqs << " requests " << std::endl;
         sender.start();
         sender.join();
         std::cout << "end sending" << std::endl;

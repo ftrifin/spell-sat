@@ -768,7 +768,7 @@ void SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what,
         // lineno will be changed accordingly.
         if (m_gotoTarget != "")
         {
-             repeat = repeat || m_frame->goLabel(m_gotoTarget);
+             repeat = repeat || m_frame->goLabel(m_gotoTarget, false);
              lineno = frame->f_lineno;
              m_gotoTarget = "";
         }
@@ -1059,7 +1059,7 @@ const bool SPELLexecutorImpl::goLabel( const std::string& label, bool programmed
 	else
 	{
 		m_gotoTarget = "";
-		bool result = m_frame->goLabel(label);
+		bool result = m_frame->goLabel(label, true);
 		if (result)
 		{
 			// When we skip the line, we dont want the callstack and trace model to register the current line
@@ -1084,7 +1084,7 @@ const bool SPELLexecutorImpl::goLine( const int new_lineno )
         m_cif->warning("Unable to go to line '" + ISTR(new_lineno) + "'", LanguageConstants::SCOPE_SYS );
 		return false;
 	}
-    bool result = m_frame->goLine( new_lineno );
+    bool result = m_frame->goLine( new_lineno, true );
     if (result)
     {
     	// When we skip the line, we dont want the callstack and trace model to register the current line

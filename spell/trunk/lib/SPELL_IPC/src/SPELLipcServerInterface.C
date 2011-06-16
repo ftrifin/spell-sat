@@ -59,6 +59,10 @@ SPELLipcServerInterface::SPELLipcServerInterface( std::string name, int key, int
 SPELLipcServerInterface::~SPELLipcServerInterface()
 {
     SPELLipcClientMap::iterator cit;
+    for( cit = m_clients.begin(); cit != m_clients.end(); cit++ )
+    {
+    	delete cit->second;
+    }
     m_clients.clear();
     DEBUG("[IPC-SRV-" + m_name + "] Server interface destroyed");
 }
@@ -151,7 +155,6 @@ void SPELLipcServerInterface::removeClient( int key, bool send_eoc )
         throw SPELLipcError("No such key", key);
     }
     cit->second->disconnectClient(send_eoc);
-    delete cit->second;
 }
 
 //=============================================================================
@@ -183,7 +186,7 @@ void SPELLipcServerInterface::disconnect( bool send_eoc )
 //=============================================================================
 void SPELLipcServerInterface::disconnect( int peerKey, bool send_eoc )
 {
-    if (!m_connected) return;
+    if (!isConnected()) return;
     SPELLipcInterface::disconnect(peerKey,send_eoc);
     DEBUG("[IPC-SRV-" + m_name + "] Server interface disconnect client ");
     removeClient( peerKey, send_eoc );

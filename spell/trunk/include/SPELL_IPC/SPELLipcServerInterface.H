@@ -147,6 +147,15 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		SPELLipcMessage* forwardRequest( int peerKey, SPELLipcMessage* msg, unsigned long timeoutSec );
 
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given key corresponds to an active client.
+		 *
+		 * \param key IN: peer IPC key.
+		 *
+		 * \returns True if such a client is available.
+		**////////////////////////////////////////////////////////////////////
+		bool hasClient( int key );
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 protected: //-----------------------------------------------------------------
@@ -181,14 +190,6 @@ private: //-------------------------------------------------------------------
     // METHODS ///////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////
-		/** Check if the given key corresponds to an active client.
-		 *
-		 * \param key IN: peer IPC key.
-		 *
-		 * \returns True if such a client is available.
-		**////////////////////////////////////////////////////////////////////
-		bool hasClient( int key );
-
 		//////////////////////////////////////////////////////////////////////
 		/** Add a client to the list of connected clients.
 		 *

@@ -99,7 +99,7 @@ public:
             resp->setId("resp");
             resp->setType(MSG_TYPE_RESPONSE);
             resp->set("NUM", msg->get("NUM"));
-            usleep(14000);
+            usleep(200000);
         }
         catch(SPELLcoreException& ex)
         {
@@ -110,7 +110,7 @@ public:
 
     void processError( std::string error, std::string reason )
     {
-        std::cout << "error" << std::endl;
+        std::cout << "error: " << error << "," << reason << std::endl;
     };
 };
 
