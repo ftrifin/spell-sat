@@ -357,7 +357,9 @@ void SPELLcontroller::executeCommand( const ExecutorCommand& cmd )
     }
     else if (cmd.id == CMD_PAUSE)
     {
-        doPause( (getStatus() != STATUS_WAITING) );
+    	SPELLexecutorStatus st = getStatus();
+    	bool synchronizeWithDispatcher = (st != STATUS_WAITING) && (st != STATUS_RUNNING);
+        doPause( synchronizeWithDispatcher );
     }
     else if (cmd.id == CMD_SCRIPT)
     {

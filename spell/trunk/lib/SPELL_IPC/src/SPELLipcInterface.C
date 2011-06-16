@@ -102,7 +102,6 @@ void SPELLipcInterface::disconnect( int peerKey, bool send_eoc )
 {
     DEBUG("[IPC-IFC-" + m_name + "] IPC interface disconnect peer " + ISTR(peerKey));
     cancelOutgoingRequests(peerKey);
-    m_connected = false;
 }
 
 //=============================================================================

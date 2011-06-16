@@ -232,19 +232,21 @@ public: //--------------------------------------------------------------------
 		/** Move the execution to the line corresponding to the given label.
 		 *
 		 * \param label IN: label where to go
+		 * \param report IN: report the jump to the user
 		 *
 		 * \returns True if success.
 		**////////////////////////////////////////////////////////////////////
-		const bool goLabel( const std::string& label );
+		const bool goLabel( const std::string& label, bool report );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Move the execution to the line given.
 		 *
 		 * \param line IN: line where to go
+		 * \param report IN: report the jump to the user
 		 *
 		 * \returns True if success.
 		**////////////////////////////////////////////////////////////////////
-		const bool goLine( const int& line );
+		const bool goLine( const int& line, bool report );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Run the given script in the frame context.

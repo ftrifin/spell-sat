@@ -387,6 +387,22 @@ class SaveDictionary_Helper(WrapperHelper):
         
         return [False, True, NOTIF_STATUS_OK, "Database saved"]
 
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Save dictionary skipped", {Severity:WARNING} )
+        return [False,True]        
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Save dictionary cancelled", {Severity:WARNING} )
+        return [False,False]        
+                
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Save dictionary failed.", {Severity:WARNING} )
+        return [True,None]
+
+
 ################################################################################
 class CreateDictionary_Helper(LoadDictionary_Helper):
 
