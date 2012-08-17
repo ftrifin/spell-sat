@@ -1,5 +1,12 @@
 *.pyc
 *.swp
-/log/
-/spel-gui-src/bin/
-
+Makefile
+Makefile.in
+*.o
+*.pyo
+*.lo
+*.la
+.deps
+.libs
+*.m4
+*.log
