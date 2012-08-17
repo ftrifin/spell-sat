@@ -1,0 +1,34 @@
+# SPELL release 2.3.12 - information
+
+= About this release =
+
+SES is proud to announce that *SPELL 2.3.12* is available for download. This version of SPELL includes a number of enhancements and fixes that SES is using in *Orbital Star2*, *Lockheed Martin A2100*, *Astrium E3000*, *TAS SB4000* and *SS/Loral FS1300* satellites. 
+
+SPELL is used for operations for all these platforms, using both GMV hifly and SES Scorpio ground control systems.
+
+<br>
+= Highlights =
+
+== What is new with respect to 2.0.X ==
+
+  * Support for operations with Astrium Eurostar 3000 in conjunction with automatically converted procedures (with PIL2SPELL software)
+
+  * Friendly merging, viewing and edition of external data files used by procedures, including support for Astrium data file format.
+
+  * Usage of *data containers* that improve execution safety by checking variable initialization, value types, value ranges and expected values.
+
+  * Improved *Monitoring Mode* to allow multiple users to follow the execution of a procedure without operational impact.
+
+  * Migration of core server processes to C++ to improve maintainability and performance
+
+  * *Recovery* of procedure executions after Python errors based on the contextual information of the execution
+
+== Compatibility ==
+
+SPELL 2.3.12 is fully backwards-compatible with former SPELL releases. _What runs in SPELL 2.0 or 1.5, runs in SPELL 2.3_.
+
+Nevertheless, some new constructs and features have been added to the language specification, therefore _what runs in SPELL 2.3 _may_ not run in SPELL 2.0 or 1.5_.
+
+== SPELL-DEV ==
+
+This release does not include changes to the SPELL-DEV application.
