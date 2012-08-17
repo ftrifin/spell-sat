@@ -15,6 +15,8 @@ The wish is to create a community to share experience and procedures (via the Sa
 
 ==Latest News==
 
+ * *August 17th, 2012*: released version 2.3.12. Find more details [Release_2312 here].
+
  * *June 16th, 2011*: an upgrade to version 2.0.8 is released. Find more details [Patch_208 here].
 
 
