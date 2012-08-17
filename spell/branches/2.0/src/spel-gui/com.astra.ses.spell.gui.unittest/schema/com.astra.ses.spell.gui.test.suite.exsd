@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Schema file written by PDE -->
+<schema targetNamespace="com.astra.ses.spell.gui.unittest" xmlns="http://www.w3.org/2001/XMLSchema">
+<annotation>
+      <appinfo>
+         <meta.schema plugin="com.astra.ses.spell.gui.unittest" id="com.astra.ses.spell.gui.test.suite" name="SPELL Test Suite"/>
+      </appinfo>
+      <documentation>
+         This point is intended to be extended by plugins/fragments inside the SPELL universe for unit testing purposes.
+The plugin that defines this extension point will load plugins extending it to perform unit testing.
+      </documentation>
+   </annotation>
+
+   <element name="extension">
+      <annotation>
+         <appinfo>
+            <meta.element />
+         </appinfo>
+      </annotation>
+      <complexType>
+         <sequence>
+            <element ref="suite" minOccurs="1" maxOccurs="unbounded"/>
+         </sequence>
+         <attribute name="point" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="id" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="name" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+               <appinfo>
+                  <meta.attribute translatable="true"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <element name="suite">
+      <complexType>
+         <attribute name="class" type="string" use="required">
+            <annotation>
+               <documentation>
+                  SPELL Test Suite must implement JUnit Test interface
+               </documentation>
+               <appinfo>
+                  <meta.attribute kind="java" basedOn=":junit.framework.Test"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+         <attribute name="description" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="name" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="since"/>
+      </appinfo>
+      <documentation>
+         [Enter the first release in which this extension point appears.]
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="examples"/>
+      </appinfo>
+      <documentation>
+         [Enter extension point usage example here.]
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="apiinfo"/>
+      </appinfo>
+      <documentation>
+         [Enter API information here.]
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="implementation"/>
+      </appinfo>
+      <documentation>
+         [Enter information about supplied implementation of this extension point.]
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="copyright"/>
+      </appinfo>
+      <documentation>
+         ////////////////////////////////////////////////////////////////////////////////
+//
+// Copyright (C) 2008, 2010 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+// By using this software in any way, you are agreeing to be bound by
+// the terms of this license.
+//
+// All rights reserved. This program and the accompanying materials
+// are made available under the terms of the Eclipse Public License v1.0
+// which accompanies this distribution, and is available at
+// http://www.eclipse.org/legal/epl-v10.html
+//
+// NO WARRANTY
+// EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, THE PROGRAM IS PROVIDED
+// ON AN &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER
+// EXPRESS OR IMPLIED INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR
+// CONDITIONS OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A
+// PARTICULAR PURPOSE. Each Recipient is solely responsible for determining
+// the appropriateness of using and distributing the Program and assumes all
+// risks associated with its exercise of rights under this Agreement ,
+// including but not limited to the risks and costs of program errors,
+// compliance with applicable laws, damage to or loss of data, programs or
+// equipment, and unavailability or interruption of operations.
+//
+// DISCLAIMER OF LIABILITY
+// EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, NEITHER RECIPIENT NOR ANY
+// CONTRIBUTORS SHALL HAVE ANY LIABILITY FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING WITHOUT LIMITATION
+// LOST PROFITS), HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OR DISTRIBUTION OF THE PROGRAM OR THE
+// EXERCISE OF ANY RIGHTS GRANTED HEREUNDER, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGES.
+//
+// Contributors:
+//    SES ENGINEERING - initial API and implementation and/or initial documentation
+//
+// PROJECT   : SPELL
+//
+// SUBPROJECT: SPELL GUI Client
+//
+////////////////////////////////////////////////////////////////////////////////
+      </documentation>
+   </annotation>
+
+</schema>

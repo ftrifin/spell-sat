@@ -1,0 +1,69 @@
+<config>
+
+    <!-- =================================================================== -->
+    <!-- GENERAL PROPERTIES -->
+    <!-- =================================================================== -->
+    <common>
+        <property name="Log">ENABLED</property>
+        <property name="LogDetail">PROC</property>
+    </common>
+
+    <!-- =================================================================== -->
+    <!-- LANGUAGE CONFIGURATION FILE -->
+    <!-- =================================================================== -->
+    <language>
+        <file>language.xml</file>
+    </language>
+
+    <!-- =================================================================== -->
+    <!-- LISTENER CONFIGURATION -->
+    <!-- =================================================================== -->
+    <listener>
+        <property name="ListenerPort">9988</property>
+        <property name="ContextScript">server/context/context.py</property>
+    </listener>
+    
+    <!-- =================================================================== -->
+    <!-- CONTEXT GENERAL CONFIGURATION -->
+    <!-- =================================================================== -->
+    <context>
+        <property name="ProcPropertiesSL">PROCEDURE,NAME,AUTHOR,FILE,DATE,SPACECRAFT,DATABASE,CATEGORY,VALIDATED,APPROVED</property>
+        <property name="ProcPropertiesML">DESCRIPTION,HISTORY</property>
+        <property name="ExecutorScript">$SPELL_HOME/bin/SPELL-Executor</property>
+    </context>
+
+    <!-- =================================================================== -->
+    <!-- EXECUTOR CONFIGURATION COMMON TO ALL CONTEXTS -->
+    <!-- =================================================================== -->
+    <executor>
+        <property name="ExecDelay">0</property>
+        <property name="RunInto">True</property>
+        <property name="ByStep">False</property>
+        <property name="BrowsableLib">False</property>
+        <property name="MaxVerbosity">5</property>
+        <property name="SaveStateMode">ON_LINE</property>
+        <property name="WatchVariables">ENABLED</property>
+    </executor>
+
+    <!-- =================================================================== -->
+    <!-- AVAILABLE DRIVERS -->
+    <!-- =================================================================== -->
+    <drivers>
+        <driver>driver_standalone.xml</driver>
+    </drivers>
+    
+    <!-- =================================================================== -->
+    <!-- AVAILABLE CONTEXTS -->
+    <!-- =================================================================== -->
+    <contexts>
+        <context>context_STD.xml</context>
+    </contexts>
+
+    <!-- =================================================================== -->
+    <!-- SATELLITE FAMILIES -->
+    <!-- =================================================================== -->
+    <families>
+        <family name="STD">STD1,STD2,STD3,STD4,STD5</family>
+    </families>
+    
+</config>

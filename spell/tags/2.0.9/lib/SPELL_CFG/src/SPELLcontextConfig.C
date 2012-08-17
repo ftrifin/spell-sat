@@ -1,0 +1,358 @@
+// ################################################################################
+// FILE       : SPELLcontextConfig.C
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Implementation of the context configuration model
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_CFG/SPELLcontextConfig.H"
+#include "SPELL_CFG/SPELLxmlConfigReaderFactory.H"
+// Project includes --------------------------------------------------------
+#include "SPELL_UTIL/SPELLlog.H"
+#include "SPELL_WRP/SPELLconstants.H"
+#include "SPELL_UTIL/SPELLpythonHelper.H"
+
+
+// GLOBALS /////////////////////////////////////////////////////////////////
+
+
+
+//=============================================================================
+// CONSTRUCTOR: SPELLcontextConfig::SPELLcontextConfig()
+//=============================================================================
+SPELLcontextConfig::SPELLcontextConfig( const std::string& contextFile )
+{
+    m_reader = SPELLxmlConfigReaderFactory::createXMLConfigReader();
+    m_reader->parseFile( contextFile );
+
+    loadBasics();
+
+    loadExecutorParameters();
+
+    loadDriverParameters();
+
+    loadLocations();
+}
+
+//=============================================================================
+// DESTRUCTOR:    SPELLcontextConfig::~SPELLcontextConfig
+//=============================================================================
+SPELLcontextConfig::~SPELLcontextConfig()
+{
+    m_executorConfig.clear();
+    m_driverConfig.clear();
+    m_locationPaths.clear();
+    m_locationExts.clear();
+    m_builtinDatabases.clear();
+    if (m_reader != NULL)
+    {
+        delete m_reader;
+        m_reader = NULL;
+    }
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getName
+//=============================================================================
+std::string SPELLcontextConfig::getName() const
+{
+    return m_ctxName;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getDescription
+//=============================================================================
+std::string SPELLcontextConfig::getDescription() const
+{
+    return m_ctxDesc;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getSC
+//=============================================================================
+std::string SPELLcontextConfig::getSC() const
+{
+    return m_spacecraft;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getFamily
+//=============================================================================
+std::string SPELLcontextConfig::getFamily() const
+{
+    return m_family;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getGCS
+//=============================================================================
+std::string SPELLcontextConfig::getGCS() const
+{
+    return m_gcs;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getProcPath
+//=============================================================================
+std::string SPELLcontextConfig::getProcPath() const
+{
+    return m_procPath;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getLibPath
+//=============================================================================
+std::string SPELLcontextConfig::getLibPath() const
+{
+    return m_libPath;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getDriverParameter
+//=============================================================================
+std::string SPELLcontextConfig::getDriverParameter( const std::string& key ) const
+{
+    Properties::const_iterator it = m_driverConfig.find(key);
+    if (it!= m_driverConfig.end())
+    {
+        return it->second;
+    }
+    return "";
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getExecutorParameter
+//=============================================================================
+std::string SPELLcontextConfig::getExecutorParameter( const std::string& key ) const
+{
+    Properties::const_iterator it = m_executorConfig.find(key);
+    if ( it != m_executorConfig.end())
+    {
+        return it->second;
+    }
+    return "";
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::loadBasics
+//=============================================================================
+void SPELLcontextConfig::loadBasics()
+{
+    SPELLxmlNode* root = m_reader->getRoot();
+    m_ctxName = root->getAttributeValue("id");
+    delete root;
+
+    LOG_INFO("[CFG] SPELLcontextConfig configuration for " + m_ctxName);
+
+    SPELLxmlNodeList list = m_reader->findElementsByName( XMLTags::TAG_CTX_DESC );
+    if (list.size()>0)
+    {
+        SPELLxmlNode* node = *(list.begin());
+        m_ctxDesc = node->getValue();
+    }
+    else
+    {
+        m_ctxDesc = "";
+    }
+    dealloc_list(list);
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_DRIVER );
+    if (list.size()==0) throw SPELLcoreException("Cannot create context configuration", "Unable to read context driver");
+    SPELLxmlNode* node = *(list.begin());
+    m_driver = node->getValue();
+    dealloc_list(list);
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_SC );
+    if (list.size()==0) throw SPELLcoreException("Cannot create context configuration", "Unable to read context S/C");
+    node = *(list.begin());
+    m_spacecraft = node->getValue();
+    dealloc_list(list);
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_GCS );
+    if (list.size()==0) throw SPELLcoreException("Cannot create context configuration", "Unable to read context GCS");
+    node = *(list.begin());
+    m_gcs = node->getValue();
+    dealloc_list(list);
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_FAM );
+    if (list.size()==0) throw SPELLcoreException("Cannot create context configuration", "Unable to read context family");
+    node = *(list.begin());
+    m_family = node->getValue();
+    dealloc_list(list);
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_PPATH );
+    if (list.size()==0) throw SPELLcoreException("Cannot create context configuration", "Unable to read context procedure path");
+    node = *(list.begin());
+    m_procPath = node->getValue();
+    dealloc_list(list);
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_LPATH );
+    if (list.size()==1)
+    {
+        node = *(list.begin());
+        m_libPath = node->getValue();
+        dealloc_list(list);
+    }
+    else
+    {
+        m_libPath = "";
+    }
+
+    LOG_INFO("     Driver : " + m_driver);
+    LOG_INFO("     S/C    : " + m_spacecraft);
+    LOG_INFO("     GCS    : " + m_gcs);
+    LOG_INFO("     Family : " + m_family);
+    LOG_INFO("     P.Path : " + m_procPath);
+    LOG_INFO("     L.Path : " + m_libPath);
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::loadExecutorParameters
+//=============================================================================
+void SPELLcontextConfig::loadExecutorParameters()
+{
+    SPELLxmlNodeList list = m_reader->findElementsByName( XMLTags::TAG_CTX_ECONFIG );
+    if (list.size()>0)
+    {
+        LOG_INFO("[CFG] Executor config: ");
+        SPELLxmlNode* executor = *(list.begin());
+        SPELLxmlNodeList exProperties = executor->getChildren();
+        for( SPELLxmlNodeList::iterator it = exProperties.begin(); it != exProperties.end(); it++)
+        {
+            std::string name = (*it)->getAttributeValue( XMLTags::TAG_ATTR_NAME );
+            std::string value = (*it)->getValue();
+            LOG_INFO("     " + name + "=" + value);
+            m_executorConfig.insert( std::make_pair( name, value ));
+        }
+        dealloc_list(list);
+        dealloc_list(exProperties);
+    }
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::loadDriverParameters
+//=============================================================================
+void SPELLcontextConfig::loadDriverParameters()
+{
+    SPELLxmlNodeList list = m_reader->findElementsByName( XMLTags::TAG_CTX_DCONFIG );
+    if (list.size()>0)
+    {
+        LOG_INFO("[CFG] Driver config: ");
+        SPELLxmlNode* dconfig = *(list.begin());
+        SPELLxmlNodeList dcProperties = dconfig->getChildren();
+        for( SPELLxmlNodeList::iterator it = dcProperties.begin(); it != dcProperties.end(); it++)
+        {
+            std::string name = (*it)->getAttributeValue( XMLTags::TAG_ATTR_NAME );
+            std::string value = (*it)->getValue();
+            LOG_INFO("     " + name + "=" + value);
+            m_driverConfig.insert( std::make_pair( name, value ));
+        }
+        dealloc_list(list);
+        dealloc_list(dcProperties);
+    }
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::loadLocations
+//=============================================================================
+void SPELLcontextConfig::loadLocations()
+{
+    SPELLxmlNodeList sectionNodes = m_reader->findElementsByName( XMLTags::TAG_DATABASES_SECTION );
+    SPELLxmlNode* node = *(sectionNodes.begin());
+    SPELLxmlNodeList children = node->getChildren();
+    for( SPELLxmlNodeList::iterator nit = children.begin(); nit != children.end(); nit++)
+    {
+        if ((*nit)->getName() == XMLTags::TAG_LOCATION)
+        {
+            std::string lname = (*nit)->getAttributeValue(XMLTags::TAG_ATTR_NAME);
+            std::string lpath = (*nit)->getValue();
+            std::string lext  = (*nit)->getAttributeValue( XMLTags::TAG_ATTR_EXT );
+            m_locationPaths.insert( std::make_pair( lname, lpath ));
+            m_locationExts.insert( std::make_pair( lname, lext ));
+        }
+        else if ((*nit)->getName() == XMLTags::TAG_DATABASE)
+        {
+            std::string dname = (*nit)->getAttributeValue(XMLTags::TAG_ATTR_NAME);
+            std::string dloc  = (*nit)->getAttributeValue(XMLTags::TAG_ATTR_LOC);
+            m_builtinDatabases.insert( std::make_pair( dname, dloc ));
+        }
+    }
+    dealloc_list(sectionNodes);
+    dealloc_list(children);
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getLocationPath
+//=============================================================================
+std::string SPELLcontextConfig::getLocationPath( const std::string& locationName ) const
+{
+    Properties::const_iterator it = m_locationPaths.find(locationName);
+    if (it == m_locationPaths.end())
+    {
+        throw SPELLcoreException("Unable to get path for location name " + locationName, "No such name");
+    }
+    return (*it).second;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getLocationExtension
+//=============================================================================
+std::string SPELLcontextConfig::getLocationExtension( const std::string& locationName ) const
+{
+    Properties::const_iterator it = m_locationExts.find(locationName);
+    if (it == m_locationExts.end())
+    {
+        throw SPELLcoreException("Unable to get extension for location name " + locationName, "No such name");
+    }
+    return (*it).second;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getBuiltinDatabases
+//=============================================================================
+std::list<std::string> SPELLcontextConfig::getBuiltinDatabases() const
+{
+    std::list<std::string> dbList;
+    Properties::const_iterator it;
+    for( it = m_builtinDatabases.begin(); it != m_builtinDatabases.end(); it++)
+    {
+        dbList.push_back( it->first );
+    }
+    return dbList;
+}
+
+//=============================================================================
+// METHOD    : SPELLcontextConfig::getDatabaseLocation
+//=============================================================================
+std::string SPELLcontextConfig::getDatabaseLocation( const std::string& database ) const
+{
+    Properties::const_iterator it = m_builtinDatabases.find(database);
+    if (it != m_builtinDatabases.end() )
+    {
+        return it->second;
+    }
+    return "";
+}
+
