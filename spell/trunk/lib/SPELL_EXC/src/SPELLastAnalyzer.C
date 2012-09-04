@@ -86,7 +86,7 @@ void SPELLastAnalyzer::process( const std::string& filename )
 	{
 		findNodeLines( &node->n_child[index], 0, parDepth );
 	}
-
+        PyNode_Free(node);
 //#ifdef WITH_DEBUG
 //    std::ifstream file;
 //    file.open( filename.c_str() );
