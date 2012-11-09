@@ -188,9 +188,11 @@ ITEM_PROGRESS = "IN PROGRESS"
 ITEM_FAILED   = "FAILED"
 
 ###############################################################################
-#: Step constants
+#: PROC constants
 STEP = 'STEP'
 PREV_STEP = 'PREV_STEP'
+OUTPUT_DATA = 'OUTPUT_DATA'
+INPUT_DATA = 'INPUT_DATA'
 
 ###############################################################################
 #: Value radix decimal. Used with Radix modifier.            
@@ -286,3 +288,10 @@ ACTION_SKIP = 'K'
 ACTION_NOACTION = 'N'
 ACTION_CANCEL = 'Q'
 ACTION_CANCEL_PMT = 'P'
+
+################################################################################
+# File constants
+APPEND = 'append'
+WRITE = 'write'
+READ = 'read'
+READ_WRITE = 'read write'

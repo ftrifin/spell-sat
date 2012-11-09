@@ -48,6 +48,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.dialogs;
 
+import java.util.Arrays;
 import java.util.Vector;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -264,7 +265,22 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 	{
 		if (e.widget instanceof Combo)
 		{
-			if (e.widget == m_cmbSpacecrafts)
+			if (e.widget == m_cmbServers)
+			{
+				int fidx = m_cmbServers.getSelectionIndex();
+				m_btnConnect.setEnabled(fidx != -1);
+				if (fidx != -1)
+				{
+	            	Display.getCurrent().getActiveShell().setDefaultButton(m_btnConnect);
+	            	m_btnConnect.setFocus();
+				}
+				else
+				{
+	            	Display.getCurrent().getActiveShell().setDefaultButton(getButton(IDialogConstants.CLOSE_ID));
+	            	getButton(IDialogConstants.CLOSE_ID).setFocus();
+				}
+			}
+			else if (e.widget == m_cmbSpacecrafts)
 			{
 				int fidx = m_cmbSpacecrafts.getSelectionIndex();
 				if (fidx != -1)
@@ -893,6 +909,7 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 		String[] serverIDs = s_cfg.getAvailableServers();
 		Logger.debug("Available servers: " + serverIDs.length, Level.GUI, this);
 		m_servers = new Vector<ServerInfo>();
+		Arrays.sort(serverIDs);
 		for (String server : serverIDs)
 		{
 			ServerInfo info = s_cfg.getServerData(server);

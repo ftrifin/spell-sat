@@ -65,6 +65,8 @@ public class ExecutorConfig
 	private boolean	m_byStep;
 	/** Holds the show lib state */
 	private boolean	m_showLib;
+	/** Tc confirmation flag */
+	private boolean m_tcConfirmation;
 
 	/***************************************************************************
 	 * Constructor
@@ -76,6 +78,7 @@ public class ExecutorConfig
 		m_byStep = false;
 		m_execDelay = 0;
 		m_showLib = false;
+		m_tcConfirmation = false;
 	}
 
 	/***************************************************************************
@@ -87,6 +90,7 @@ public class ExecutorConfig
 		m_byStep = config.m_byStep;
 		m_execDelay = config.m_execDelay;
 		m_showLib = config.m_showLib;
+		m_tcConfirmation = config.m_tcConfirmation;
 	}
 
 	/***************************************************************************
@@ -119,6 +123,14 @@ public class ExecutorConfig
 	public void setStepByStep(boolean enabled)
 	{
 		m_byStep = enabled;
+	}
+
+	/***************************************************************************
+	 * Assign the TC confirmation flag
+	 **************************************************************************/
+	public void setTcConfirmation(boolean force)
+	{
+		m_tcConfirmation = force;
 	}
 
 	/***************************************************************************
@@ -162,35 +174,24 @@ public class ExecutorConfig
 	}
 
 	/***************************************************************************
+	 * Obtain the TC confirmation flag
+	 **************************************************************************/
+	public boolean getTcConfirmation()
+	{
+		return m_tcConfirmation;
+	}
+
+	/***************************************************************************
 	 * Obtain the client mode
 	 **************************************************************************/
 	public Map<String, String> getConfigMap()
 	{
 		Map<String, String> config = new TreeMap<String, String>();
-		if (m_runInto)
-		{
-			config.put(ExecutorConfigKeys.RUN_INTO, "True");
-		}
-		else
-		{
-			config.put(ExecutorConfigKeys.RUN_INTO, "False");
-		}
-		if (m_byStep)
-		{
-			config.put(ExecutorConfigKeys.BY_STEP, "True");
-		}
-		else
-		{
-			config.put(ExecutorConfigKeys.BY_STEP, "False");
-		}
-		if (m_showLib)
-		{
-			config.put(ExecutorConfigKeys.BROWSABLE_LIB, "True");
-		}
-		else
-		{
-			config.put(ExecutorConfigKeys.BROWSABLE_LIB, "False");
-		}
+		
+		config.put(ExecutorConfigKeys.RUN_INTO, m_runInto ? "True" : "False");
+		config.put(ExecutorConfigKeys.BY_STEP, m_byStep ? "True" : "False");
+		config.put(ExecutorConfigKeys.BROWSABLE_LIB, m_showLib ? "True" : "False");
+		config.put(ExecutorConfigKeys.FORCE_TC_CONFIRM, m_tcConfirmation ? "True" : "False");
 		config.put(ExecutorConfigKeys.EXEC_DELAY, Integer.toString(m_execDelay));
 		return config;
 	}

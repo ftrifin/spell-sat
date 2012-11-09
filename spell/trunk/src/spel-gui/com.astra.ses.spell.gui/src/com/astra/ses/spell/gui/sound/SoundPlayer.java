@@ -133,15 +133,6 @@ public class SoundPlayer
 			line.drain();
 			/* All data played. We can close the shop. */
 			line.close();
-
-			try
-			{
-				Thread.sleep(1000);
-			}
-			catch (InterruptedException e)
-			{
-			}
-			;
 		}
 		catch (UnsupportedAudioFileException e)
 		{

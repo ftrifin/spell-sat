@@ -48,6 +48,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.model;
 
+import java.util.Arrays;
+
 import com.astra.ses.spell.gui.core.extensionpoints.IProcedureRuntimeExtension;
 import com.astra.ses.spell.gui.core.model.notification.ControlNotification;
 import com.astra.ses.spell.gui.core.model.notification.DisplayData;
@@ -152,6 +154,21 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 	@Override
 	public void notifyProcedureStack(StackNotification data)
 	{
+		switch(data.getStackType())
+		{
+		case CALL:
+			Logger.info("Notified CALL: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
+			break;
+		case LINE:
+			Logger.info("Notified LINE: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
+			break;
+		case RETURN:
+			Logger.info("Notified RETURN: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
+			break;
+		case STAGE:
+			Logger.info("Notified STAGE: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
+			break;
+		}
 		m_treeController.notifyProcedureStack(data);
 		((IExecutionInformationHandler) m_model.getRuntimeInformation()).setStage(data.getStageId(), data.getStageTitle());
 		// Redirect the data to the consumers
@@ -175,6 +192,7 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 				ProcExtensions.get().fireModelReset(m_model);
 			}
 		}
+		Logger.info("Notified STATUS: " + data.getStatus(), Level.PROC, this);
 		// Redirect the data to the consumers
 		ProcExtensions.get().fireProcedureStatus(m_model, data);
 	}

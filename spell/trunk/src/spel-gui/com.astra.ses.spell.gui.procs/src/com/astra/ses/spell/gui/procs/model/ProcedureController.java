@@ -173,9 +173,16 @@ public class ProcedureController implements IProcedureController
 			Logger.debug("Refreshing execution model", Level.PROC, this);
 			String procId = m_model.getProcId();
 			IExecutorInfo info = new ExecutorInfo(procId);
-			s_proxy.updateExecutorInfo(procId, info);
-			((IExecutionInformationHandler) m_model.getRuntimeInformation()).copyFrom(info);
-			Logger.debug("Execution model updated", Level.PROC, this);
+			try
+			{
+				s_proxy.updateExecutorInfo(procId, info);
+				((IExecutionInformationHandler) m_model.getRuntimeInformation()).copyFrom(info);
+				Logger.debug("Execution model updated", Level.PROC, this);
+			}
+			catch(Exception ex)
+			{
+				((IExecutionInformationHandler) m_model.getRuntimeInformation()).setExecutorStatus(ExecutorStatus.UNKNOWN);
+			}
 		}
 	}
 
@@ -388,6 +395,31 @@ public class ProcedureController implements IProcedureController
 	public void setStepByStep(boolean value)
 	{
 		((IExecutionInformationHandler) m_model.getRuntimeInformation()).setStepByStep(value);
+		// If we are controlling, perform the change request to the server
+		if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
+		{
+			try
+			{
+				// Send the request to configure the server
+				ExecutorConfig config = new ExecutorConfig(m_model.getProcId());
+				m_model.getRuntimeInformation().visit(config);
+				s_proxy.setExecutorConfiguration(m_model.getProcId(), config);
+				ProcExtensions.get().fireModelConfigured(m_model);
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void setForceTcConfirmation(boolean value)
+	{
+		((IExecutionInformationHandler) m_model.getRuntimeInformation()).setForceTcConfirmation(value);
 		// If we are controlling, perform the change request to the server
 		if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
 		{

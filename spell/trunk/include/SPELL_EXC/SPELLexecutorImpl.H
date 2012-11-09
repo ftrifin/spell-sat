@@ -254,6 +254,11 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setExecDelay( const int delay );
 
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void setForceTcConfirm( const bool force );
+
     // *******************************************************************
     // LANGUAGE INTERLOCK
     // *******************************************************************
@@ -497,6 +502,11 @@ private: //-------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void installInternalVariables();
 
+		//////////////////////////////////////////////////////////////////////
+		/** Change the force TC flag on the adapter layer
+		**////////////////////////////////////////////////////////////////////
+		void setForceTcConfirmInternal( bool force );
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 		/** True if the initial configuration parameters have been set */
@@ -513,6 +523,11 @@ private: //-------------------------------------------------------------------
 		std::string                  m_procPath;
 		/** Used for dispatching filter (user library) */
 		std::string                  m_libPath;
+		/** Output directory location */
+		std::string                  m_outputDir;
+		/** Input directory location */
+		std::string                  m_inputDir;
+
 		/** Holds the context name */
 		std::string                  m_contextName;
 

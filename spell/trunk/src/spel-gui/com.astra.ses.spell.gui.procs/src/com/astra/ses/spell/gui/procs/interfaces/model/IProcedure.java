@@ -147,4 +147,9 @@ public interface IProcedure extends IAdaptable
 	 * Check if it is in replay mode
 	 **************************************************************************/
 	public boolean isInReplayMode();
+
+	/***************************************************************************
+	 * Notify close of model
+	 **************************************************************************/
+	public void onClose();
 }

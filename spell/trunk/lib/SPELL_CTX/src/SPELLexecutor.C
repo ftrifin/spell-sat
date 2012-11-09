@@ -246,7 +246,19 @@ void SPELLexecutor::close()
 		bool timeout = m_executorLoggedOutEvent.wait(5 * 1000); // Wait for 5 seconds
 		if (timeout)
 		{
-			THROW_EXCEPTION("Failed to close executor", "Executor did not log out in time", SPELL_ERROR_PROCESS);
+			LOG_ERROR("Failed to close executor, it did not log out in time");
+			try
+			{
+		    	SPELLprocessManager::instance().removeListener( m_model.getInstanceId(), this );
+				SPELLprocessManager::instance().killProcess( m_model.getInstanceId() );
+		    	SPELLprocessManager::instance().waitProcess( m_model.getInstanceId() );
+		    	SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
+			}
+			catch( SPELLcoreException& ex )
+			{
+				LOG_ERROR("Could not kill process: " + m_model.getInstanceId());
+			}
+	    	return;
 		}
 		DEBUG("Executor logged out, disconnecting IPC");
 		m_ipc.cleanup();
@@ -260,10 +272,6 @@ void SPELLexecutor::close()
 		waitFinish();
 		DEBUG("Waiting process to finish done");
 	}
-
-	DEBUG("Removing process");
-
-	SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
 
 	LOG_INFO("Executor closed: " + m_model.getInstanceId());
 }
@@ -279,16 +287,8 @@ void SPELLexecutor::kill()
 	{
 		LOG_INFO("Killing executor " + m_model.getInstanceId());
 
-		// Block requests
-		m_ipc.block();
-
 		// Remove process listener, not to be notified for the kill
     	SPELLprocessManager::instance().removeListener( m_model.getInstanceId(), this );
-
-		// Send CIF block command
-		ExecutorCommand cmd;
-		cmd.id = CMD_BLOCK;
-		command(cmd);
 
 		// Cancel requests to client
 		SPELLclient* ctrl = getControllingClient();
@@ -297,13 +297,8 @@ void SPELLexecutor::kill()
 			ctrl->cancelRequestsToClient();
 		}
 
-		m_ipc.waitIncomingRequests();
-
 		// Disconnect IPC
 		m_ipc.cleanup();
-
-		// Release requests
-		m_ipc.unblock();
 
 		try
 		{
@@ -311,7 +306,10 @@ void SPELLexecutor::kill()
 	    	SPELLprocessManager::instance().waitProcess( m_model.getInstanceId() );
 	    	SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
 		}
-		catch(SPELLcoreException& ex) {};
+		catch( SPELLcoreException& ex )
+		{
+			LOG_ERROR("Could not kill process: " + m_model.getInstanceId());
+		}
 		LOG_INFO("Executor killed: " + m_model.getInstanceId());
 	}
 }
@@ -359,7 +357,12 @@ void SPELLexecutor::processMessageFromExecutor( SPELLipcMessage msg )
 	{
 		DEBUG("Executor logged out");
 		m_executorLoggedOutEvent.set();
+		return;
 	}
+    else if ( id == MessageId::MSG_ID_NOTIFICATION )
+    {
+    	executorNotification(msg);
+    }
 	else
 	{
 		// In case of error, store the information
@@ -368,8 +371,8 @@ void SPELLexecutor::processMessageFromExecutor( SPELLipcMessage msg )
 			m_model.setError( msg.get( MessageField::FIELD_ERROR ), msg.get( MessageField::FIELD_REASON) );
 			executorStatusChanged( STATUS_ERROR, msg.get( MessageField::FIELD_ERROR ), msg.get( MessageField::FIELD_REASON ) );
 		}
-		forwardMessageToClient( msg );
 	}
+	forwardMessageToClient( msg );
 }
 
 //=============================================================================
@@ -388,11 +391,6 @@ SPELLipcMessage SPELLexecutor::processRequestFromExecutor( SPELLipcMessage msg )
     if (requestId == ExecutorMessages::REQ_NOTIF_EXEC_OPEN )
     {
     	response = executorLogin(msg);
-    	return response;
-    }
-    else if ( requestId == MessageId::MSG_ID_NOTIFICATION )
-    {
-    	response = executorNotification(msg);
     	return response;
     }
 
@@ -416,7 +414,7 @@ SPELLipcMessage SPELLexecutor::processRequestFromExecutor( SPELLipcMessage msg )
     {
         response = SPELLcontext::instance().getInstanceId( msg );
     }
-    else if ( requestId != MessageId::MSG_ID_NOTIFICATION )
+    else
     {
 		response = forwardRequestToClient( msg );
     }
@@ -509,9 +507,27 @@ void SPELLexecutor::waitFinish()
 	{
 		DEBUG("Waiting executor process to finish");
 		m_processStoppedEvent.clear();
-		m_processStoppedEvent.wait();
-		DEBUG("Executor process finished, stop waiting");
+		bool timeout = m_processStoppedEvent.wait(2000);
+		if (timeout)
+		{
+			LOG_WARN("Did not see the process close, try kill");
+			SPELLprocessManager::instance().removeListener( m_model.getInstanceId(), this );
+			try
+			{
+				SPELLprocessManager::instance().killProcess( m_model.getInstanceId() );
+		    	SPELLprocessManager::instance().waitProcess( m_model.getInstanceId() );
+			}
+			catch( SPELLcoreException& ex )
+			{
+				LOG_ERROR("Could not kill process: " + m_model.getInstanceId());
+			}
+		}
+		else
+		{
+			DEBUG("Executor process finished, stop waiting");
+		}
 	}
+	SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
 }
 
 //=============================================================================
@@ -725,7 +741,7 @@ void SPELLexecutor::executorStatusChanged( const SPELLexecutorStatus& status,
 										   const std::string& error, const std::string& reason )
 {
 	LOG_INFO("Executor " + m_model.getInstanceId() + " status changed: " + SPELLdataHelper::executorStatusToString(status) );
-	LOG_INFO("Error information: " + error + ":" + reason );
+	if (error != "") LOG_INFO("Error information: " + error + ":" + reason );
 	m_model.setStatus(status);
 	m_executorStatusEvent.set();
 
@@ -839,12 +855,11 @@ SPELLipcMessage SPELLexecutor::executorLogin( const SPELLipcMessage& msg )
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-SPELLipcMessage SPELLexecutor::executorNotification( const SPELLipcMessage& msg )
+void SPELLexecutor::executorNotification( const SPELLipcMessage& msg )
 {
-	SPELLipcMessage response = VOID_MESSAGE;
-
 	switch( msg.getType() )
 	{
+	case MSG_TYPE_NOTIFY_ASYNC:
 	case MSG_TYPE_NOTIFY:
 	{
 		DEBUG("Received notification from " + m_model.getInstanceId() );
@@ -853,6 +868,7 @@ SPELLipcMessage SPELLexecutor::executorNotification( const SPELLipcMessage& msg 
 		{
 			std::string statusStr = msg.get( MessageField::FIELD_EXEC_STATUS );
 			LOG_INFO("Executor status changed: " + statusStr );
+
 			SPELLexecutorStatus st = SPELLdataHelper::stringToExecutorStatus( statusStr );
 			if (st == STATUS_ERROR )
 			{
@@ -871,26 +887,10 @@ SPELLipcMessage SPELLexecutor::executorNotification( const SPELLipcMessage& msg 
 				executorStatusChanged( st );
 			}
 		}
-		// Forward requests to controlling client if any. The monitoring GUIs receive requests via the interest list
-		if (m_controllingClient != NULL)
-		{
-			DEBUG("Forward executor request to controlling client" );
-			response = forwardRequestToClient( msg );
-			DEBUG("Forward done, response: " + response.dataStr() );
-		}
-		else
-		{
-	    	response = SPELLipcHelper::createErrorResponse( MessageId::MSG_PEER_LOST, msg );
-	    	response.set(MessageField::FIELD_ERROR, "Cannot send notification " + msg.getId());
-	    	response.set(MessageField::FIELD_REASON, "No controlling client available");
-	    	response.set(MessageField::FIELD_FATAL, PythonConstants::False );
-	    	LOG_ERROR("Unable to forward notification to controlling client");
-		}
 		break;
 	}
 	default:
 		LOG_ERROR("UNHANDLED EXECUTOR NOTIFICATION" + msg.dataStr());
 		break;
 	}
-	return response;
 }

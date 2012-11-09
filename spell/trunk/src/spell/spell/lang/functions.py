@@ -104,7 +104,7 @@ def DisplayStep( id, description ):
         REGISTRY['EXEC'].setStep(id,description)
 
 #==============================================================================
-def Finish( message = "" ):
+def Finish( message = None ):
     """
     Finishes the procedure execution.
     
@@ -1303,7 +1303,7 @@ def LoadDictionary( *args, **kargs ):
     The corresponding database object.
     
     """
-    from helpers.genhelper import LoadDictionary_Helper
+    from helpers.filehelper import LoadDictionary_Helper
     helper = LoadDictionary_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
@@ -1332,7 +1332,7 @@ def SaveDictionary( *args, **kargs ):
     None.
     
     """
-    from helpers.genhelper import SaveDictionary_Helper
+    from helpers.filehelper import SaveDictionary_Helper
     helper = SaveDictionary_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
@@ -1361,7 +1361,7 @@ def CreateDictionary( *args, **kargs ):
     The newly created database object.
     
     """
-    from helpers.genhelper import CreateDictionary_Helper
+    from helpers.filehelper import CreateDictionary_Helper
     helper = CreateDictionary_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
@@ -1649,25 +1649,32 @@ def bin( number, count = 24 ):
     """
     return "".join([str((number >> y) & 1) for y in range(count-1, -1, -1)])
 
+   
 #==============================================================================
-def EnableAlignment( *args, **kargs ):
-    if REGISTRY.exists('EXEC'):
-        REGISTRY['EXEC'].enableAlignment()
-        
-#==============================================================================
-def DisableAlignment( *args, **kargs ):
-    if REGISTRY.exists('EXEC'):
-        REGISTRY['EXEC'].disableAlignment()
-
-#==============================================================================
-def PerformAlignment( *args, **kargs ):
-    if REGISTRY.exists('EXEC'):
-        REGISTRY['EXEC'].performAlignment()
-
-#==============================================================================
-def SetAlignmentMode( *args, **kargs ):
-    from helpers.exechelper import SetAlignmentMode_Helper
-    helper = SetAlignmentMode_Helper()
+def Open( *args, **kargs ):
+    from helpers.filehelper import OpenFile_Helper
+    helper = OpenFile_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
     
+#==============================================================================
+def Write( *args, **kargs ):
+    from helpers.filehelper import WriteFile_Helper
+    helper = WriteFile_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+    
+#==============================================================================
+def Close( *args, **kargs ):
+    from helpers.filehelper import CloseFile_Helper
+    helper = CloseFile_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+    
+#==============================================================================
+def Read( *args, **kargs ):
+    from helpers.filehelper import ReadFile_Helper
+    helper = ReadFile_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+

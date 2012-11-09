@@ -366,6 +366,11 @@ protected: //-----------------------------------------------------------------
 		void completeMessage( SPELLipcMessage& msg );
 
 		//////////////////////////////////////////////////////////////////////
+		/** Wait acknowledge from client
+		 *////////////////////////////////////////////////////////////////////
+		void waitAcknowledge( const SPELLipcMessage& msg );
+
+		//////////////////////////////////////////////////////////////////////
 		/** Get message timestamp.
 		**////////////////////////////////////////////////////////////////////
 		std::string getTimestampUsec();
@@ -495,6 +500,8 @@ private: //-------------------------------------------------------------------
 		SPELLtimer m_lineTimer;
 		/** Synchronization with line notification timer */
 		SPELLmutex m_lineLock;
+		/** Execution synchronization master lock */
+		SPELLevent m_ack;
 };
 
 /*@}*/

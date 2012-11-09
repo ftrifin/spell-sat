@@ -124,7 +124,7 @@ class ProcedureLoadMonitor
 		{
 			// Wait 15 seconds
 			Logger.debug("Waiting for procedure load signal", Level.PROC, this);
-			long remaining = m_loadCondition.awaitNanos((long) 15e9);
+			long remaining = m_loadCondition.awaitNanos((long) 60e9);
 			if (remaining <= 0)
 			{ 
 				throw new LoadFailed("Could not open the procedure '" + m_instanceId

@@ -130,5 +130,22 @@
     <defaults function="SaveDictionary">
        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
     </defaults>
+
+    <defaults function="Open">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="Close">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="Write">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="Read">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
 </language>
 

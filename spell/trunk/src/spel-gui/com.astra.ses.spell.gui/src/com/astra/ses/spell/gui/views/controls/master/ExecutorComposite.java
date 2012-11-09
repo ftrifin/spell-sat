@@ -66,7 +66,9 @@ import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
 import com.astra.ses.spell.gui.core.interfaces.IProcedureClient;
 import com.astra.ses.spell.gui.core.interfaces.IProcedureOperation;
+import com.astra.ses.spell.gui.core.interfaces.IServerProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.model.server.ServerInfo.ServerRole;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
@@ -427,6 +429,8 @@ public class ExecutorComposite extends Composite implements IProcedureOperation,
 	 **************************************************************************/
 	private boolean canTakeControl(String[] procIds)
 	{
+		IServerProxy proxy = (IServerProxy) ServiceManager.get(IServerProxy.class);
+		if (proxy.getCurrentServer().getRole().equals(ServerRole.MONITORING)) return false;
 		// Ensure that all are uncontrolled.
 		for (String procId : procIds)
 		{

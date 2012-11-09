@@ -58,6 +58,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.astra.ses.spell.gui.core.CoreExtensions;
 import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
+import com.astra.ses.spell.gui.core.comm.messages.MessageException;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLlistenerLost;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessage;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageAttachExec;
@@ -1165,6 +1166,12 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			if (response != null)
 			{
 				SPELLmessageGetExecConfig.fillExecConfig(config, response);
+				Logger.debug("Executor " + procId + " configuration: ", Level.COMM, this);
+				Logger.debug("    exec delay: " + config.getExecDelay(), Level.COMM, this);
+				Logger.debug("    blib      : " + config.getBrowsableLib(), Level.COMM, this);
+				Logger.debug("    by step   : " + config.getStepByStep(), Level.COMM, this);
+				Logger.debug("    tc confirm: " + config.getTcConfirmation(), Level.COMM, this);
+				Logger.debug("    run into  : " + config.getRunInto(), Level.COMM, this);
 			}
 		}
 		catch (Exception ex)
@@ -1349,9 +1356,10 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 	 * 
 	 * @param msg
 	 **************************************************************************/
-	protected void processNotificationMessage(SPELLmessage msg)
+	protected synchronized void processNotificationMessage(SPELLmessage msg)
 	{
 		NotificationData data = null;
+		
 		if (msg instanceof SPELLmessageNotifyAsync)
 		{
 			data = ((SPELLmessageNotifyAsync) msg).getData();
@@ -1360,6 +1368,7 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		{
 			data = ((SPELLmessageNotify) msg).getData();
 		}
+		
 		if (data instanceof ItemNotification)
 		{
 			CoreExtensions.get().fireProcedureItem((ItemNotification) data);
@@ -1491,6 +1500,25 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
+	protected void sendAcknowledge( SPELLmessage msg )
+	{
+		//System.err.println("ACK " + msg.dataStr());
+		SPELLmessage ack = new SPELLmessage();
+		ack.setId("ACKNOWLEDGE");
+		ack.setType(IMessageType.MSG_TYPE_ONEWAY);
+		ack.setSender(msg.getReceiver());
+		ack.setReceiver(msg.getSender());
+		try
+        {
+            ack.set(IMessageField.FIELD_PROC_ID, msg.get(IMessageField.FIELD_PROC_ID));
+        }
+        catch (MessageException e)
+        {
+            e.printStackTrace();
+        }
+		sendMessage(ack);
+	}
+	
 	/* (non-Javadoc)
      * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#processIncomingMessage(com.astra.ses.spell.gui.core.comm.messages.SPELLmessage)
      */
@@ -1505,6 +1533,17 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		{
 			SPELLmessageDisplay display = (SPELLmessageDisplay) msg;
 			CoreExtensions.get().fireProcedureDisplay(display.getData());
+		}
+		else if (msg instanceof SPELLmessagePrompt)
+		{
+			SPELLmessagePrompt prompt = (SPELLmessagePrompt) msg;
+			InputData promptData = prompt.getData();
+			CoreExtensions.get().firePrompt(promptData);
+		}
+		else if (msg instanceof SPELLmessageNotify)
+		{
+			sendAcknowledge(msg);
+			processNotificationMessage((SPELLmessage) msg);
 		}
 		else if (msg instanceof SPELLlistenerLost)
 		{
@@ -1585,12 +1624,12 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 		else if (msg instanceof SPELLmessageOneway)
 		{
-			Logger.error("Unknown oneway message: " + msg.getId(), Level.COMM, this);
+			Logger.error("Unknown oneway message: " + msg.dataStr(), Level.COMM, this);
 			return false;
 		}
 		else
 		{
-			Logger.error("Unexpected message type: " + msg, Level.COMM, this);
+			Logger.error("Unexpected message: " + msg.dataStr(), Level.COMM, this);
 			return false;
 		}
 		return true;
@@ -1602,18 +1641,14 @@ public class ContextProxy extends BaseProxy implements IContextProxy
     @Override
     public SPELLmessageResponse processIncomingRequest(SPELLmessage msg)
     {
-		SPELLmessageResponse response = null;
-		if (msg instanceof SPELLmessagePrompt)
+		SPELLmessageResponse response = new SPELLmessageResponse(msg);
+		if (msg instanceof SPELLmessageNotify)
 		{
-			SPELLmessagePrompt prompt = (SPELLmessagePrompt) msg;
-			InputData promptData = prompt.getData();
-			CoreExtensions.get().firePrompt(promptData);
-			response = new SPELLmessageResponse(msg);
-		}
-		else if (msg instanceof SPELLmessageNotify)
-		{
-			response = new SPELLmessageResponse(msg);
 			processNotificationMessage((SPELLmessage) msg);
+		}
+		else
+		{
+			Logger.error("Unexpected request: " + msg.dataStr(), Level.COMM, this);
 		}
 		return response;
     }

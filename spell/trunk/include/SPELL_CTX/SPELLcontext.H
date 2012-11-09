@@ -168,8 +168,13 @@ protected: //-----------------------------------------------------------------
 
 		SPELLipcDataChunk::DataList getServerFileData( const std::string& filename );
 		SPELLipcDataChunk::DataList getInputFileData( SPELLdatabase* db );
+		typedef std::map<std::string,SPELLipcDataChunk*> ChunkerMap;
 
 		void checkRecoveryFiles( const std::string& filename );
+
+		SPELLipcDataChunk& getChunker( const SPELLipcMessage& msg );
+
+		void clearChunker( const SPELLipcMessage& msg );
 
 private: //-------------------------------------------------------------------
 
@@ -192,8 +197,10 @@ private: //-------------------------------------------------------------------
 		SPELLevent              m_eventFinish;
 		/** Singleton instance */
 		static SPELLcontext*  s_instance;
-		/** IPC data chunker */
-		SPELLipcDataChunk m_dataChunker;
+		/** IPC data chunkers */
+		ChunkerMap m_dataChunkers;
+		/** Data chunking synchronization */
+		SPELLmutex m_chunkLock;
 };
 
 /*@}*/

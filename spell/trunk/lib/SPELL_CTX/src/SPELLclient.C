@@ -116,6 +116,13 @@ void SPELLclient::processMessageFromClient( const SPELLipcMessage& msg )
 	SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor(procId);
 	if (exec)
 	{
+		if (msg.getId() == ExecutorMessages::ACKNOWLEDGE)
+		{
+			if (exec->getControllingClient() != this)
+			{
+				return;
+			}
+		}
 		exec->sendMessageToExecutor(msg);
 	}
 	else

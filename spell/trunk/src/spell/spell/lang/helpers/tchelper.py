@@ -325,8 +325,11 @@ class Send_Helper(WrapperHelper):
         #-----------------------------------------------------------------------
         # CONFIRM SECTION
         #-----------------------------------------------------------------------
-        # If confirm modifier is defined, confirm execution
-        if self.hasConfig(Confirm) and self.getConfig(Confirm) == True:
+        # Confirm execution if needed
+        confirm = REGISTRY['TC'].shouldForceTcConfirm()
+        confirm = confirm or self.hasConfig(Confirm) and self.getConfig(Confirm) == True
+        
+        if confirm:
             self.__section = 'CONFIRM'
             msg = "Please confirm execution of command(s):\n  "
             msg += self._buildCommandDescription()
@@ -455,6 +458,11 @@ class Send_Helper(WrapperHelper):
 
             # We dont allow repeat here but allow recheck at least
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~REPEAT))
+
+           # Adapt the action messages
+            self._setActionString( ACTION_RECHECK,  "Repeat the telemetry verification")
+            self._setActionString( ACTION_SKIP   ,  "Skip the telemetry verification and return success (True)")
+            self._setActionString( ACTION_CANCEL ,  "Skip the telemetry verification and return failure (False)")
 
             # Perform verification
             tmIsSuccess = REGISTRY['TM'].verify(self.__verifyCondition, config=self.getConfig())

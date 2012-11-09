@@ -329,6 +329,7 @@ class StartProc_Helper(WrapperHelper):
         self.__arguments = {}
         self.__result = False
         self.__status = None
+        self._opName = ""
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):

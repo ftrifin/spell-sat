@@ -49,7 +49,6 @@
 package com.astra.ses.spell.gui.procs.interfaces.model;
 
 import java.util.Collection;
-import java.util.Map;
 
 import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
 import com.astra.ses.spell.gui.core.interfaces.IProcedureClient;
@@ -218,6 +217,13 @@ public interface IExecutionInformation
 	public boolean isStepByStep();
 
 	/***************************************************************************
+	 * Check TC confirmation flag
+	 * 
+	 * @return
+	 **************************************************************************/
+	public boolean isForceTcConfirmation();
+
+	/***************************************************************************
 	 * Check visible flag
 	 * 
 	 * @return
@@ -246,10 +252,5 @@ public interface IExecutionInformation
 	 *            the {@link ExecutorConfig} object to fill
 	 **************************************************************************/
 	public void visit(ExecutorConfig cfg);
-
-	/***************************************************************************
-	 * Obtain the client mode
-	 **************************************************************************/
-	public Map<String, String> getConfigMap();
 
 }

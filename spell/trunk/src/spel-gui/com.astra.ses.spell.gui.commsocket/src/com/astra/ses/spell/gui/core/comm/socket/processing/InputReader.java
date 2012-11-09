@@ -230,8 +230,11 @@ public class InputReader extends Thread
 					m_interface.incomingResponse(msgId, smsg);
 				}
 				else if (smsg instanceof SPELLmessageNotify
-				        || smsg instanceof SPELLmessagePrompt
-				        || smsg instanceof SPELLmessageRequest)
+				        || smsg instanceof SPELLmessagePrompt)
+				{
+					m_interface.incomingMessage(msgId, smsg);
+				}
+				else if (smsg instanceof SPELLmessageRequest)
 				{
 					msgId += ":" + smsg.getSequence();
 					m_interface.incomingRequest(msgId, smsg);

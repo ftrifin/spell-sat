@@ -140,6 +140,14 @@ public interface IExecutionTreeNode
 	public void notifyLineChanged( int lineNo, StackNotification data);
 
 	/***************************************************************************
+	 * Notify about a current line change
+	 * 
+	 * @param data
+	 *            the {@link StackNotification} received from the server
+	 **************************************************************************/
+	public void notifyLineChanged( int lineNo );
+
+	/***************************************************************************
 	 * Notify about a item information
 	 **************************************************************************/
 	public void notifyItem(int lineNumber, ItemNotification notification);

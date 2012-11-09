@@ -48,6 +48,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.model.callstack;
 
+import java.util.List;
+
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeInformation;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeLine;
@@ -198,6 +200,7 @@ public class CallstackProcedureModel
 	 *************************************************************************/
 	public CallstackNode notifyStack(IProcedure model, StackNotification data)
 	{
+		List<String> stack = data.getStackPosition();
 		switch (data.getStackType())
 		{
 		case CALL:
@@ -210,12 +213,9 @@ public class CallstackProcedureModel
 			}
 			else
 			{
-				String codeId = data.getStackPosition().get(
-				        data.getStackPosition().size() - 2);
-				int lineNumber = Integer.valueOf(data.getStackPosition()
-				        .lastElement());
-				CallstackNode newNode = new CallstackExecutionNode(codeId,
-				        data.getCodeName(), lineNumber, data.getNumExecutions());
+				String codeId = stack.get(stack.size() - 2);
+				int lineNumber = Integer.valueOf(stack.get(stack.size()-1));
+				CallstackNode newNode = new CallstackExecutionNode(codeId, data.getCodeName(), lineNumber, data.getNumExecutions());
 				m_currentNode.addChild(newNode);
 				m_currentNode = newNode;
 			}
@@ -232,9 +232,7 @@ public class CallstackProcedureModel
 			break;
 		case LINE:
 			// Set the line number in the current node
-			int lineNumber = Integer.valueOf(data.getStackPosition()
-			        .lastElement());
-			;
+			int lineNumber = Integer.valueOf(stack.get(stack.size()-1));
 			m_currentNode.lineNotified(lineNumber);
 			break;
 		}

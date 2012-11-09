@@ -63,6 +63,8 @@ import org.eclipse.swt.widgets.Shell;
 
 import com.astra.ses.spell.gui.Activator;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
+import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /*******************************************************************************
  * @brief Dialog for closing procedures
@@ -75,9 +77,9 @@ public class CloseProcDialog extends TitleAreaDialog
 	// =========================================================================
 
 	// PRIVATE -----------------------------------------------------------------
-	public static final int	DETACH	= 97;
-	public static final int	KILL	= 98;
-	public static final int	CLOSE	= 99;
+	public static final int DETACH = 97;
+	public static final int KILL = 98;
+	public static final int CLOSE = 99;
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
 
@@ -87,15 +89,9 @@ public class CloseProcDialog extends TitleAreaDialog
 
 	// PRIVATE -----------------------------------------------------------------
 	/** Holds the dialog image icon */
-	private Image	        m_image;
-	/** Holds the procedure status string */
-	private String	        m_status;
-	/** Holds the client mode */
-	private ClientMode	    m_mode;
-	/** Holds the procedure name string */
-	private String	        m_name;
-	/** Holds the active prompt flag */
-	private boolean	        m_promptActive;
+	private Image m_image;
+	/** Holds the procedure model */
+	private IProcedure m_model;
 
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
@@ -110,17 +106,12 @@ public class CloseProcDialog extends TitleAreaDialog
 	 * @param shell
 	 *            The parent shell
 	 **************************************************************************/
-	public CloseProcDialog(Shell shell, String name, String status,
-	        ClientMode mode, boolean doingPrompt)
+	public CloseProcDialog(Shell shell, IProcedure model)
 	{
 		super(shell);
-		m_name = name;
-		m_mode = mode;
-		m_status = status;
-		m_promptActive = doingPrompt;
+		m_model = model;
 		// Obtain the image for the dialog icon
-		ImageDescriptor descr = Activator
-		        .getImageDescriptor("icons/dlg_question.png");
+		ImageDescriptor descr = Activator.getImageDescriptor("icons/dlg_question.png");
 		m_image = descr.createImage();
 	}
 
@@ -149,9 +140,9 @@ public class CloseProcDialog extends TitleAreaDialog
 	protected Control createContents(Composite parent)
 	{
 		Control contents = super.createContents(parent);
-		setTitle("Close procedure '" + m_name + "'");
+		setTitle("Close procedure '" + m_model.getProcName() + "'");
 		setTitleImage(m_image);
-		String msg = "The procedure status is " + m_status;
+		String msg = "The procedure status is " + m_model.getRuntimeInformation().getStatus();
 		setMessage(msg);
 		return contents;
 	}
@@ -166,15 +157,20 @@ public class CloseProcDialog extends TitleAreaDialog
 	protected Control createDialogArea(Composite parent)
 	{
 		String longMessage = "";
-		if (m_mode != ClientMode.CONTROLLING)
+		if (!m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
 		{
 			longMessage = "You can only release the procedure, since you are";
 			longMessage += " not in control of the procedure\n";
 		}
-		else if (m_promptActive)
+		else if (m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.PROMPT))
 		{
-			longMessage = "You can kill the procedure only, since some input";
+			longMessage = "You can kill or release the procedure only, since some input";
 			longMessage += " is required by it (a prompt is active)\n";
+		}
+		else if (m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.RUNNING) ||
+				 m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.WAITING))
+		{
+			longMessage = "You can kill or release the procedure only, since it is running\n";
 		}
 		else
 		{
@@ -200,21 +196,22 @@ public class CloseProcDialog extends TitleAreaDialog
 	 **************************************************************************/
 	protected void createButtonsForButtonBar(Composite parent)
 	{
-		if (m_mode != ClientMode.CONTROLLING)
+		if (!m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
 		{
 			createButton(parent, DETACH, "Stop monitor", false);
 		}
 		else
 		{
-			if (!m_promptActive)
+			createButton(parent, DETACH, "Release control", false);
+			if (!m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.PROMPT)
+			 && !m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.RUNNING)
+			 && !m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.WAITING))
 			{
-				createButton(parent, DETACH, "Release control", false);
 				createButton(parent, CLOSE, "Close procedure", false);
 			}
 			createButton(parent, KILL, "Kill procedure", false);
 		}
-		Button cancel = createButton(parent, IDialogConstants.CANCEL_ID,
-		        IDialogConstants.CANCEL_LABEL, true);
+		Button cancel = createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CANCEL_LABEL, true);
 		cancel.setFocus();
 	}
 

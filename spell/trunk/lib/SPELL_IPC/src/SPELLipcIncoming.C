@@ -169,6 +169,7 @@ bool SPELLipcIncomingBase::wait( long timeoutMsec )
 	if (timedout)
 	{
 		DEBUG( NAME + "Finish timeout (" + ISTR(timeoutMsec) + ") " + getMessage().getSequenceStr());
+		DEBUG( "MESSAGE " + getMessage().dataStr());
 	}
 	else
 	{

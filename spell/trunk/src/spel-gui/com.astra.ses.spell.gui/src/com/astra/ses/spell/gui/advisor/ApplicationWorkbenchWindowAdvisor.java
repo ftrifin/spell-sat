@@ -158,7 +158,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
 		}
 		catch (Exception e)
 		{
-			RELEASE = "2.3.12";
+			RELEASE = "2.3.13";
 		}
 	}
 

@@ -223,7 +223,7 @@ abstract class BaseProxy extends BaseService implements IBaseProxy, ICommListene
 	 * 
 	 * @throws RequestException
 	 **************************************************************************/
-	protected synchronized SPELLmessage performRequest(SPELLmessage request, long timeout) throws Exception
+	protected SPELLmessage performRequest(SPELLmessage request, long timeout) throws Exception
 	{
 		SPELLmessage response = null;
 		try

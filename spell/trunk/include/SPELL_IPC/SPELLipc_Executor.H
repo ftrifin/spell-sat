@@ -195,9 +195,9 @@ namespace MessageField
 	/** Name of the dictionary contents */
 	static const std::string FIELD_DICT_CONTENTS("DictContents");
 
-//###############################################################################
-//# UI notification fields
-//###############################################################################
+	//###############################################################################
+	//# UI notification fields
+	//###############################################################################
 
 	/** Subprocedure identifier for notifications */
 	static const std::string FIELD_NOTIF_SUBPROC_ID("SubProcId");
@@ -413,9 +413,9 @@ namespace ExecutorMessages
 	//################################################################################
 
 	/** Request for saving state on demand */
-	static const std::string  REQ_SAVE_STATE("REQ_SAVE_STATE");
+	static const std::string REQ_SAVE_STATE("REQ_SAVE_STATE");
 	/** Response */
-	static const std::string  RSP_SAVE_STATE("RSP_SAVE_STATE");
+	static const std::string RSP_SAVE_STATE("RSP_SAVE_STATE");
 
 	/** Oneway message for variable change notifications */
 	static const std::string MSG_VARIABLE_CHANGE("MSG_VARIABLE_CHANGE");
@@ -477,6 +477,8 @@ namespace ExecutorMessages
 	static const std::string MSG_CMD_SCRIPT("CMD_SCRIPT");
 	/** Action command */
 	static const std::string MSG_CMD_ACTION("CMD_ACTION");
+
+	static const std::string ACKNOWLEDGE("ACKNOWLEDGE");
 };
 
 /*@}*/

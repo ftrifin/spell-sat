@@ -72,13 +72,13 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 {
 
 	/** Execution information */
-	private IExecutionInformation	 m_execInfo;
+	private IExecutionInformation m_execInfo;
 	/** Procedure controller */
-	private IExecutionTreeController	m_controller;
+	private IExecutionTreeController m_controller;
 	/** Execution trace */
-	private IExecutionTrace	         m_trace;
+	private IExecutionTrace m_trace;
 	/** Source provider */
-	private ISourceCodeProvider	     m_sourceProvider;
+	private ISourceCodeProvider m_sourceProvider;
 
 	/***************************************************************************
 	 * Constructor
@@ -86,8 +86,7 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	 * @param controller
 	 * @param sourceProvider
 	 **************************************************************************/
-	public ProcedureDataProvider(IExecutionInformation info,
-	        IExecutionTreeController controller, IExecutionTrace trace,
+	public ProcedureDataProvider(IExecutionInformation info, IExecutionTreeController controller, IExecutionTrace trace,
 	        ISourceCodeProvider sourceProvider)
 	{
 		m_execInfo = info;
@@ -97,7 +96,7 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	}
 
 	@Override
-	public Integer[] getAffectedLines( int lineNumber ) throws UninitProcedureException
+	public Integer[] getAffectedLines(int lineNumber) throws UninitProcedureException
 	{
 		String viewCode = getCurrentCodeId();
 		return m_controller.getCodeStackLines(viewCode, lineNumber);
@@ -110,22 +109,22 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	}
 
 	@Override
-	public String[] getCurrentSource( IProgressMonitor monitor ) throws UninitProcedureException
+	public String[] getCurrentSource(IProgressMonitor monitor) throws UninitProcedureException
 	{
 		String codeId = getCurrentCodeId();
 		return m_sourceProvider.getSource(codeId, monitor);
 	}
 
 	@Override
-	public String[] getRootSource( IProgressMonitor monitor )
+	public String[] getRootSource(IProgressMonitor monitor)
 	{
 		String codeId = m_controller.getRootCodeId();
-		int idx = codeId.indexOf("#"); 
-		if ( idx != -1)
+		int idx = codeId.indexOf("#");
+		if (idx != -1)
 		{
-			codeId = codeId.substring(0,idx);
+			codeId = codeId.substring(0, idx);
 		}
-		return m_sourceProvider.getSource(codeId, monitor );
+		return m_sourceProvider.getSource(codeId, monitor);
 	}
 
 	@Override
@@ -135,9 +134,9 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	}
 
 	@Override
-	public boolean isExecuted( int lineNo ) throws UninitProcedureException
+	public boolean isExecuted(int lineNo) throws UninitProcedureException
 	{
-		return m_controller.isExecuted( lineNo );
+		return m_controller.isExecuted(lineNo);
 	}
 
 	@Override
@@ -147,16 +146,14 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	}
 
 	@Override
-	public BreakpointType getBreakpoint(int lineNumber)
-	        throws UninitProcedureException
+	public BreakpointType getBreakpoint(int lineNumber) throws UninitProcedureException
 	{
 		String codeId = getCurrentCodeId();
 		return m_sourceProvider.getBreakpoint(codeId, lineNumber);
 	}
 
 	@Override
-	public ILineData[] getItemData(int line, boolean latest)
-	        throws UninitProcedureException
+	public ILineData[] getItemData(int line, boolean latest) throws UninitProcedureException
 	{
 		String codeId = getCurrentCodeId();
 		return m_trace.getNotifications(codeId, line, latest);
@@ -170,8 +167,7 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	}
 
 	@Override
-	public ILineSummaryData getSummary(int line)
-	        throws UninitProcedureException
+	public ILineSummaryData getSummary(int line) throws UninitProcedureException
 	{
 		String codeId = getCurrentCodeId();
 		return m_trace.getSummary(codeId, line);
@@ -190,8 +186,7 @@ public class ProcedureDataProvider implements IProcedureDataProvider
 	}
 
 	@Override
-	public int getExecutionCount(int lineNumber)
-	        throws UninitProcedureException
+	public int getExecutionCount(int lineNumber) throws UninitProcedureException
 	{
 		String codeId = getCurrentCodeId();
 		return m_trace.getExecutionCount(codeId, lineNumber);

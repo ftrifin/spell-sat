@@ -128,6 +128,14 @@ public interface IExecutionInformationHandler extends IExecutionInformation
 	public void setStepByStep(boolean value);
 
 	/***************************************************************************
+	 * Set by step flag
+	 * 
+	 * @param value
+	 *            the flag value
+	 **************************************************************************/
+	public void setForceTcConfirmation(boolean value);
+
+	/***************************************************************************
 	 * Set show lib flag
 	 * 
 	 * @param value

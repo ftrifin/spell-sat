@@ -52,8 +52,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.Vector;
 
 import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
@@ -63,7 +61,6 @@ import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.notification.UserActionNotification.UserActionStatus;
 import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorConfigKeys;
 import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
@@ -79,51 +76,53 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 {
 
 	/** Display messages */
-	private Collection<DisplayData>	m_displayMessages;
+	private Collection<DisplayData> m_displayMessages;
 	/** Error messages */
-	private ErrorData	            m_error;
+	private ErrorData m_error;
 	/** Executor status */
-	private ExecutorStatus	        m_status;
+	private ExecutorStatus m_status;
 	/** Holds the current stage identifier if any */
-	private String	                m_stageId;
+	private String m_stageId;
 	/** Holds the current stage name if any */
-	private String	                m_stageTitle;
+	private String m_stageTitle;
 	/** User action name */
-	private String	                m_userAction;
+	private String m_userAction;
 	/** Current user action status */
-	private UserActionStatus	    m_userActionStatus;
+	private UserActionStatus m_userActionStatus;
 	/** User action severity */
-	private Severity	            m_userActionSeverity;
+	private Severity m_userActionSeverity;
 	/** Step over execution mode */
-	private StepOverMode	        m_soMode;
+	private StepOverMode m_soMode;
 	/** Previous so mode */
-	private StepOverMode	        m_soPrevious;
+	private StepOverMode m_soPrevious;
 	/** By step execution mode */
-	private boolean	                m_byStep;
+	private boolean m_byStep;
 	/** Holds the show lib state */
-	private boolean	                m_showLib;
+	private boolean m_showLib;
+	/** TC confirmation flag */
+	private boolean m_tcConfirmation;
 	/** Holds the execution delay in secs */
-	private int	                    m_execDelay;
+	private int m_execDelay;
 	/** Mode of this client for this executor */
-	private ClientMode	            m_mode;
+	private ClientMode m_mode;
 	/** Holds the list of monitoring clients, if any */
-	private IProcedureClient[]      m_monitoringClients;
+	private IProcedureClient[] m_monitoringClients;
 	/** Holds the execution condition */
-	private String	                m_condition;
+	private String m_condition;
 	/** Holds the controlling client if any */
-	private IProcedureClient        m_controllingClient;
+	private IProcedureClient m_controllingClient;
 	/** True if the procedure is started in visible mode */
-	private boolean	                m_visible;
+	private boolean m_visible;
 	/** True if the procedure is started in automatic mode */
-	private boolean	                m_automatic;
+	private boolean m_automatic;
 	/** True if the procedure is started in blocking mode */
-	private boolean	                m_blocking;
+	private boolean m_blocking;
 	/** Waiting input flag */
-	private boolean	                m_waitingInput;
+	private boolean m_waitingInput;
 	/** Executor lost flag */
-	private boolean					m_executorLost;
+	private boolean m_executorLost;
 	/** Parent procedure */
-	private String	                m_parent;
+	private String m_parent;
 
 	/***************************************************************************
 	 * Constructor
@@ -142,6 +141,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		m_soPrevious = null;
 		m_byStep = false;
 		m_showLib = false;
+		m_tcConfirmation = false;
 		m_execDelay = 0;
 		m_condition = null;
 		m_controllingClient = null;
@@ -363,6 +363,18 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	}
 
 	@Override
+	public boolean isForceTcConfirmation()
+	{
+		return m_tcConfirmation;
+	}
+
+	@Override
+	public void setForceTcConfirmation(boolean value)
+	{
+		m_tcConfirmation = value;
+	}
+
+	@Override
 	public void setExecutionDelay(int msec)
 	{
 		m_execDelay = msec;
@@ -393,13 +405,13 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	}
 
 	@Override
-	public void setControllingClient( IProcedureClient client )
+	public void setControllingClient(IProcedureClient client)
 	{
 		m_controllingClient = client;
 	}
 
 	@Override
-	public void setMonitoringClients( IProcedureClient[] clients )
+	public void setMonitoringClients(IProcedureClient[] clients)
 	{
 		if (clients == null)
 		{
@@ -407,7 +419,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		}
 		else
 		{
-			m_monitoringClients = Arrays.copyOf( clients, clients.length );
+			m_monitoringClients = Arrays.copyOf(clients, clients.length);
 		}
 	}
 
@@ -424,14 +436,15 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		}
 		else
 		{
-			for(IProcedureClient clt : m_monitoringClients)
+			for (IProcedureClient clt : m_monitoringClients)
 			{
-				if (clt.getKey().equals(client.getKey())) return;
+				if (clt.getKey().equals(client.getKey()))
+					return;
 			}
 			List<IProcedureClient> aux = new LinkedList<IProcedureClient>();
-			aux.addAll( Arrays.asList(m_monitoringClients) );
+			aux.addAll(Arrays.asList(m_monitoringClients));
 			aux.add(client);
-			m_monitoringClients = aux.toArray( new IProcedureClient[0] );
+			m_monitoringClients = aux.toArray(new IProcedureClient[0]);
 		}
 	}
 
@@ -448,11 +461,11 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		else
 		{
 			List<IProcedureClient> aux = new LinkedList<IProcedureClient>();
-			aux.addAll( Arrays.asList(m_monitoringClients) );
+			aux.addAll(Arrays.asList(m_monitoringClients));
 			IProcedureClient toDelete = null;
-			for(IProcedureClient clt : aux)
+			for (IProcedureClient clt : aux)
 			{
-				if (clt.getKey().equals(client.getKey())) 
+				if (clt.getKey().equals(client.getKey()))
 				{
 					toDelete = clt;
 					break;
@@ -461,7 +474,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 			if (toDelete != null)
 			{
 				aux.remove(toDelete);
-				m_monitoringClients = aux.toArray( new IProcedureClient[0] );
+				m_monitoringClients = aux.toArray(new IProcedureClient[0]);
 			}
 		}
 	}
@@ -486,33 +499,6 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	}
 
 	@Override
-	public Map<String, String> getConfigMap()
-	{
-		/*
-		 * TODO Add more info like UserAction info?
-		 */
-		Map<String, String> config = new TreeMap<String, String>();
-
-		// Run into
-		String runInto = (m_soMode.equals(StepOverMode.STEP_INTO_ALWAYS)) ? "True"
-		        : "False";
-		config.put(ExecutorConfigKeys.RUN_INTO, runInto);
-
-		// Step by step execution
-		String byStep = (m_byStep) ? "True" : "False";
-		config.put(ExecutorConfigKeys.BY_STEP, byStep);
-
-		// Browsable lib
-		String browseLib = (m_showLib) ? "True" : "False";
-		config.put(ExecutorConfigKeys.BROWSABLE_LIB, browseLib);
-
-		// Exec delay
-		config.put(ExecutorConfigKeys.EXEC_DELAY, Double.toString(m_execDelay));
-
-		return config;
-	}
-
-	@Override
 	public void visit(IExecutorInfo info)
 	{
 		info.setAutomatic(m_automatic);
@@ -525,8 +511,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		info.setStage(m_stageId, m_stageTitle);
 		info.setStatus(m_status);
 		info.setUserAction(m_userAction);
-		info.setUserActionEnabled(m_userActionStatus
-		        .equals(UserActionStatus.ENABLED));
+		info.setUserActionEnabled(m_userActionStatus.equals(UserActionStatus.ENABLED));
 		info.setUserActionSeverity(m_userActionSeverity);
 		info.setVisible(m_visible);
 		info.setParent(m_parent);
@@ -539,6 +524,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		config.setExecDelay(m_execDelay);
 		config.setRunInto(m_soMode.equals(StepOverMode.STEP_INTO_ALWAYS));
 		config.setStepByStep(m_byStep);
+		config.setTcConfirmation(m_tcConfirmation);
 	}
 
 	@Override
@@ -554,9 +540,10 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		}
 		else
 		{
-			if (info.getError() != null) setError(info.getError());
+			if (info.getError() != null)
+				setError(info.getError());
 		}
-		setMonitoringClients( info.getMonitoringClients() );
+		setMonitoringClients(info.getMonitoringClients());
 		setStage(info.getStageId(), info.getStageTitle());
 		setExecutorStatus(info.getStatus());
 		setParent(info.getParent());
@@ -576,6 +563,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 			setStepOverMode(StepOverMode.STEP_OVER_ALWAYS);
 		}
 		setStepByStep(config.getStepByStep());
+		setForceTcConfirmation(config.getTcConfirmation());
 	}
 
 	@Override
@@ -593,6 +581,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		m_userActionStatus = UserActionStatus.DISMISSED;
 		m_userActionSeverity = Severity.INFO;
 		m_showLib = false;
+		m_tcConfirmation = false;
 		m_condition = null;
 		m_controllingClient = null;
 		m_monitoringClients = null;

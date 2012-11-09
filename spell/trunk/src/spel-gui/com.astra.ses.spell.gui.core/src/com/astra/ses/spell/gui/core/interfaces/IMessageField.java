@@ -119,6 +119,7 @@ public interface IMessageField
 	public static final String	FIELD_EXEC_DELAY	      = "ExecDelay";
 	public static final String	FIELD_BY_STEP	          = "ByStep";
 	public static final String	FIELD_BROWSABLE_LIB	      = "BrowsableLib";
+	public static final String	FIELD_FORCE_TC_CONFIG     = "ForceTcConfirm";
 
 	// //////////////////////////////////////////////////////////////////////////
 	// Failure-related message fields

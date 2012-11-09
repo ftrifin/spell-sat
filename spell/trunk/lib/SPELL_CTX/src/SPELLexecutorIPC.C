@@ -111,33 +111,6 @@ void SPELLexecutorIPC::sendMessage( const std::string& executorId, const SPELLip
 }
 
 //=============================================================================
-// METHOD: SPELLexecutorIPC::block
-//=============================================================================
-void SPELLexecutorIPC::block()
-{
-	m_ipc.lockIncomingRequests();
-}
-
-//=============================================================================
-// METHOD: SPELLexecutorIPC::waitIncomingRequests
-//=============================================================================
-void SPELLexecutorIPC::waitIncomingRequests()
-{
-	while(m_ipc.getNumIncomingRequests()>0)
-	{
-		usleep(1500);
-	}
-}
-
-//=============================================================================
-// METHOD: SPELLexecutorIPC::unblock
-//=============================================================================
-void SPELLexecutorIPC::unblock()
-{
-	m_ipc.unlockIncomingRequests();
-}
-
-//=============================================================================
 // METHOD: SPELLexecutorIPC::
 //=============================================================================
 SPELLipcMessage SPELLexecutorIPC::sendRequest( const std::string& executorId, const SPELLipcMessage& msg, unsigned long timeoutMsec )
@@ -263,13 +236,11 @@ void SPELLexecutorIPC::notifyRequest( const SPELLipcMessage& msg )
 	SPELLmonitor m(m_notifyLock);
 	if (m_connected)
 	{
-		//DEBUG("[EXCIPC] Notify request " + msg.getId() + " to all listeners: " + ISTR(m_notifiers.size()) );
 		if (m_notifiers.size()>0)
 		{
 			NotifierList::iterator it;
 			for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)
 			{
-				//DEBUG("         Notify to: " + PSTR(*it));
 				(*it)->processRequestFromExecutor(msg);
 			}
 		}

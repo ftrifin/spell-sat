@@ -354,6 +354,7 @@ void SPELLprocedureManager::findLibraries( const std::string& basePath )
 //=============================================================================
 SPELLprocedureSourceCode SPELLprocedureManager::getSourceCode( const std::string& procId )
 {
+	SPELLmonitor lock(m_lock);
     ProcModels::iterator it;
     std::string theProcId = noInstanceId(procId);
     it = m_procModels.find(theProcId);
@@ -382,6 +383,7 @@ SPELLprocedureSourceCode SPELLprocedureManager::getSourceCode( const std::string
 //=============================================================================
 SPELLprocedure::PropertyKeys SPELLprocedureManager::getPropertyKeys( const std::string& procId )
 {
+	SPELLmonitor lock(m_lock);
     ProcModels::iterator it;
     std::string theProcId = noInstanceId(procId);
     it = m_procModels.find(theProcId);
@@ -399,6 +401,7 @@ SPELLprocedure::PropertyKeys SPELLprocedureManager::getPropertyKeys( const std::
 //=============================================================================
 const std::string SPELLprocedureManager::getProperty( const std::string& procId, const std::string& key )
 {
+	SPELLmonitor lock(m_lock);
     ProcModels::iterator it;
     std::string theProcId = noInstanceId(procId);
     it = m_procModels.find(theProcId);
@@ -429,6 +432,7 @@ const std::string SPELLprocedureManager::noInstanceId( const std::string& procId
 //=============================================================================
 SPELLprocedure& SPELLprocedureManager::getProcedure( const std::string& procId )
 {
+	SPELLmonitor lock(m_lock);
 	std::string noIId = noInstanceId(procId);
     ProcModels::iterator it;
     it = m_procModels.find(noIId);

@@ -116,8 +116,6 @@ public class ProcedureControlPanel extends Composite implements SelectionListene
 	private Label	                     m_statusText;
 	/** Holds the client mode */
 	private ClientMode	                 m_clientMode;
-	/** Map for getting the color for each ExecutorStatus */
-	private Map<ExecutorStatus, Color>	 m_procColors;
 	/** User action button */
 	private ColoredButton	             m_userActionButton;
 
@@ -180,16 +178,9 @@ public class ProcedureControlPanel extends Composite implements SelectionListene
 			m_controlButtons[action.ordinal()] = btn;
 		}
 
-		m_procColors = new HashMap<ExecutorStatus, Color>();
-		IConfigurationManager rsc = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-		for (ExecutorStatus status : ExecutorStatus.values())
-		{
-			Color statusColor = rsc.getProcedureColor(status);
-			m_procColors.put(status, statusColor);
-		}
 		m_statusText = new Label(this, SWT.BORDER);
 		m_statusText.setText("    UNINIT    ");
-		m_statusText.setFont(rsc.getFont(FontKey.HEADER));
+		m_statusText.setFont(s_cfg.getFont(FontKey.HEADER));
 		m_statusText.setAlignment(SWT.CENTER);
 		GridData ldata = new GridData(GridData.FILL_HORIZONTAL);
 		ldata.horizontalIndent = 3;
@@ -255,10 +246,6 @@ public class ProcedureControlPanel extends Composite implements SelectionListene
 	@Override
 	public void dispose()
 	{
-		for (Color color : m_procColors.values())
-		{
-			color.dispose();
-		}
 	}
 
 	/***************************************************************************
@@ -289,7 +276,7 @@ public class ProcedureControlPanel extends Composite implements SelectionListene
 		if (!isDisposed())
 		{
 			m_statusText.setText(status.toString());
-			m_statusText.setBackground(m_procColors.get(status));
+			m_statusText.setBackground(s_cfg.getProcedureColor(status));
 		}
 
 		// Procedure control buttons enablement

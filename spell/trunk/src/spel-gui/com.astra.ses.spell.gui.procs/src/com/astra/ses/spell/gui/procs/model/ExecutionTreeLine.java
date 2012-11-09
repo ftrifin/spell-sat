@@ -51,6 +51,7 @@ package com.astra.ses.spell.gui.procs.model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Vector;
 
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
@@ -309,11 +310,11 @@ public class ExecutionTreeLine implements IExecutionTreeLine
 
 		ExecutionInfo targetInfo = m_executionData.get(execution);
 
-		ArrayList<String> names = data.getItemName();
-		ArrayList<String> values = data.getItemValue();
-		ArrayList<String> status = data.getItemStatus();
-		ArrayList<String> times = data.getTimes();
-		ArrayList<String> comments = data.getComments();
+		List<String> names = data.getItemName();
+		List<String> values = data.getItemValue();
+		List<String> status = data.getItemStatus();
+		List<String> times = data.getTimes();
+		List<String> comments = data.getComments();
 		data.getNumExecutions();
 		for (int i = 0; i < names.size(); i++)
 		{

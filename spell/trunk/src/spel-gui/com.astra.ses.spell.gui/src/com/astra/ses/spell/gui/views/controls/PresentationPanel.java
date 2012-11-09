@@ -60,6 +60,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
@@ -94,9 +95,9 @@ public class PresentationPanel extends Composite
 	// =========================================================================
 
 	// PRIVATE -----------------------------------------------------------------
-	private static final String	CMD_ID	           = "com.astra.ses.spell.gui.views.controls.CommandId";
-	private static final String	PRESENTATION_INDEX	= "com.astra.ses.spell.gui.views.controls.PresentationIndex";
-	private static final int	NUM_ELEMENTS	   = 5;
+	private static final String CMD_ID = "com.astra.ses.spell.gui.views.controls.CommandId";
+	private static final String PRESENTATION_INDEX = "com.astra.ses.spell.gui.views.controls.PresentationIndex";
+	private static final int NUM_ELEMENTS = 5;
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
 
@@ -105,28 +106,30 @@ public class PresentationPanel extends Composite
 	// =========================================================================
 
 	// PRIVATE -----------------------------------------------------------------
-	private ProcedureView	    m_view;
-	private Label	            m_stageDisplay;
-	private String	            m_currentStage;
-	private Text	            m_procDisplay;
-	private Color	            m_okColor;
-	private Color	            m_warningColor;
-	private Color	            m_errorColor;
-	private ArrayList<Button>	m_presentationButton;
-	private Composite	        m_presentationsPanel;
-	private Button	            m_btnIncrFont;
-	private Button	            m_btnDecrFont;
-	private Text	            m_satName;
+	private ProcedureView m_view;
+	private Label m_stageDisplay;
+	private String m_currentStage;
+	private Text m_procDisplay;
+	private Color m_okColor;
+	private Color m_warningColor;
+	private Color m_errorColor;
+	private ArrayList<Button> m_presentationButton;
+	private Composite m_presentationsPanel;
+	private Button m_btnIncrFont;
+	private Button m_btnDecrFont;
+	private Text m_satName;
 	/** Holds the autoscroll checkbox */
-	private Button	            m_autoScroll;
+	private Button m_autoScroll;
 	/** Holds the run over checkbox */
-	private Button	            m_runInto;
+	private Button m_runInto;
 	/** Holds the by step checkbox */
-	private Button	            m_byStep;
+	private Button m_byStep;
+	/** Holds the TC cofnrimation checkbox */
+	private Label m_tcConfirm;
 	/** Client mode */
-	private ClientMode	        m_clientMode;
+	private ClientMode m_clientMode;
 	/** Holds the current proc status */
-	private ExecutorStatus	    m_currentStatus;
+	private ExecutorStatus m_currentStatus;
 
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
@@ -138,8 +141,7 @@ public class PresentationPanel extends Composite
 	/***************************************************************************
 	 * Constructor.
 	 **************************************************************************/
-	public PresentationPanel(ProcedureView view, IProcedure model,
-	        Composite parent, int style, int numPresentations)
+	public PresentationPanel(ProcedureView view, IProcedure model, Composite parent, int style, int numPresentations)
 	{
 		super(parent, style);
 
@@ -176,8 +178,7 @@ public class PresentationPanel extends Composite
 		m_autoScroll = new Button(stagePanel, SWT.CHECK);
 		m_autoScroll.setText("Autoscroll");
 		m_autoScroll.setSelection(true);
-		m_autoScroll
-		        .setToolTipText("Enable or disable automatic scroll on procedure views");
+		m_autoScroll.setToolTipText("Enable or disable automatic scroll on procedure views");
 		m_autoScroll.addSelectionListener(new SelectionAdapter()
 		{
 			public void widgetSelected(SelectionEvent e)
@@ -210,6 +211,10 @@ public class PresentationPanel extends Composite
 			}
 		});
 
+		m_tcConfirm = new Label(stagePanel, SWT.BORDER);
+		m_tcConfirm.setText("No TC Confirm");
+		m_tcConfirm.setToolTipText("TC confirmation flag");
+
 		resetStage();
 
 		m_presentationButton = new ArrayList<Button>();
@@ -223,8 +228,7 @@ public class PresentationPanel extends Composite
 
 		m_btnIncrFont = new Button(this, SWT.PUSH);
 		m_btnIncrFont.setText("");
-		Image image = Activator.getImageDescriptor("icons/16x16/more.png")
-		        .createImage();
+		Image image = Activator.getImageDescriptor("icons/16x16/more.png").createImage();
 		m_btnIncrFont.setImage(image);
 		m_btnIncrFont.setData(CMD_ID, "+");
 		m_btnIncrFont.addSelectionListener(new SelectionAdapter()
@@ -238,8 +242,7 @@ public class PresentationPanel extends Composite
 
 		m_btnDecrFont = new Button(this, SWT.PUSH);
 		m_btnDecrFont.setText("");
-		image = Activator.getImageDescriptor("icons/16x16/less.png")
-		        .createImage();
+		image = Activator.getImageDescriptor("icons/16x16/less.png").createImage();
 		m_btnDecrFont.setImage(image);
 		m_btnDecrFont.setData(CMD_ID, "-");
 		m_btnDecrFont.addSelectionListener(new SelectionAdapter()
@@ -291,11 +294,9 @@ public class PresentationPanel extends Composite
 	/***************************************************************************
 	 * Add a presentation button
 	 **************************************************************************/
-	public void addPresentation(String title, String desc, Image icon,
-	        int pageIndex)
+	public void addPresentation(String title, String desc, Image icon, int pageIndex)
 	{
-		Logger.debug("Added presentation '" + title + "' with index "
-		        + pageIndex, Level.GUI, this);
+		Logger.debug("Added presentation '" + title + "' with index " + pageIndex, Level.GUI, this);
 		Button btn = new Button(m_presentationsPanel, SWT.TOGGLE);
 		btn.setText(title);
 		btn.setImage(icon);
@@ -352,6 +353,7 @@ public class PresentationPanel extends Composite
 		m_byStep.setEnabled(enabled);
 		m_runInto.setEnabled(enabled);
 		m_autoScroll.setEnabled(enabled);
+		m_tcConfirm.setEnabled(enabled);
 		if (enabled && m_clientMode == ClientMode.CONTROLLING)
 		{
 			setProcedureStatus(m_currentStatus);
@@ -397,7 +399,8 @@ public class PresentationPanel extends Composite
 		// Disable the rest of buttons
 		for (int count = 0; count < m_presentationButton.size(); count++)
 		{
-			if (count == index) continue;
+			if (count == index)
+				continue;
 			m_presentationButton.get(count).setSelection(false);
 		}
 		m_view.showPresentation(index);
@@ -409,10 +412,28 @@ public class PresentationPanel extends Composite
 	public void notifyModelConfigured(IProcedure model)
 	{
 		IExecutionInformation info = model.getRuntimeInformation();
-		m_runInto.setSelection(info.getStepOverMode().equals(
-		        StepOverMode.STEP_INTO_ALWAYS));
+		m_runInto.setSelection(info.getStepOverMode().equals(StepOverMode.STEP_INTO_ALWAYS));
 		m_byStep.setSelection(info.isStepByStep());
+		if (info.isForceTcConfirmation())
+		{
+			m_tcConfirm.setBackground(m_warningColor);
+		}
+		else
+		{
+			m_tcConfirm.setBackground(null);
+		}
+		if (info.isForceTcConfirmation())
+		{
+			m_tcConfirm.setText("TC Confirm");
+			m_tcConfirm.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_YELLOW));
+		}
+		else
+		{
+			m_tcConfirm.setText("No TC Confirm");
+			m_tcConfirm.setBackground(null);
+		}
 	}
+		
 
 	/***************************************************************************
 	 * 
@@ -433,7 +454,7 @@ public class PresentationPanel extends Composite
 	{
 		// Procedure control buttons enablement
 		m_currentStatus = status;
-		if ((m_clientMode != null) && ( !isDisposed() ))
+		if ((m_clientMode != null) && (!isDisposed()))
 		{
 			boolean controlling = false;
 			controlling = m_clientMode.equals(ClientMode.CONTROLLING);
@@ -453,6 +474,7 @@ public class PresentationPanel extends Composite
 			m_autoScroll.setEnabled(trackingEnabled);
 			m_runInto.setEnabled(trackingEnabled && controlling);
 			m_byStep.setEnabled(trackingEnabled && controlling);
+			m_tcConfirm.setEnabled(trackingEnabled && controlling);
 		}
 	}
 

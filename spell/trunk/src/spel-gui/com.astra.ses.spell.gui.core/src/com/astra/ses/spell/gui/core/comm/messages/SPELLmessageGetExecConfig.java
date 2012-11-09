@@ -70,6 +70,7 @@ public class SPELLmessageGetExecConfig extends SPELLmessageRequest
 		boolean runInto = false;
 		boolean byStep = false;
 		boolean showLib = false;
+		boolean forceTcConfirm = false;
 		int delay = 0;
 		try
 		{
@@ -108,9 +109,19 @@ public class SPELLmessageGetExecConfig extends SPELLmessageRequest
 		{
 			ex.printStackTrace();
 		}
+		try
+		{
+			value = response.get(IMessageField.FIELD_FORCE_TC_CONFIG);
+			forceTcConfirm = Boolean.parseBoolean(value);
+		}
+		catch (MessageException ex)
+		{
+			ex.printStackTrace();
+		}
 		config.setRunInto(runInto);
 		config.setExecDelay(delay);
 		config.setStepByStep(byStep);
 		config.setBrowsableLib(showLib);
+		config.setTcConfirmation(forceTcConfirm);
 	}
 }

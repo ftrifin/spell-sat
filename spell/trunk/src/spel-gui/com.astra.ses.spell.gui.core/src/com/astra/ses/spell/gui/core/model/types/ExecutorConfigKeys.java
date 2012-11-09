@@ -50,8 +50,9 @@ package com.astra.ses.spell.gui.core.model.types;
 
 public interface ExecutorConfigKeys
 {
-	public static final String	RUN_INTO	  = "RunInto";
-	public static final String	BY_STEP	      = "ByStep";
-	public static final String	EXEC_DELAY	  = "ExecDelay";
-	public static final String	BROWSABLE_LIB	= "BrowsableLib";
+	public static final String	RUN_INTO	     = "RunInto";
+	public static final String	BY_STEP	         = "ByStep";
+	public static final String	EXEC_DELAY	     = "ExecDelay";
+	public static final String	BROWSABLE_LIB	 = "BrowsableLib";
+	public static final String  FORCE_TC_CONFIRM = "ForceTcConfirm";
 }

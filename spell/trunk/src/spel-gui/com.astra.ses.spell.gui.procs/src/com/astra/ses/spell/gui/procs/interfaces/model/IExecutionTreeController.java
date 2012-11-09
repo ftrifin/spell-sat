@@ -121,4 +121,10 @@ public interface IExecutionTreeController extends IExecutionTreeInformation
 	 * Check if in replay mode
 	 **************************************************************************/
 	public boolean isInReplayMode();
+
+	/***************************************************************************
+	 * Should be called on model unload
+	 **************************************************************************/
+	public void dispose();
+	
 }
