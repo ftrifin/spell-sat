@@ -95,6 +95,11 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcallstackIF.
 		**////////////////////////////////////////////////////////////////////
+		const std::string getFullStack();
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLcallstackIF.
+		**////////////////////////////////////////////////////////////////////
 		unsigned int getCurrentLine() { return m_currentLine; };
 
 		//////////////////////////////////////////////////////////////////////
@@ -215,6 +220,8 @@ private: //-------------------------------------------------------------------
 		std::string            m_stageTitle;
 		/** Holds the current stack string */
 		std::string            m_stack;
+		/** Holds the full stack string */
+		std::vector<std::string> m_fullStack;
 		/** Holds the current line number */
 		unsigned int           m_currentLine;
 		/** Holds the current code name string */

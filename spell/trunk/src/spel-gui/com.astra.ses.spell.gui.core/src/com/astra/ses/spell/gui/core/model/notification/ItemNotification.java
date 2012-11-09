@@ -49,6 +49,7 @@
 package com.astra.ses.spell.gui.core.model.notification;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.astra.ses.spell.gui.core.model.types.ItemType;
 
@@ -66,15 +67,15 @@ public class ItemNotification extends NotificationData
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
 	/** Holds the item name */
-	private ArrayList<String>	m_itemName	   = new ArrayList<String>();
+	private List<String>	m_itemName	   = new ArrayList<String>();
 	/** Holds the item value */
-	private ArrayList<String>	m_itemValue	   = new ArrayList<String>();
+	private List<String>	m_itemValue	   = new ArrayList<String>();
 	/** Holds the item status */
-	private ArrayList<String>	m_itemStatus	= new ArrayList<String>();
+	private List<String>	m_itemStatus	= new ArrayList<String>();
 	/** Holds the item time */
-	private ArrayList<String>	m_itemTime	   = new ArrayList<String>();
+	private List<String>	m_itemTime	   = new ArrayList<String>();
 	/** Holds the item comments */
-	private ArrayList<String>	m_itemComments	= new ArrayList<String>();
+	private List<String>	m_itemComments	= new ArrayList<String>();
 	/** Holds the item type */
 	private ItemType	      m_itemType;
 
@@ -104,7 +105,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Obtain item name
 	 **************************************************************************/
-	public ArrayList<String> getItemName()
+	public List<String> getItemName()
 	{
 		return m_itemName;
 	}
@@ -112,7 +113,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Obtain item value
 	 **************************************************************************/
-	public ArrayList<String> getItemValue()
+	public List<String> getItemValue()
 	{
 		return m_itemValue;
 	}
@@ -120,7 +121,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Obtain item status
 	 **************************************************************************/
-	public ArrayList<String> getItemStatus()
+	public List<String> getItemStatus()
 	{
 		return m_itemStatus;
 	}
@@ -128,7 +129,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Obtain comments
 	 **************************************************************************/
-	public ArrayList<String> getComments()
+	public List<String> getComments()
 	{
 		return m_itemComments;
 	}
@@ -136,7 +137,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Obtain times
 	 **************************************************************************/
-	public ArrayList<String> getTimes()
+	public List<String> getTimes()
 	{
 		return m_itemTime;
 	}
@@ -176,9 +177,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Set item name
 	 **************************************************************************/
-	public void setItems(ArrayList<String> names, ArrayList<String> values,
-	        ArrayList<String> status, ArrayList<String> comments,
-	        ArrayList<String> times)
+	public void setItems(List<String> names, List<String> values, List<String> status, List<String> comments, List<String> times)
 	{
 		m_itemName = names;
 		m_itemValue = values;
@@ -190,7 +189,7 @@ public class ItemNotification extends NotificationData
 	/***************************************************************************
 	 * Get total items
 	 **************************************************************************/
-	public int getTotaltems()
+	public int getTotalItems()
 	{
 		return m_itemName.size();
 	}

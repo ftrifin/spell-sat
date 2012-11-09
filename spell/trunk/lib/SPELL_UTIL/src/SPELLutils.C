@@ -628,24 +628,6 @@ std::string SPELLutils::getSPELL_DATA()
 }
 
 //============================================================================
-// FUNCTION:    SPELLutils::getSPELL_INPUT_FILES()
-//============================================================================
-std::string SPELLutils::getSPELL_INPUT_FILES()
-{
-	//TODO get from configuration
-	return getSPELL_DATA() + PATH_SEPARATOR + "InputFiles";
-}
-
-//============================================================================
-// FUNCTION:    SPELLutils::getSPELL_OUTPUT_FILES()
-//============================================================================
-std::string SPELLutils::getSPELL_OUTPUT_FILES()
-{
-	//TODO get from configuration
-	return getSPELL_DATA() + PATH_SEPARATOR + "OutputFiles";
-}
-
-//============================================================================
 // FUNCTION:    SPELLutils::getSPELL_CONFIG()
 //====================================================nnn========================
 std::string SPELLutils::getSPELL_CONFIG()

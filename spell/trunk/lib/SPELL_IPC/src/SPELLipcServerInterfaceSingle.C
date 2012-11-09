@@ -148,6 +148,7 @@ void SPELLipcServerInterfaceSingle::run()
 				addClient(clientSocket);
 				DEBUG(NAME + "Waiting interface to be ready");
 				waitReady();
+				m_connected = true;
 				LOG_INFO(NAME + "New connection ready");
             }
             catch(SPELLipcError& err)
@@ -220,7 +221,7 @@ void SPELLipcServerInterfaceSingle::disconnect()
     //m_msgPool.shutdown();
     DEBUG(NAME + "Removing clients");
     removeClient();
-    DEBUG(NAME + "Server interface disconnect ALL done");
+    LOG_INFO(NAME + "Server interface disconnected");
 }
 
 //=============================================================================
@@ -402,16 +403,6 @@ void SPELLipcServerInterfaceSingle::cancelOutgoingRequests()
 }
 
 //=============================================================================
-// METHOD: SPELLipcServerInterfaceSingle:cancelIncomingRequests
-//=============================================================================
-void SPELLipcServerInterfaceSingle::cancelIncomingRequests()
-{
-	DEBUG(NAME + "Cancel incoming requests");
-	m_trash.cancelAndCleanRequests(1);
-	DEBUG(NAME + "Cancel incoming requests done");
-}
-
-//=============================================================================
 // METHOD: SPELLipcServerInterfaceSingle:incomingRequest
 //=============================================================================
 void SPELLipcServerInterfaceSingle::incomingRequest( const SPELLipcMessage& msg )
@@ -421,7 +412,7 @@ void SPELLipcServerInterfaceSingle::incomingRequest( const SPELLipcMessage& msg 
     DEBUG(NAME + "IPC interface incoming request IN (" + msg.getSequenceStr() + ")");
     {
         SPELLmonitor m(m_ipcLock);
-		if (!m_connected)
+		if (!isConnected())
 		{
 			LOG_WARN("!! Request discarded: not connected: " + msg.getId());
 			return;
@@ -466,7 +457,7 @@ void SPELLipcServerInterfaceSingle::incomingMessage( const SPELLipcMessage& msg 
     DEBUG(NAME + "IPC interface incoming message IN " + msg.getId());
     {
     	SPELLmonitor m(m_ipcLock);
-    	if (!m_connected) return;
+    	if (!isConnected()) return;
     	if (m_listener == NULL) return;
     }
 
@@ -568,7 +559,7 @@ SPELLipcMessage SPELLipcServerInterfaceSingle::performRequest( SPELLipcMessage& 
 SPELLipcMessage SPELLipcServerInterfaceSingle::performRequest( SPELLipcMessage& msg, unsigned long timeoutMsec )
 {
     SPELLipcMessage response = VOID_MESSAGE;
-    if (m_connected && m_channel->isConnected())
+    if (isConnected() && m_channel->isConnected())
     {
         std::string reqId = startRequest(msg);
     	m_channel->requestStarted(reqId);
@@ -613,6 +604,7 @@ SPELLipcMessage SPELLipcServerInterfaceSingle::performRequest( SPELLipcMessage& 
             {
                 LOG_ERROR(NAME + "Failed to perform request " + msg.getId() + " due to timeout");
                 LOG_ERROR("#######################################################################");
+                LOG_ERROR("MESSAGE " + msg.dataStr());
                 LOG_ERROR("RESPONSE TIMED OUT, RETRYING (" + ISTR(retries) + "/" + ISTR(IPC_REQUEST_MAX_RETRIES) + ")");
                 LOG_ERROR("TIMEOUT: " + ISTR(timeoutMsec) + " ms." );
                 LOG_ERROR("ID: " + msg.getId() + " IPC KEY: " + ISTR(msg.getKey()) + " SEQ: " + ISTR(msg.getSequence()));
@@ -659,28 +651,4 @@ SPELLipcMessage SPELLipcServerInterfaceSingle::performRequest( SPELLipcMessage& 
         DEBUG(NAME + " Perform request response: " + response.dataStr());
     }
     return response;
-}
-
-//=============================================================================
-// METHOD: SPELLipcServerInterfaceSingle:lockIncomingRequests()
-//=============================================================================
-void SPELLipcServerInterfaceSingle::lockIncomingRequests()
-{
-	m_incomingLock.lock();
-}
-
-//=============================================================================
-// METHOD: SPELLipcServerInterfaceSingle:unlockIncomingRequests()
-//=============================================================================
-void SPELLipcServerInterfaceSingle::unlockIncomingRequests()
-{
-	m_incomingLock.unlock();
-}
-
-//=============================================================================
-// METHOD: SPELLipcServerInterfaceSingle:unlockIncomingRequests()
-//=============================================================================
-int SPELLipcServerInterfaceSingle::getNumIncomingRequests()
-{
-	return m_trash.getNumRequests(1);
 }

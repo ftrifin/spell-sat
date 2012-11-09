@@ -265,6 +265,12 @@
                   style="toggle"
                   tooltip="Toggle running step by step">
             </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ToggleTcConfirm"
+                  id="com.astra.ses.spell.gui.menu.execution.ToggleTcConfirm"
+                  style="toggle"
+                  tooltip="Toggle TC confirmation">
+            </command>
             <separator
                   name="com.astra.ses.spell.gui.menu.execution.Separator1"
                   visible="true">
@@ -448,6 +454,15 @@
             categoryId="com.astra.ses.spell.gui.commands.control"
             id="com.astra.ses.spell.gui.commands.ToggleByStep"
             name="Step by step">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:false"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ToggleTcConfirm"
+            name="TC Confirm">
          <state
                class="org.eclipse.ui.handlers.RegistryToggleState:false"
                id="org.eclipse.ui.commands.toggleState">
@@ -875,6 +890,15 @@
       <handler
             class="com.astra.ses.spell.gui.model.commands.ToggleByStep"
             commandId="com.astra.ses.spell.gui.commands.ToggleByStep">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ToggleTcConfirm"
+            commandId="com.astra.ses.spell.gui.commands.ToggleTcConfirm">
          <enabledWhen>
             <test
                   property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">

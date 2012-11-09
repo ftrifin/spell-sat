@@ -63,5 +63,6 @@ void SPELLexecutorConfig::reset()
     m_blocking           = true;
     m_arguments          = "";
     m_condition          = "";
+    m_forceTcConfirm     = false;
 }
 

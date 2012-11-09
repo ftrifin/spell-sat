@@ -96,6 +96,8 @@ SPELLserverCif::SPELLserverCif()
 
     m_lastStack = "";
 
+    m_ack.set();
+
 	m_ipcTimeoutGuiRequestMsec = SPELLconfiguration::instance().commonOrDefault( "GuiRequestTimeout", IPC_GUIREQUEST_DEFAULT_TIMEOUT_MSEC );
 	m_ipcTimeoutCtxRequestMsec = SPELLconfiguration::instance().commonOrDefault( "CtxRequestTimeout", IPC_CTXREQUEST_DEFAULT_TIMEOUT_MSEC );
 	m_timeoutOpenProcMsec = SPELLconfiguration::instance().commonOrDefault( "OpenProcTimeout", IPC_OPENPROC_DEFAULT_TIMEOUT_MSEC );
@@ -162,6 +164,8 @@ void SPELLserverCif::setup( const SPELLcifStartupInfo& info )
 void SPELLserverCif::cleanup( bool force )
 {
     SPELLcif::cleanup(force);
+    m_ready = false;
+    m_ack.set();
     DEBUG("[CIF] Cleaning server CIF");
     cancelPrompt();
     m_buffer->stop();
@@ -184,7 +188,6 @@ void SPELLserverCif::cleanup( bool force )
     DEBUG("[CIF] Disconnecting IPC");
 
     m_ifc->disconnect();
-    m_ready = false;
     // Release pending requests
     m_ipcLock.unlock();
     DEBUG("[CIF] Cleanup server CIF finished");
@@ -503,7 +506,14 @@ void SPELLserverCif::completeMessage( SPELLipcMessage& msg )
 	msg.set(MessageField::FIELD_MSG_SEQUENCE, ISTR(m_sequence));
 	m_sequence++;
 
-    msg.set(MessageField::FIELD_CSP, getStack() + "/" + ISTR(getNumExecutions()) );
+    std::string stack = SPELLexecutor::instance().getCallstack().getFullStack();
+
+    if (stack == "")
+    {
+    	stack = SPELLexecutor::instance().getCallstack().getStack();
+    }
+
+    msg.set(MessageField::FIELD_CSP, stack + "/" + ISTR(getNumExecutions()) );
 
     if (isManual())
     {
@@ -522,34 +532,7 @@ void SPELLserverCif::notifyLine()
 {
 	TICK_IN;
 
-	//DEBUG("[CIF] Notify line TRY-IN");
-
 	SPELLmonitor m(m_lineLock);
-
-	//DEBUG("[CIF] Notify line IN");
-
-
-	std::string stack = getStack();
-
-    if (m_lastStack == stack)
-	{
-		//DEBUG("[CIF] Notify line discarded since is the same: " + stack);
-    	return;
-	}
-
-    if (m_errorState)
-    {
-		//DEBUG("[CIF] Notify line discarded due to error");
-		return;
-    }
-
-	//DEBUG("[CIF] Notifying " + stack);
-
-    m_lastStack = stack;
-
-    std::string stage = getStage();
-
-    //DEBUG("[CIF] Procedure line: " + stack + "(" + stage + ")");
 
     m_lnMessage.set( MessageField::FIELD_DATA_TYPE, MessageValue::DATA_TYPE_LINE );
 	m_lnMessage.setType(MSG_TYPE_NOTIFY_ASYNC);
@@ -558,6 +541,21 @@ void SPELLserverCif::notifyLine()
     m_lnMessage.set(MessageField::FIELD_MSG_SEQUENCE, ISTR(m_sequenceStack));
 	m_sequenceStack++;
 	m_lnMessage.set(MessageField::FIELD_CODE_NAME, getCodeName() );
+
+	std::string stack = m_lnMessage.get(MessageField::FIELD_CSP);
+
+    if (m_lastStack == stack)
+	{
+    	return;
+	}
+
+    if (m_errorState)
+    {
+		return;
+    }
+
+    m_lastStack = stack;
+    std::string stage = getStage();
 
     if (stage.find(":") != std::string::npos)
     {
@@ -591,12 +589,7 @@ void SPELLserverCif::notifyLine()
 //=============================================================================
 void SPELLserverCif::notifyCall()
 {
-
 	if (m_errorState) return;
-
-	std::string stack = getStack();
-
-    DEBUG("[CIF] Procedure call: " + stack );
 
     m_lnMessage.set( MessageField::FIELD_DATA_TYPE, MessageValue::DATA_TYPE_CALL );
 	m_lnMessage.setType(MSG_TYPE_NOTIFY);
@@ -606,9 +599,13 @@ void SPELLserverCif::notifyCall()
 	m_sequenceStack++;
 	m_lnMessage.set(MessageField::FIELD_CODE_NAME, getCodeName() );
 
+    std::string stack = m_lnMessage.get(MessageField::FIELD_CSP);
     m_asRun->writeCall( stack, (m_sequence-1) );
 
-	sendGUIRequest(m_lnMessage, m_ipcTimeoutGuiRequestMsec);
+    DEBUG("[CIF] Procedure call: " + stack );
+
+	sendGUIMessage(m_lnMessage);
+    waitAcknowledge(m_lnMessage);
 }
 
 //=============================================================================
@@ -630,7 +627,8 @@ void SPELLserverCif::notifyReturn()
 
     m_asRun->writeReturn( (m_sequence-1) );
 
-	sendGUIRequest(m_lnMessage, m_ipcTimeoutGuiRequestMsec);
+    sendGUIMessage(m_lnMessage);
+    waitAcknowledge(m_lnMessage);
 }
 
 //=============================================================================
@@ -639,7 +637,6 @@ void SPELLserverCif::notifyReturn()
 void SPELLserverCif::notifyStatus( const SPELLstatusInfo& st )
 {
     DEBUG("Status notification: " + SPELLexecutorUtils::statusToString(st.status) + " (" + st.condition + ")");
-
 
     m_stMessage.set(MessageField::FIELD_EXEC_STATUS, SPELLexecutorUtils::statusToString(st.status));
 
@@ -660,30 +657,8 @@ void SPELLserverCif::notifyStatus( const SPELLstatusInfo& st )
 
     m_asRun->writeStatus( st.status );
 
-    bool retry = false;
-    unsigned int numRetries = 0;
-    do
-    {
-    	retry = false;
-    	SPELLipcMessage resp = sendGUIRequest(m_stMessage, m_ipcTimeoutGuiRequestMsec);
-    	if (resp.getType() == MSG_TYPE_ERROR)
-    	{
-    		if (resp.get(MessageField::FIELD_REASON) == "Response timed out")
-    		{
-    			LOG_ERROR("Retrying status notification: " + SPELLexecutorUtils::statusToString(st.status) );
-    			numRetries++;
-    			if (numRetries<3)
-    			{
-    				retry = true;
-    			}
-    		}
-        	else
-        	{
-        		LOG_ERROR("Failed to notify status: " + resp.get(MessageField::FIELD_ERROR));
-        	}
-    	}
-    }
-    while(retry);
+    sendGUIMessage(m_stMessage);
+    waitAcknowledge(m_stMessage);
 }
 
 //=============================================================================
@@ -805,7 +780,7 @@ void SPELLserverCif::notify( ItemNotification notification )
 
     //DEBUG("[CIF] Message prepared, sending");
 
-    m_asRun->writeItem( getStack(),
+    m_asRun->writeItem( m_ntMessage.get(MessageField::FIELD_CSP),
 						NOTIF_TYPE_STR[notification.type],
                         notification.name,
                         notification.value,
@@ -813,8 +788,35 @@ void SPELLserverCif::notify( ItemNotification notification )
                         notification.comment,
                         notification.time );
 
-    sendGUIRequest(m_ntMessage, m_ipcTimeoutGuiRequestMsec);
+    sendGUIMessage(m_ntMessage);
+    waitAcknowledge(m_ntMessage);
     //DEBUG("[CIF] Notification sent");
+}
+
+//=============================================================================
+// METHOD: SPELLserverCif::waitAcknowledge()
+//=============================================================================
+void SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
+{
+    if (m_ready)
+    {
+		while(m_ack.isClear())
+		{
+			usleep(2000);
+		}
+		m_ack.clear();
+		bool timeout = m_ack.wait(15000); // 15 seconds
+		if (timeout)
+		{
+			m_ack.set();
+			std::cerr << "\n\n####################################################" << std::endl;
+			std::cerr << "Message: " + msg.dataStr() << std::endl;
+			std::cerr << "####################################################\n\n" << std::endl;
+			LOG_ERROR("Acknowledge not received, pause");
+			warning("Acknowledge not received from GUI, pausing for safety", LanguageConstants::SCOPE_SYS);
+    		SPELLexecutor::instance().pause();
+		}
+    }
 }
 
 //=============================================================================
@@ -1230,6 +1232,12 @@ void SPELLserverCif::processMessage( const SPELLipcMessage& msg )
     std::string procId = msg.get(MessageField::FIELD_PROC_ID);
     std::string parentProcId = "";
 
+    if (m_ready && msgId == ExecutorMessages::ACKNOWLEDGE)
+    {
+    	m_ack.set();
+    	return;
+    }
+
     // Prompt answers
     if ( msgId == MessageId::MSG_ID_PROMPT_ANSWER )
     {
@@ -1445,9 +1453,9 @@ SPELLipcMessage SPELLserverCif::processRequest( const SPELLipcMessage& msg )
     {
     	m_processor.processSaveState(msg, response);
     }
-    else if (msg.getType() == MSG_TYPE_NOTIFY)
+    else if (requestId == ContextMessages::MSG_EXEC_OP)
     {
-    	DEBUG("[CIF] Received notification from context");
+    	DEBUG("[CIF] Received executor operation notification from context");
         if (procId != getProcId())
         {
         	DEBUG("[CIF] Notification is for child");
@@ -1528,7 +1536,7 @@ void SPELLserverCif::startPrompt()
     SPELLexecutor::instance().getScheduler().startPrompt();
 
     // Send actual prompt message
-	SPELLipcMessage response = sendGUIRequest(m_promptMessage, m_ipcTimeoutGuiRequestMsec);
+	sendGUIMessage(m_promptMessage);
 
 	// Reset the event that will trigger the answer
 	m_promptAnswerEvent.clear();

@@ -49,12 +49,13 @@
 package com.astra.ses.spell.gui.core.model.notification;
 
 import java.util.Arrays;
+import java.util.List;
 
 /*******************************************************************************
  * @brief Data structure used for line notifications.
  * @date 25/10/07
  ******************************************************************************/
-public class StackNotification extends NotificationData
+public class StackNotification extends NotificationData 
 {
 	// =========================================================================
 	// STATIC DATA MEMBERS
@@ -99,6 +100,21 @@ public class StackNotification extends NotificationData
 		m_stageId = null;
 		m_stageTitle = null;
 		m_codeName = codeName;
+	}
+
+	/***************************************************************************
+	 * Constructor
+	 * 
+	 * @param stack
+	 *            The stack position
+	 ***************************************************************************/
+	public StackNotification(StackType type, String procId, List<String> stack, int numExecutions)
+	{
+		super(procId,stack,numExecutions);
+		m_stackType = type;
+		m_stageId = null;
+		m_stageTitle = null;
+		m_codeName = procId;
 	}
 
 	public void setStage(String id, String title)

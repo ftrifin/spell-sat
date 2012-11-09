@@ -261,7 +261,8 @@ class ProcedureModelManager
 		if (m_localModels.containsKey(instanceId))
 		{
 			Logger.debug("Deleting local model: " + instanceId , Level.PROC, this);
-			m_localModels.remove(instanceId);
+			IProcedure proc = m_localModels.remove(instanceId);
+			proc.onClose();
 		}
 	}
 

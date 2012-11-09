@@ -180,6 +180,14 @@ public interface IProcedureController extends IProcedureInput
 	public void setStepByStep(boolean value);
 
 	/***************************************************************************
+	 * Update TC confirmation flag value
+	 * 
+	 * @param value
+	 *            the new value
+	 **************************************************************************/
+	public void setForceTcConfirmation(boolean value);
+
+	/***************************************************************************
 	 * Set the execution delay between lines
 	 * 
 	 * @param msec

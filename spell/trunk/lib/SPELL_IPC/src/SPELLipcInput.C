@@ -112,20 +112,22 @@ int SPELLipcInput::readMoreBytes()
 
     while(1)
     {
-        bool dataIn = m_socket.waitData(500);//0.5 sec
+        bool dataIn = m_socket.waitData(10000);//10 sec
         if (dataIn)
         {
-            numRead = m_socket.receive( m_buffer, IPC_BUFFER_SIZE );
-        	int errNo = errno;
-            if (numRead == 0 && m_connected)
-            {
-                // When we receive zero it means that the peer has invoked
-                // shutdown(). We shall do the same on our side. The IPC
-                // interface is in charge of that, we shall not touch the
-                // socket file descriptor here in SPELLipcInput. Just finish the
-                // loop.
-            	throw SPELLipcError(NAME + "Peer has disconnected (errno " + ISTR(errNo) + ")", errNo );
-            }
+        	int retries = 0;
+        	while(1)
+        	{
+				numRead = m_socket.receive( m_buffer, IPC_BUFFER_SIZE );
+				int errNo = errno;
+				if (numRead == 0 && m_connected)
+				{
+					LOG_WARN( NAME + "WARNING: retrying read...");
+					retries++;
+					if (retries ==3) throw SPELLipcError(NAME + "Peer has disconnected (errno " + ISTR(errNo) + ")", errNo );
+				}
+				else break;
+        	}
             return numRead;
         }
         if (!isConnected())
@@ -448,11 +450,11 @@ void SPELLipcInput::dispatch()
     case MSG_TYPE_ERROR:
         m_interface.incomingResponse(msg);
         break;
-    case MSG_TYPE_NOTIFY:
     case MSG_TYPE_REQUEST:
-    case MSG_TYPE_PROMPT:
         m_interface.incomingRequest(msg);
         break;
+    case MSG_TYPE_PROMPT:
+    case MSG_TYPE_NOTIFY:
     case MSG_TYPE_ONEWAY:
     case MSG_TYPE_NOTIFY_ASYNC:
     case MSG_TYPE_WRITE:

@@ -224,6 +224,15 @@ public class Procedure implements IProcedure
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
+	@Override
+	public void onClose()
+	{
+		m_treeController.dispose();
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Object getAdapter(Class adapter)

@@ -87,6 +87,9 @@ SPELLexecutorImpl::SPELLexecutorImpl()
       m_importChecker()
 {
     m_initialized        = false;
+    m_initStepDone       = false;
+    m_cif                = NULL;
+    m_frameManager       = NULL;
     m_instanceId         = "";
     m_parentId           = "";
     m_childId            = "";
@@ -105,6 +108,7 @@ SPELLexecutorImpl::SPELLexecutorImpl()
     m_userActionLabel = "";
     m_userActionEnabled = false;
     m_userActionFunction = "";
+    m_userActionSeverity = 0;
     m_gotoTarget = "";
 
     m_childMgr = new SPELLchildManager();
@@ -212,24 +216,35 @@ void SPELLexecutorImpl::prepare( const std::string& instanceId, const SPELLconte
         m_config->setVisible ( m_cif->isVisible() );
         m_config->setBlocking( m_cif->isBlocking() );
         m_config->setBrowsableLib( m_cif->isBrowsableLib() );
+
+        // Get other configuration parameters from the context configuration file
         m_config->setRunInto( (ctxConfig.getExecutorParameter(ExecutorConstants::RunInto) == True) );
         m_config->setByStep( (ctxConfig.getExecutorParameter(ExecutorConstants::ByStep) == True) );
         m_config->setExecDelay( STRI((ctxConfig.getExecutorParameter(ExecutorConstants::ExecDelay))) );
         m_config->setBrowsableLib( (ctxConfig.getExecutorParameter(ExecutorConstants::BrowsableLib) == True) );
+        m_config->setForceTcConfirm( (ctxConfig.getExecutorParameter(ExecutorConstants::ForceTcConfirm) == True) );
         std::string saveMode = ctxConfig.getExecutorParameter(ExecutorConstants::SaveStateMode);
         m_config->setSaveStateMode( saveMode );
         std::string wvMode = ctxConfig.getExecutorParameter(ExecutorConstants::WatchVariables);
         bool wvEnabled = wvMode == ExecutorConstants::ENABLED;
         m_config->setWatchEnabled( wvEnabled );
         m_varManager->setEnabled( wvEnabled );
-        LOG_INFO("[E] Arguments       : " + m_config->getArguments()  )
-        LOG_INFO("[E] Condition       : " + m_config->getCondition()  )
-        LOG_INFO("[E] Automatic mode  : " + BSTR( m_config->getAutomatic() ))
-        LOG_INFO("[E] Visible mode    : " + BSTR( m_config->getVisible()   ))
-        LOG_INFO("[E] Blocking mode   : " + BSTR( m_config->getBlocking()  ))
-        LOG_INFO("[E] Browsable lib   : " + BSTR( m_config->getBrowsableLib()  ))
-        LOG_INFO("[E] Save state mode : " + saveMode );
-        LOG_INFO("[E] Watch variables : " + wvMode );
+
+        m_inputDir = SPELLutils::resolvePath( ctxConfig.getInputDirectory() );
+        m_outputDir = SPELLutils::resolvePath( ctxConfig.getOutputDirectory() );
+
+        // Report the current configuration
+        LOG_INFO("[E] Arguments        : " + m_config->getArguments()  );
+        LOG_INFO("[E] Condition        : " + m_config->getCondition()  );
+        LOG_INFO("[E] Automatic mode   : " + BSTR( m_config->getAutomatic() ));
+        LOG_INFO("[E] Visible mode     : " + BSTR( m_config->getVisible()   ));
+        LOG_INFO("[E] Blocking mode    : " + BSTR( m_config->getBlocking()  ));
+        LOG_INFO("[E] Browsable lib    : " + BSTR( m_config->getBrowsableLib()  ));
+        LOG_INFO("[E] TC Confirm       : " + BSTR( m_config->getForceTcConfirm()  ));
+        LOG_INFO("[E] Save state mode  : " + saveMode );
+        LOG_INFO("[E] Watch variables  : " + wvMode );
+        LOG_INFO("[E] Input directory  : " + m_inputDir );
+        LOG_INFO("[E] Output directory : " + m_outputDir );
 
         m_initialized = true;
     }
@@ -667,11 +682,15 @@ void SPELLexecutorImpl::loadExecutionEnvironment()
 	PyObject* procObj = PyDict_New();
 	PyObject* pname = SSTRPY(m_instanceId);
 	PyObject* arguments = SSTRPY(m_config->getArguments());
+	PyObject* outputDataDir = SSTRPY( m_outputDir );
+	PyObject* inputDataDir = SSTRPY( m_inputDir );
 
 	PyDict_SetItemString( procObj, DatabaseConstants::NAME.c_str(), pname);
 	PyDict_SetItemString( procObj, DatabaseConstants::ARGS.c_str(), arguments);
 	PyDict_SetItemString( procObj, DatabaseConstants::STEP.c_str(), Py_None);
 	PyDict_SetItemString( procObj, DatabaseConstants::PREV_STEP.c_str(), Py_None);
+	PyDict_SetItemString( procObj, DatabaseConstants::OUTPUT_DATA.c_str(), outputDataDir);
+	PyDict_SetItemString( procObj, DatabaseConstants::INPUT_DATA.c_str(), inputDataDir);
 
 	SPELLpythonHelper::instance().install( procObj,  DatabaseConstants::PROC );
 
@@ -701,6 +720,12 @@ void SPELLexecutorImpl::loadDriver()
 	LOG_INFO("Loading driver")
 	// Prepare and load the SPELL driver
 	SPELLdriverManager::instance().setup( m_contextName );
+
+	// Enable TC confirmation if so said the config
+    if (m_config->getForceTcConfirm())
+    {
+    	setForceTcConfirmInternal(true);
+    }
 
 	// Load the driver language specifics
 	SPELLcontextConfig& ctxConfig = SPELLconfiguration::instance().getContext( m_contextName );
@@ -1101,6 +1126,32 @@ void SPELLexecutorImpl::setExecDelay( const int delay )
         m_config->setExecDelay(delay);
         m_controller->setExecutionDelay(delay);
     }
+}
+
+//=============================================================================
+// METHOD    : SPELLexecutorImpl::setForceTcConfirm
+//=============================================================================
+void SPELLexecutorImpl::setForceTcConfirm( const bool force )
+{
+	if (m_config->getForceTcConfirm() != force )
+	{
+		LOG_INFO("[EXEC] Set force TC confirmation to " + BSTR(force));
+		m_config->setForceTcConfirm(force);
+		setForceTcConfirmInternal(force);
+	}
+}
+
+//=============================================================================
+// METHOD    : SPELLexecutorImpl::command
+//=============================================================================
+void SPELLexecutorImpl::setForceTcConfirmInternal( bool force )
+{
+	PyObject* tc = SPELLregistry::instance().get("TC");
+	if (tc != NULL)
+	{
+		PyObject* arg = force ? Py_True : Py_False;
+		SPELLpythonHelper::instance().callMethod( tc, "forceTcConfirm", arg, NULL );
+	}
 }
 
 //=============================================================================

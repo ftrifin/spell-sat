@@ -108,6 +108,7 @@ void SPELLclientNotifier::stop()
 void SPELLclientNotifier::processMessageFromExecutor( SPELLipcMessage msg )
 {
 	if (!m_working) return;
+	DEBUG("[NOTIF] Forward message to client " + ISTR(m_client->getClientKey()) + ": " + msg.dataStr());
 	m_client->sendMessageToClient(msg);
 }
 

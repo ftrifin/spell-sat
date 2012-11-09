@@ -39,6 +39,7 @@ from spell.lib.adapter.databases.dbsvn import *
 from spell.lib.adapter.databases.dbfile import *
 from spell.lib.adapter.databases.dbfilespb import *
 from spell.lib.adapter.databases.dbfileeph import *
+from spell.lib.adapter.databases.dbsvnspb import *
 
 #from libSPELL_SDB import DatabaseFile, DatabaseFileSPB
 
@@ -70,6 +71,7 @@ DB_TYPE_EPH_A2100     = 'eph_a2100'
 DB_TYPE_EPH_OSCS2     = 'eph_oscs2'
 DB_TYPE_EPH_SB4000    = 'eph_sb4000'
 DB_TYPE_ASRUN         = 'asrun'
+DB_TYPE_SPB_SVN       = 'spb-svn'
 
 
 ################################################################################
@@ -154,6 +156,8 @@ class DatabaseManagerClass(Configurable):
             db = DatabaseFileEphSB4000(dbName, dbPath, dbExt)
         elif dbType == DB_TYPE_SVN:
             db = DatabaseSubversion(dbName, dbPath, dbExt)
+        elif dbType == DB_TYPE_SPB_SVN:
+            db = DatabaseSubversionSPB(dbName, dbPath, dbExt)
         elif dbType == DB_TYPE_ASRUN:
             db = DatabaseAsRun(dbName, dbPath, dbExt)
         else:

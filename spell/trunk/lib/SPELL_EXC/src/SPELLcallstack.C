@@ -72,6 +72,7 @@ SPELLcallstack::~SPELLcallstack()
 void SPELLcallstack::reset()
 {
 	m_stack = "";
+	m_fullStack.clear();
     m_stageId = "";
     m_stageTitle = "";
     m_codeName = "";
@@ -91,6 +92,23 @@ const std::string& SPELLcallstack::getStack()
 	SPELLmonitor mon(m_lock);
 
 	return m_stack;
+}
+
+//=============================================================================
+// METHOD    : SPELLcallstack::getFullStack()
+//=============================================================================
+const std::string SPELLcallstack::getFullStack()
+{
+	SPELLmonitor mon(m_lock);
+	std::string stack = "";
+	std::vector<std::string>::iterator it;
+	std::vector<std::string>::iterator end = m_fullStack.end();
+	for(it = m_fullStack.begin(); it != end; it++)
+	{
+		if (stack != "") stack += ":";
+		stack += *it;
+	}
+	return stack;
 }
 
 //=============================================================================
@@ -186,6 +204,8 @@ void SPELLcallstack::callbackEventLine( PyFrameObject* frame, const std::string&
     m_currentNode->eventLine(line);
     // Update the stack string
     m_stack = std::string(file + ":" + ISTR(line));
+    m_fullStack[m_fullStack.size()-1] = m_stack;
+
     // Update the code name string
     m_codeName = name;
 
@@ -241,6 +261,7 @@ void SPELLcallstack::callbackEventCall( PyFrameObject* frame, const std::string&
 	}
     // Update the stack string
     m_stack = std::string(file + ":" + ISTR(line));
+    m_fullStack.push_back(m_stack);
     // Update the code name string
     m_codeName = name;
 
@@ -298,6 +319,9 @@ void SPELLcallstack::callbackEventReturn( PyFrameObject* frame, const std::strin
 
     // Update the stack string
     m_stack = std::string(file + ":" + ISTR(line));
+    m_fullStack.pop_back();
+    m_fullStack[m_fullStack.size()-1] = m_stack;
+
     // Update the code name string
     m_codeName = name;
 
@@ -323,6 +347,7 @@ void SPELLcallstack::clearStack()
 		m_rootNode->reset();
 		delete m_rootNode;
 		m_stack = "";
+		m_fullStack.clear();
 	}
 	m_rootNode = NULL;
 	m_currentNode = NULL;

@@ -141,6 +141,20 @@ public: //--------------------------------------------------------------------
 		std::string getLibPath() const { return m_libPath; };
 
 		//////////////////////////////////////////////////////////////////////
+		/** Obtain the current output directory path
+		 *
+		 * \returns The path.
+		**////////////////////////////////////////////////////////////////////
+		std::string getOutputDirectory() const { return m_outputDir; };
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the current input directory path
+		 *
+		 * \returns The path.
+		**////////////////////////////////////////////////////////////////////
+		std::string getInputDirectory() const { return m_inputDir; };
+
+		//////////////////////////////////////////////////////////////////////
 		/** Obtain a driver configuration parameter.
 		 *
 		 * \param key IN: the name of the configuration parameter.
@@ -288,6 +302,10 @@ private: //-------------------------------------------------------------------
 		std::string m_procPath;
 		/** Holds the library path */
 		std::string m_libPath;
+		/** Holds the output data directory */
+		std::string m_outputDir;
+		/** Holds the input data directory */
+		std::string m_inputDir;
 		/** Holds the executor config  */
 		Properties m_executorConfig;
 		/** Holds the ISA config  */

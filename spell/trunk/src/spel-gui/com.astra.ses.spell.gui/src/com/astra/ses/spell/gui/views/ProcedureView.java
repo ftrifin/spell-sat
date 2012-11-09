@@ -102,23 +102,11 @@ import com.astra.ses.spell.gui.views.presentations.PresentationStack;
  ******************************************************************************/
 public class ProcedureView extends ViewPart implements ISaveablePart2
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private static IConfigurationManager s_cfg = null;
 	private static IContextProxy s_proxy = null;
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Holds the view identifier */
 	public static final String ID = "com.astra.ses.spell.gui.views.ProcedureView";
 
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the current domain name (sat) for the procedure */
 	private String m_domain;
 	/** View contents root composite */
@@ -510,13 +498,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	{
 		Logger.debug("Procedure not directly closeable, asking user", Level.GUI, this);
 		Shell shell = Display.getCurrent().getActiveShell();
-		IExecutionInformation info = m_model.getRuntimeInformation();
-		ExecutorStatus st = info.getStatus();
-		ClientMode mode = info.getClientMode();
-		String status = st.toString();
-		String name = m_model.getProcId();
-		boolean onPrompt = info.isWaitingInput();
-		CloseProcDialog dialog = new CloseProcDialog(shell, name, status, mode, onPrompt);
+		CloseProcDialog dialog = new CloseProcDialog(shell, m_model);
 		int retcode = dialog.open();
 		Logger.debug("User selection " + retcode, Level.GUI, this);
 		if (retcode == IDialogConstants.CANCEL_ID)
@@ -591,7 +573,6 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	 **************************************************************************/
 	public void notifyStack(StackNotification data)
 	{
-		Logger.debug("Notified stack: " + data.getStackType(), Level.GUI, this);
 		m_presentationPanel.setStage(data.getStageId(), data.getStageTitle());
 		// Report to presentations
 		m_presentationNotifier.notifyProcedureStack(data);

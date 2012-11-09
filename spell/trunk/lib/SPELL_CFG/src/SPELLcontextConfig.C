@@ -54,6 +54,8 @@ SPELLcontextConfig::SPELLcontextConfig( const std::string& contextFile )
     m_family = "unknown";
     m_procPath = "unknown";
     m_libPath = "unknown";
+    m_outputDir = "";
+    m_inputDir = "";
 
     loadBasics();
 
@@ -188,12 +190,40 @@ void SPELLcontextConfig::loadBasics()
         m_libPath = "";
     }
 
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_OPATH );
+    if (list.size()==1)
+    {
+        node = *(list.begin());
+        m_outputDir = node->getValue();
+        dealloc_list(list);
+    }
+    else
+    {
+    	LOG_WARN("Output directory not defined in context configuration");
+        m_outputDir = SPELLutils::getSPELL_DATA();
+    }
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_IPATH );
+    if (list.size()==1)
+    {
+        node = *(list.begin());
+        m_inputDir = node->getValue();
+        dealloc_list(list);
+    }
+    else
+    {
+    	LOG_WARN("Input directory not defined in context configuration");
+        m_inputDir = SPELLutils::getSPELL_DATA();
+    }
+
     LOG_INFO("     Driver : " + m_driver);
     LOG_INFO("     S/C    : " + m_spacecraft);
     LOG_INFO("     GCS    : " + m_gcs);
     LOG_INFO("     Family : " + m_family);
     LOG_INFO("     P.Path : " + m_procPath);
     LOG_INFO("     L.Path : " + m_libPath);
+    LOG_INFO("     O.Path : " + m_outputDir);
+    LOG_INFO("     I.Path : " + m_inputDir);
 }
 
 //=============================================================================

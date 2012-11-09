@@ -27,7 +27,8 @@
     <!-- =================================================================== -->
     <procpath>$SPELL_DATA/Procedures/STD</procpath>
     <libpath>$SPELL_DATA/UserLib/STD</libpath>
-    
+    <output_dir>$SPELL_DATA/OutputFiles/STD</output_dir>
+    <input_dir>$SPELL_DATA/InputFiles/STD</input_dir>
     
     <!-- =================================================================== -->
     <!-- DRIVER CONFIGURATION -->
@@ -40,11 +41,12 @@
     <!-- EXECUTOR CONFIGURATION -->
     <!-- =================================================================== -->
     <executor>
-        <property name="ExecDelay">10</property>
+        <property name="ExecDelay">200</property>
         <property name="RunInto">True</property>
         <property name="ByStep">False</property>
         <property name="BrowsableLib">False</property>
         <property name="MaxVerbosity">5</property>
+        <!--ON_LINE, ON_DEMAND, ON_STEP -->
         <property name="SaveStateMode">ON_DEMAND</property>
         <property name="WatchVariables">ENABLED</property>
     </executor>

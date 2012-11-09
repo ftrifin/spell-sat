@@ -76,6 +76,7 @@ class TcInterface(Configurable,Interface):
     # To supress useless notifications
     __lastStatus = None
     __lastElement = None
+    __tcConfirm = False
     
     #===========================================================================
     def __init__(self):
@@ -84,6 +85,7 @@ class TcInterface(Configurable,Interface):
         self.__lastStatus = None
         self.__lastElement = None
         self.__useConfig = {}
+        self.__tcConfirm = False
         LOG("Created")
 
     #===========================================================================
@@ -94,6 +96,14 @@ class TcInterface(Configurable,Interface):
             INTERFACE_DEFAULTS.update(languageDefaults)
         self.setConfig( INTERFACE_DEFAULTS )
         LOG("Configuration loaded", level = LOG_CNFG )
+
+    #===========================================================================
+    def forceTcConfirm(self, confirm = False ):
+        self.__tcConfirm = confirm
+
+    #===========================================================================
+    def shouldForceTcConfirm(self, confirm = False ):
+        return self.__tcConfirm
 
     #==========================================================================
     def setup(self, ctxConfig, drvConfig ):
@@ -251,6 +261,10 @@ class TcInterface(Configurable,Interface):
 
     #==========================================================================
     def __processTcList(self, tcList, useConfig):
+        
+        # Force the Confirm=True if requested
+        useConfig[Confirm] = True
+        
         LOG("Interface configuration:\n\n" + repr(useConfig) + "\n")
         if useConfig.has_key(Block) and useConfig.get(Block):
             if type(tcList)!=list:

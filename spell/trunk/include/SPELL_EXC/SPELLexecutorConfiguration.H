@@ -155,6 +155,15 @@ public: //--------------------------------------------------------------------
 		};
 
 		//////////////////////////////////////////////////////////////////////
+		/** Obtain the force TC confirmation flag
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		bool getForceTcConfirm() const {
+			return m_forceTcConfirm;
+		};
+
+		//////////////////////////////////////////////////////////////////////
 		/** Obtain the executor condition.
 		 *
 		 * \returns The executor condition.
@@ -263,6 +272,15 @@ public: //--------------------------------------------------------------------
 		};
 
 		//////////////////////////////////////////////////////////////////////
+		/** Set the force TC confirmation flag
+		 *
+		 * \param force IN: the flag
+		**////////////////////////////////////////////////////////////////////
+		void setForceTcConfirm( bool force ) {
+			m_forceTcConfirm = force;
+		};
+
+		//////////////////////////////////////////////////////////////////////
 		/** Set the executor condition.
 		 *
 		 * \param condition IN: the condition.
@@ -337,6 +355,8 @@ private: //-------------------------------------------------------------------
 		SPELLwsWorkingMode			 m_saveStateMode;
 		/** True if watch variables is enabled */
 		bool                         m_watchVariables;
+		/** True if all TCs should be confirmed */
+		bool                         m_forceTcConfirm;
 };
 
 /*@}*/

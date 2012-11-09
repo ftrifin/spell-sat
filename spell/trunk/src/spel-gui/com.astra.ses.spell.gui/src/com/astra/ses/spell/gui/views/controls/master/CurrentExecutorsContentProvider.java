@@ -49,6 +49,8 @@
 package com.astra.ses.spell.gui.views.controls.master;
 
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.jface.viewers.IStructuredContentProvider;
@@ -88,14 +90,22 @@ public class CurrentExecutorsContentProvider implements IStructuredContentProvid
 	    Set<Object> procedures = new HashSet<Object>();
 	    if (mgr.canOperate())
 	    {
-		    for(String id : mgr.getOpenLocalProcedures()) 
+	    	List<String> currentOpenLocalProcs = new LinkedList<String>();
+	    	currentOpenLocalProcs.addAll(mgr.getOpenLocalProcedures());
+	    	
+		    for(String id : currentOpenLocalProcs) 
 		    {
 		    	procedures.add(mgr.getProcedure(id));
 		    }
-		    for(String id : mgr.getOpenRemoteProcedures(false)) 
+		    
+	    	List<String> currentOpenRemoteProcs = new LinkedList<String>();
+	    	currentOpenRemoteProcs.addAll(mgr.getOpenRemoteProcedures(false));
+	    	
+		    for(String id : currentOpenRemoteProcs) 
 		    {
 		    	procedures.add(mgr.getRemoteProcedure(id));
 		    }
+		    
 		    if (procedures.isEmpty())
 		    {
 		    	String[] nop = {"(No open procedures)"};

@@ -31,6 +31,7 @@
 #include "SPELL_UTIL/SPELLpythonMonitors.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutor.H"
+#include "SPELL_SYN/SPELLmutex.H"
 #include "SPELL_SYN/SPELLmonitor.H"
 // System includes ---------------------------------------------------------
 #include "structmember.h"

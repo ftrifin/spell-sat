@@ -48,6 +48,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.views.controls.input;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.astra.ses.spell.gui.sound.SoundPlayer;
 
 /**
@@ -59,7 +61,7 @@ class PromptSounder extends Thread
 	/** Rate for the blinking */
 	private static final int	SOUND_RATE_MSEC	= 2500;
 	/** Working flag */
-	private boolean	         m_working;
+	private AtomicBoolean    m_working;
 	/** File name */
 	private String	         m_soundFilename;
 
@@ -72,7 +74,7 @@ class PromptSounder extends Thread
 	{
 		super();
 		m_soundFilename = soundFilename;
-		m_working = true;
+		m_working = new AtomicBoolean(true);
 	}
 
 	/**************************************************************************
@@ -81,27 +83,17 @@ class PromptSounder extends Thread
 	@Override
 	public void run()
 	{
-		while (m_working)
+		while (m_working.get())
 		{
 			try
 			{
+				SoundPlayer.playFile(m_soundFilename);
 				Thread.sleep(SOUND_RATE_MSEC);
 			}
-			catch (Exception ex)
+			catch(Exception ex)
 			{
+				m_working.set(false);
 				return;
-			}
-			if (m_working) 
-			{
-				try
-				{
-					SoundPlayer.playFile(m_soundFilename);
-				}
-				catch(Exception ex)
-				{
-					m_working = false;
-					return;
-				}
 			}
 		}
 	}
@@ -111,7 +103,12 @@ class PromptSounder extends Thread
 	 *************************************************************************/
 	void cancel()
 	{
-		m_working = false;
+		m_working.set(false);
+		try
+		{
+			interrupt();
+		}
+		catch(Exception ex) {};
 	}
 
 }

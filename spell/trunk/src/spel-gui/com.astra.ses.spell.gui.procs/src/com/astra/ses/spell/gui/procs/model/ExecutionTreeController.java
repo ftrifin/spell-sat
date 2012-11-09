@@ -49,15 +49,18 @@
 package com.astra.ses.spell.gui.procs.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Vector;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
+import com.astra.ses.spell.gui.core.model.types.Level;
+import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
 import com.astra.ses.spell.gui.procs.interfaces.listeners.IStackChangesListener;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
@@ -76,7 +79,8 @@ import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformation
  ******************************************************************************/
 public class ExecutionTreeController implements IExecutionTreeController
 {
-	private static final int MAX_NOTIFICATION_FREQ = 100;
+	private static final int MAX_NOTIFICATION_FREQ = 250;
+
 	/** Runtime model */
 	private IExecutionInformation m_executionInfo;
 	/** Execution trace */
@@ -87,6 +91,7 @@ public class ExecutionTreeController implements IExecutionTreeController
 	private IExecutionTreeNode m_viewNode;
 	/** Execution node */
 	private IExecutionTreeNode m_executionNode;
+
 	/** On demand visible node */
 	private IExecutionTreeNode m_analysisNode;
 	/** Routine execution listener */
@@ -95,20 +100,64 @@ public class ExecutionTreeController implements IExecutionTreeController
 	private String m_rootCodeId;
 	/** Wait condition for sequence ordering */
 	private Lock m_notifyLock;
-	/** Lock used for notification ordering */
-	private Lock m_sequenceLock;
-	/** Condition for notification ordering */
-	private Condition m_notifyCondition;
-	/**
-	 * Long with concurrency support, holds the last notification sequence
-	 * reveived
-	 */
-	private AtomicLong m_lastSequence;
-	/** Used to ease graphical notifications */
-	private long m_lastGUInotif = -1;
 	/** Used to know when are we doing AsRun replay */
 	private boolean m_doingReplay;
-
+	/** Holds last time of graphical notification */
+	private long m_lastGUInotif = -1;
+	
+	/****************************************/
+	/** Line notifications synchornization **/
+	/****************************************/
+	
+	/** The line notifications are asynchronous. In order to guarantee the correct display of line information
+	 * to the users, the asynchronous messages shall be ordered by notification sequence (see NotificationData.getSequence)
+	 * To do so, we use a prioritized queue that guarantees the ordering by Comparable, and a processing thread
+	 * to poll notifications from it. Note that this mechanism is NOT USED when in replay mode (ASRUN).
+	 * 
+	 *  It is important to note that the code model shall be notified about its removal in order to shutdown the
+	 *  processing thread.
+	 */
+	
+	/** Processing thread for line notifications. */
+	private ProcessingThread m_processingThread;
+	/** Holds the line events in order of sequence */
+	private PriorityQueue<StackNotification> m_arrivedNotifications;
+	/** Used to control the processing thread */
+	private AtomicBoolean m_processing = new AtomicBoolean(true);
+	
+	/**
+	 * Processing thread for the async line notifications
+	 *
+	 */
+	private class ProcessingThread extends Thread
+	{
+		public void run()
+		{
+			// Perform retrieval of notifications continuously
+			while(m_processing.get())
+			{
+				try
+				{
+					StackNotification data = getNotification();
+					// Trigger the line event if there is data available
+					if (data != null)
+					{
+						processLineEvent(data);
+					}
+					// Otherwise wait a bit
+					else
+					{
+						Thread.sleep(100);
+					}
+				}
+				catch(Exception ex)
+				{
+					ex.printStackTrace();
+				}
+			}
+		}
+	}
+	
 	/***************************************************************************
 	 * Constructor
 	 * 
@@ -126,10 +175,13 @@ public class ExecutionTreeController implements IExecutionTreeController
 		m_listeners = new ArrayList<IStackChangesListener>();
 		m_rootCodeId = initialCodeId;
 		m_notifyLock = new ReentrantLock();
-		m_sequenceLock = new ReentrantLock();
-		m_notifyCondition = m_notifyLock.newCondition();
-		m_lastSequence = new AtomicLong(-1);
 		m_doingReplay = false;
+
+		m_arrivedNotifications = new PriorityQueue<StackNotification>();
+
+		m_processingThread = new ProcessingThread();
+		m_processingThread.start();
+		
 	}
 
 	@Override
@@ -198,19 +250,65 @@ public class ExecutionTreeController implements IExecutionTreeController
 	public synchronized void notifyProcedureItem(ItemNotification data)
 	{
 		// Retrieve line number
-		Vector<String> stack = data.getStackPosition();
-		int lineNumber = Integer.parseInt(stack.lastElement());
-		// Add the notification
-		m_executionNode.notifyItem(lineNumber, data);
-		/*
-		 * Every line in the stack shall notify an item
-		 */
-		IExecutionTreeLine line = m_executionNode.getCurrentLine();
-		while (line != null)
+		List<String> stack = data.getStackPosition();
+
+		String rootNodeName = stack.get(0);
+		int lineNumber = Integer.parseInt(stack.get(stack.size()-1));
+		
+		if (rootNodeName.equals(m_executionNode.getCodeId()))
 		{
-			m_trace.notifyItem(line);
-			line = line.getParentExecutionNode().getParentLine();
+			// Add the notification
+			m_executionNode.notifyItem(lineNumber, data);
+			/*
+			 * Every line in the stack shall notify an item
+			 */
+			IExecutionTreeLine line = m_executionNode.getLine(lineNumber);
+			while (line != null)
+			{
+				m_trace.notifyItem(line);
+				line = line.getParentExecutionNode().getParentLine();
+			}
+			
+			// Update the currently executed line
+			if (m_executionNode == m_viewNode)
+			{
+				m_viewNode.notifyLineChanged(lineNumber);
+			}
 		}
+		// If the notification corresponds to a path different from the current one
+		// we need to search for the node
+		else
+		{
+			IExecutionTreeNode node = searchNode( stack, m_rootNode );
+			IExecutionTreeLine line = node.getLine(lineNumber);
+			node.notifyItem(lineNumber, data);
+
+			// Update the currently executed line
+			if (m_executionNode == m_viewNode)
+			{
+				m_viewNode.notifyLineChanged(lineNumber);
+			}
+
+			while (line != null)
+			{
+				m_trace.notifyItem(line);
+				line = line.getParentExecutionNode().getParentLine();
+			}
+		}
+	}
+	
+	private IExecutionTreeNode searchNode( List<String> stack, IExecutionTreeNode root )
+	{
+		String nodeToSearch = stack.get(0);
+		if (root.getCodeId().equals(nodeToSearch)) return root;
+		
+		int lineOnNode = Integer.parseInt(stack.get(1));
+		
+		IExecutionTreeLine line = root.getLine(lineOnNode);
+		
+		if (line == null) return null;
+		
+		return searchNode(stack.subList(2, stack.size()), line.getChildExecutionNode() );
 	}
 
 	/***************************************************************************
@@ -221,68 +319,26 @@ public class ExecutionTreeController implements IExecutionTreeController
 	@Override
 	public void notifyProcedureStack(StackNotification data)
 	{
-		// We use the stack notification sequence number to organise the
-		// notification processing. If there is a jump in the sequence, the
-		// incoming notification is blocked in the wait, until the correct
-		// notification arrives and signals the condition.
-
-		// IMPORTANT we do not use the organization mechanism when doing AsRun
-		// replay.
-
-		long sequence = -1;
-		if (!m_doingReplay)
+		// Process the notification in the execution tree
+		switch (data.getStackType())
 		{
-			// Get the sequence number
-			sequence = data.getSequence();
-			// We use an atomic long for concurrency.
-			// Take into account the initial case.
-			if (!m_lastSequence.equals(-1))
+		case LINE:
+			if (isInReplayMode())
 			{
-				// If there is a jump in the sequence
-				while (sequence > m_lastSequence.longValue() + 1)
-				{
-					// Wait until the previous notification arrives
-					waitCondition();
-				}
-			}
-			// This lock ensures ordered, concurrent processing of each call.
-			// A different lock must be used, since several notifications may be
-			// blocked at once.
-			m_sequenceLock.lock();
-		}
-		else
-		{
-			m_lastSequence.set(data.getSequence());
-		}
-
-		try
-		{
-			// Process the notification in the execution tree
-			switch (data.getStackType())
-			{
-			case LINE:
 				processLineEvent(data);
-				break;
-			case CALL:
-				processCallEvent(data);
-				break;
-			case RETURN:
-				processReturnEvent(data);
-				break;
-			default:
 			}
-		}
-		finally
-		{
-			if (!m_doingReplay)
+			else
 			{
-				// Update the last sequence number
-				m_lastSequence.set(sequence);
-				// Signal this sequence
-				signalCondition();
-				// Unlock the sequence ordering lock
-				m_sequenceLock.unlock();
+				placeNotification(data);
 			}
+			break;
+		case CALL:
+			processCallEvent(data);
+			break;
+		case RETURN:
+			processReturnEvent(data);
+			break;
+		default:
 		}
 	}
 
@@ -293,18 +349,29 @@ public class ExecutionTreeController implements IExecutionTreeController
 	 **************************************************************************/
 	private void processLineEvent(StackNotification data)
 	{
-		if (m_executionNode == m_viewNode)
+		List<String> stack = data.getStackPosition();
+		if (stack.size()<2) return;
+		String headNodeName = stack.get(stack.size()-2);
+		int lineNumber = Integer.parseInt(stack.get(stack.size()-1));
+
+		IExecutionTreeNode node = m_executionNode;
+		
+		// If we are in the wrong position, switch there first
+		if (!headNodeName.equals(node.getCodeId()))
 		{
-			((IExecutionInformationHandler) m_executionInfo).resetStepOverMode();
+			node = searchNode(stack,m_rootNode);
 		}
 
-		// Update the currently executed line
-		int lineNumber = Integer.parseInt(data.getStackPosition().lastElement());
-		m_executionNode.notifyLineChanged(lineNumber,data);
-		// Discard notifications to the graphical layer if they come too
-		// frequently
+		if (node == m_viewNode)
+		{
+			((IExecutionInformationHandler) m_executionInfo).resetStepOverMode();
+			// Update the currently executed line
+			node.notifyLineChanged(lineNumber,data);
+		}
+
 		if ((System.currentTimeMillis() - m_lastGUInotif) > MAX_NOTIFICATION_FREQ)
 		{
+			Logger.debug("Broadcast line: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
 			for (IStackChangesListener listener : m_listeners)
 			{
 				listener.lineChanged(lineNumber);
@@ -321,21 +388,31 @@ public class ExecutionTreeController implements IExecutionTreeController
 	 **************************************************************************/
 	private void processCallEvent(StackNotification data)
 	{
-		String codeId = data.getStackPosition().elementAt(0);
+		List<String> stack = data.getStackPosition();
 		int execution = data.getNumExecutions();
 		long sequence = data.getSequence();
 		if (m_rootNode == null)
 		{
 			// If this is the first call, set the root node
+			String codeId = stack.get(0);
 			m_rootNode = new ExecutionTreeNode(codeId, codeId, null, 0, execution, sequence);
 			m_executionNode = m_rootNode;
 		}
 		else
 		{
-			IExecutionTreeLine parentLine = m_executionNode.getCurrentLine();
+			String headNodeName = stack.get(stack.size()-2);
+			
+			// If we are in the wrong position, switch there first
+			if (!headNodeName.equals(m_executionNode.getCodeId()))
+			{
+				m_executionNode = searchNode(stack,m_rootNode);
+			}
+			
+			int lineNumber = Integer.parseInt(stack.get(stack.size()-3));
+			IExecutionTreeLine parentLine = m_executionNode.getLine(lineNumber);
 			if (parentLine.getChildExecutionNode() == null)
 			{
-				m_executionNode = new ExecutionTreeNode(codeId, data.getCodeName(), parentLine, m_executionNode.getRecursionDepth() + 1,
+				m_executionNode = new ExecutionTreeNode(headNodeName, data.getCodeName(), parentLine, m_executionNode.getRecursionDepth() + 1,
 				        execution, sequence);
 				parentLine.setChild(m_executionNode);
 			}
@@ -347,7 +424,7 @@ public class ExecutionTreeController implements IExecutionTreeController
 		}
 
 		// Assign the current line in the newly created node
-		int lineNumber = Integer.parseInt(data.getStackPosition().lastElement());
+		int lineNumber = Integer.parseInt(stack.get(stack.size()-1));
 		m_executionNode.notifyLineChanged(lineNumber,data);
 
 		// Update view node
@@ -406,7 +483,7 @@ public class ExecutionTreeController implements IExecutionTreeController
 		m_viewNode = null;
 		m_executionNode = null;
 		m_rootNode = null;
-		signalCondition();
+		clearNotifications();
 	}
 
 	@Override
@@ -647,18 +724,23 @@ public class ExecutionTreeController implements IExecutionTreeController
 	}
 
 	/***************************************************************************
-	 * Wait a signal for correct ordering
+	 * Close the processing mechanism
 	 **************************************************************************/
-	void waitCondition()
+	public void dispose()
+	{
+		m_processing.set(false);
+	}
+	
+	/***************************************************************************
+	 * Place a new notification in the prioritized queue. It will be automatically
+	 * put in the correct position according to the sequence number. 
+	 **************************************************************************/
+	private void placeNotification( StackNotification data )
 	{
 		m_notifyLock.lock();
 		try
 		{
-			m_notifyCondition.awaitNanos(1000000000);
-		}
-		catch (InterruptedException err)
-		{
-			err.printStackTrace();
+			m_arrivedNotifications.add(data);
 		}
 		finally
 		{
@@ -667,18 +749,35 @@ public class ExecutionTreeController implements IExecutionTreeController
 	}
 
 	/***************************************************************************
-	 * Signal ordering condition
+	 * Obtain the next stack notification if any (return null if none available)
 	 **************************************************************************/
-	void signalCondition()
+	private StackNotification getNotification()
 	{
 		m_notifyLock.lock();
 		try
 		{
-			m_notifyCondition.signalAll();
+			return m_arrivedNotifications.poll();
 		}
 		finally
 		{
 			m_notifyLock.unlock();
 		}
 	}
+
+	/***************************************************************************
+	 * Clear all pending notifications
+	 **************************************************************************/
+	private void clearNotifications()
+	{
+		m_notifyLock.lock();
+		try
+		{
+			m_arrivedNotifications.clear();
+		}
+		finally
+		{
+			m_notifyLock.unlock();
+		}
+	}
+
 }

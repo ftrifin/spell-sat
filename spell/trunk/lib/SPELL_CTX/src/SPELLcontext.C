@@ -59,8 +59,7 @@ SPELLcontext* SPELLcontext::s_instance = NULL;
 //=============================================================================
 SPELLcontext::SPELLcontext()
 : m_clientIPC(),
-  m_listenerIPC(),
-  m_dataChunker(100)
+  m_listenerIPC()
 {
 
 }
@@ -255,7 +254,7 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 SPELLipcMessage SPELLcontext::closeExecutor( const SPELLipcMessage& msg )
 {
 	std::string instanceId = msg.get( MessageField::FIELD_PROC_ID );
-	DEBUG( NAME + "Requested closing executor " + instanceId );
+	LOG_INFO( NAME + "Requested closing executor " + instanceId );
 	SPELLipcMessage resp = VOID_MESSAGE;
 	try
 	{
@@ -1050,9 +1049,13 @@ SPELLipcMessage SPELLcontext::getProcedureCode( const SPELLipcMessage& msg )
 	{
 		int chunkNo = STRI( msg.get( MessageField::FIELD_CHUNK ) );
 		DEBUG( NAME + "Get code chunk " + ISTR(chunkNo));
-		data = m_dataChunker.getChunk( procId, chunkNo );
-		int totalChunks = m_dataChunker.getSize( procId );
-		if (chunkNo == (totalChunks-1)) m_dataChunker.endChunks(procId);
+		data = getChunker(msg).getChunk( procId, chunkNo );
+		int totalChunks = getChunker(msg).getSize( procId );
+		if (chunkNo == (totalChunks-1))
+		{
+			getChunker(msg).endChunks(procId);
+			clearChunker(msg);
+		}
 		resp.set( MessageField::FIELD_CHUNK, ISTR(chunkNo) );
 		resp.set( MessageField::FIELD_TOTAL_CHUNKS, ISTR(totalChunks));
 	}
@@ -1060,7 +1063,7 @@ SPELLipcMessage SPELLcontext::getProcedureCode( const SPELLipcMessage& msg )
 	{
 		SPELLprocedureSourceCode source = SPELLprocedureManager::instance().getSourceCode( procId );
 		std::vector<std::string> lines = source.getSourceCodeLines();
-		int totalChunks = m_dataChunker.startChunks( procId, lines );
+		int totalChunks = getChunker(msg).startChunks( procId, lines );
 		resp.set( MessageField::FIELD_CHUNK, "0" );
 
 		DEBUG( NAME + "Start chunks " + ISTR(totalChunks));
@@ -1073,7 +1076,7 @@ SPELLipcMessage SPELLcontext::getProcedureCode( const SPELLipcMessage& msg )
 		else
 		{
 			resp.set( MessageField::FIELD_TOTAL_CHUNKS, ISTR(totalChunks));
-			data = m_dataChunker.getChunk( procId, 0 );
+			data = getChunker(msg).getChunk( procId, 0 );
 		}
 	}
 	std::string dataStr = "";
@@ -1215,6 +1218,37 @@ SPELLipcDataChunk::DataList SPELLcontext::getInputFileData( SPELLdatabase* db )
 //=============================================================================
 // METHOD: SPELLcontext::
 //=============================================================================
+SPELLipcDataChunk& SPELLcontext::getChunker( const SPELLipcMessage& msg )
+{
+	SPELLmonitor m(m_chunkLock);
+	std::string chunkerId = ISTR(msg.getKey()) + ":" + msg.getId();
+
+	if (m_dataChunkers.find(chunkerId) == m_dataChunkers.end())
+	{
+		m_dataChunkers.insert( std::make_pair( chunkerId, new SPELLipcDataChunk(100) ));
+	}
+	return *m_dataChunkers[chunkerId];
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+void SPELLcontext::clearChunker( const SPELLipcMessage& msg )
+{
+	SPELLmonitor m(m_chunkLock);
+	std::string chunkerId = ISTR(msg.getKey()) + ":" + msg.getId();
+
+	ChunkerMap::iterator it = m_dataChunkers.find(chunkerId);
+	if (it != m_dataChunkers.end())
+	{
+		delete it->second;
+		m_dataChunkers.erase(it);
+	}
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
 SPELLipcMessage SPELLcontext::getInputFile( const SPELLipcMessage& msg )
 {
 	SPELLipcMessage response = SPELLipcHelper::createResponse( ContextMessages::RSP_INPUT_FILE, msg );
@@ -1229,12 +1263,13 @@ SPELLipcMessage SPELLcontext::getInputFile( const SPELLipcMessage& msg )
 	{
 		int chunkNo = STRI( msg.get( MessageField::FIELD_CHUNK ) );
 		DEBUG("Get dictionary contents chunk " + ISTR(chunkNo));
-		data = m_dataChunker.getChunk( filename, chunkNo );
-		int totalChunks = m_dataChunker.getSize( filename );
+		data = getChunker(msg).getChunk( filename, chunkNo );
+		int totalChunks = getChunker(msg).getSize( filename );
 		if (chunkNo == (totalChunks-1))
 		{
 			DEBUG( NAME + "End chunks" );
-			m_dataChunker.endChunks(filename);
+			getChunker(msg).endChunks(filename);
+			clearChunker(msg);
 		}
 		response.set( MessageField::FIELD_CHUNK, ISTR(chunkNo) );
 		response.set( MessageField::FIELD_TOTAL_CHUNKS, ISTR(totalChunks));
@@ -1294,7 +1329,7 @@ SPELLipcMessage SPELLcontext::getInputFile( const SPELLipcMessage& msg )
 
 		data = getInputFileData( db );
 
-		int totalChunks = m_dataChunker.startChunks( filename, data );
+		int totalChunks = getChunker(msg).startChunks( filename, data );
 		response.set( MessageField::FIELD_CHUNK, "0" );
 
 		// Chunk if needed
@@ -1304,7 +1339,7 @@ SPELLipcMessage SPELLcontext::getInputFile( const SPELLipcMessage& msg )
 
 			response.set( MessageField::FIELD_CHUNK, "0" );
 
-			data = m_dataChunker.getChunk( filename, 0 );
+			data = getChunker(msg).getChunk( filename, 0 );
 
 			response.set( MessageField::FIELD_DICT_CONTENTS, SPELLdataHelper::linesToString(data) );
 			response.set( MessageField::FIELD_TOTAL_CHUNKS, ISTR(totalChunks));
@@ -1369,7 +1404,7 @@ void SPELLcontext::notifyExecutorOperation(
 			// Status notifications for executors need to be requests, not oneway
 			if ( operation == EXEC_OP_STATUS)
 			{
-				notification.setType( MSG_TYPE_NOTIFY );
+				notification.setType( MSG_TYPE_REQUEST );
 				notification.set( MessageField::FIELD_DATA_TYPE, MessageValue::DATA_TYPE_STATUS );
 				parentExec->sendRequestToExecutor( notification );
 			}

@@ -26,6 +26,8 @@
 
 include ${top_srcdir}/common.mk
 
+#libSPELL_EXC_la_CPPFLAGS = ${AM_CPPFLAGS} -DWITH_DEBUG
+
 lib_LTLIBRARIES= libSPELL_CTX.la
 libSPELL_CTX_la_LDFLAGS = -version-info 3:0:0
 libSPELL_CTX_la_SOURCES = \
@@ -43,4 +45,3 @@ libSPELL_CTX_la_SOURCES = \
                 src/SPELLlistenerIPC.C  \
                 src/SPELLpersistencyTable.C
  
-  

@@ -49,6 +49,7 @@
 package com.astra.ses.spell.gui.presentation.code;
 
 import java.awt.print.Printable;
+import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -76,6 +77,7 @@ import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
 import com.astra.ses.spell.gui.presentation.code.printable.CodeViewPrintable;
 import com.astra.ses.spell.gui.print.SpellFooterPrinter;
 import com.astra.ses.spell.gui.print.SpellHeaderPrinter;
+import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
 import com.astra.ses.spell.gui.procs.interfaces.listeners.IStackChangesListener;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
@@ -200,7 +202,8 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 	public void notifyItem(IProcedure model, ItemNotification data)
 	{
 		if (!data.getExecutionMode().equals(ExecutionMode.PROCEDURE)) return;
-		int lineNumber = Integer.parseInt(data.getStackPosition().lastElement());
+		List<String> stack = data.getStackPosition();
+		int lineNumber = Integer.parseInt(stack.get(stack.size()-1));
 		m_codeViewer.newItemArrived(lineNumber);
 	}
 

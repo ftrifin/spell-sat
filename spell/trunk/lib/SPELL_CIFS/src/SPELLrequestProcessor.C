@@ -120,13 +120,16 @@ void SPELLrequestProcessor::processGetConfig( const SPELLipcMessage& msg, SPELLi
     std::string execDelay = ISTR(config.getExecDelay());
     std::string byStep = config.getByStep() ? True : False;
     std::string browsableLib = config.getBrowsableLib() ? True : False;
+    std::string forceTcConfirm = config.getForceTcConfirm() ? True : False;
     response.set(ExecutorConstants::ExecDelay, execDelay);
     response.set(ExecutorConstants::ByStep, byStep);
     response.set(ExecutorConstants::BrowsableLib, browsableLib );
+    response.set(ExecutorConstants::ForceTcConfirm, forceTcConfirm);
     LOG_INFO("Current executor configuration:");
     LOG_INFO("    exec delay   : " + execDelay);
     LOG_INFO("    by step      : " + byStep);
     LOG_INFO("    browsable lib: " + browsableLib);
+    LOG_INFO("    force confirm: " + forceTcConfirm);
     DEBUG("[CIF] Request to get executor config done");
 }
 
@@ -170,10 +173,19 @@ void SPELLrequestProcessor::processSetConfig( const SPELLipcMessage& msg, SPELLi
     std::string execDelay = msg.get(ExecutorConstants::ExecDelay);
     std::string byStep = msg.get(ExecutorConstants::ByStep);
     std::string browsableLib = msg.get(ExecutorConstants::BrowsableLib);
+    std::string forceTcConfirm = msg.get(ExecutorConstants::ForceTcConfirm);
+    LOG_INFO("New executor configuration ----------------------------------");
+    LOG_INFO("   Run into  : " + runInto);
+    LOG_INFO("   Delay     : " + execDelay);
+    LOG_INFO("   By step   : " + byStep);
+    LOG_INFO("   Br. lib   : " + browsableLib);
+    LOG_INFO("   TC confirm: " + forceTcConfirm);
+    LOG_INFO("-------------------------------------------------------------");
     SPELLexecutor::instance().setRunInto( (runInto == True) );
     SPELLexecutor::instance().setExecDelay( STRI( execDelay ));
     SPELLexecutor::instance().setByStep( (byStep == True) );
     SPELLexecutor::instance().setBrowsableLib( (browsableLib == True) );
+    SPELLexecutor::instance().setForceTcConfirm( forceTcConfirm == True );
     DEBUG("[CIF] Request to change executor config done");
 }
 

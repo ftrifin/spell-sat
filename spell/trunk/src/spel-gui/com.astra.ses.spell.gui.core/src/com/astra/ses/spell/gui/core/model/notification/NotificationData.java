@@ -48,11 +48,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.model.notification;
 
-import java.util.Vector;
+import java.util.LinkedList;
+import java.util.List;
 
 import com.astra.ses.spell.gui.core.model.types.ExecutionMode;
 
-public class NotificationData
+public class NotificationData implements Comparable<NotificationData>
 {
 	// =========================================================================
 	// INSTANCE DATA MEMBERS
@@ -62,7 +63,7 @@ public class NotificationData
 	/** Holds the procedure id */
 	private String	       m_procId;
 	/** Holds the call stack position. */
-	private Vector<String>	m_csp;
+	private List<String>	m_csp;
 	/** Holds the number of executions of the current position */
 	private int	           m_numExecutions;
 	/** Holds the notification time */
@@ -70,7 +71,7 @@ public class NotificationData
 	/** Holds the execution mode */
 	private ExecutionMode	m_mode;
 	/** Holds the notification sequence */
-	private long	       m_sequence;
+	private Long	       m_sequence;
 
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
@@ -86,7 +87,7 @@ public class NotificationData
 	public NotificationData(String procId, String stack)
 	{
 		m_procId = procId;
-		m_csp = new Vector<String>();
+		m_csp = new LinkedList<String>();
 		m_numExecutions = 0;
 		String[] levels = stack.split(":");
 		int count = 0;
@@ -113,7 +114,26 @@ public class NotificationData
 		}
 		m_time = "";
 		m_mode = ExecutionMode.PROCEDURE;
-		m_sequence = -1;
+		m_sequence = new Long(-1);
+	}
+
+	/***************************************************************************
+	 * Constructor
+	 * 
+	 * @param procId
+	 *            The procedure identifier
+	 * @param stack
+	 *            The stack position string
+	 ***************************************************************************/
+	public NotificationData(String procId, List<String> stack, int numExecutions)
+	{
+		m_procId = procId;
+		m_csp = new LinkedList<String>();
+		m_csp.addAll(stack);
+		m_numExecutions = numExecutions;
+		m_time = "";
+		m_mode = ExecutionMode.PROCEDURE;
+		m_sequence = new Long(-1);
 	}
 
 	/***************************************************************************
@@ -135,7 +155,7 @@ public class NotificationData
 	/***************************************************************************
 	 * 
 	 ***************************************************************************/
-	public Vector<String> getStackPosition()
+	public List<String> getStackPosition()
 	{
 		return m_csp;
 	}
@@ -183,8 +203,14 @@ public class NotificationData
 	/***************************************************************************
 	 * 
 	 ***************************************************************************/
-	public long getSequence()
+	public Long getSequence()
 	{
 		return m_sequence;
 	}
+
+	@Override
+    public int compareTo(NotificationData other)
+    {
+	    return m_sequence.compareTo(other.m_sequence);
+    }
 }

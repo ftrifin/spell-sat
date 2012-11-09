@@ -201,13 +201,6 @@ public class ExecutionTreeNode implements IExecutionTreeNode
 		return m_parentLine;
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
-	 * 
-	 * @see IExecutionTreeNode#notifyLineChanged(StackNotification)
-	 * =========================================================================
-	 */
 	@Override
 	public void notifyLineChanged(int lineNumber, StackNotification data)
 	{
@@ -220,6 +213,16 @@ public class ExecutionTreeNode implements IExecutionTreeNode
 		line.markExecuted(true);
 		// Update execution range
 		m_executionRanges.get(m_currentExecution).notifySequence(sequence);
+	}
+
+	@Override
+	public void notifyLineChanged(int lineNumber)
+	{
+		// Retrieve the line
+		IExecutionTreeLine line = getLine(lineNumber);
+		// Update current line
+		m_currentLine = line;
+		line.markExecuted(true);
 	}
 
 	/*

@@ -218,7 +218,7 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
                 }
             }
 
-/**
+
             // Now ensure that all libraries contain all imported names as well
             for( it = files.begin(); it != end; it++)
             {
@@ -240,7 +240,7 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
                     PyErr_Clear();
                 }
             }
-**/
+
             // Mark the import as done
             PyDict_SetItemString( main_dict, "__USERLIB__", STRPY("__USERLIB__"));
         }

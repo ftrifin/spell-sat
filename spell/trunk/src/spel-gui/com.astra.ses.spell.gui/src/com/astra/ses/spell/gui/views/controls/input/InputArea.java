@@ -58,8 +58,6 @@ import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.swt.events.VerifyListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -579,8 +577,8 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			m_blinkerLauncher.cancel();
 			m_blinkerLauncher = null;
 		}
-		// Ensure the text field has null background color
-		m_textPrompt.setBackground(null);
+		// Ensure the text field has white background color
+		m_textPrompt.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_WHITE));
 		m_textPrompt.redraw();
 	}
 

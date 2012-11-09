@@ -167,6 +167,8 @@ public class RemoteProcedure implements IProcedure
         public void stepOver() {}
         @Override
         public void setVisibleNode(String stack) {}
+		@Override
+        public void setForceTcConfirmation(boolean value) {}
 	};
 	
 	// =========================================================================
@@ -218,12 +220,28 @@ public class RemoteProcedure implements IProcedure
 	private void updateInfoFromRemote() throws Exception
 	{
 		IExecutorInfo info = new ExecutorInfo(m_procId);
-		s_proxy.updateExecutorInfo(m_procId, info);
-		m_executionInformation.copyFrom(info);
-		ExecutorConfig cfg = new ExecutorConfig(m_procId);
-		s_proxy.updateExecutorConfig(m_procId, cfg);
-		m_properties.put(ProcProperties.PROC_NAME, info.getName());
-		m_executionInformation.copyFrom(cfg);
+		try
+		{
+			s_proxy.updateExecutorInfo(m_procId, info);
+			m_executionInformation.copyFrom(info);
+			ExecutorConfig cfg = new ExecutorConfig(m_procId);
+			s_proxy.updateExecutorConfig(m_procId, cfg);
+			m_properties.put(ProcProperties.PROC_NAME, info.getName());
+			m_executionInformation.copyFrom(cfg);
+		}
+		catch(Exception ex)
+		{
+			m_executionInformation.setExecutorStatus(ExecutorStatus.UNKNOWN);
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void onClose()
+	{
+		// Nothing to do
 	}
 
 	/***************************************************************************

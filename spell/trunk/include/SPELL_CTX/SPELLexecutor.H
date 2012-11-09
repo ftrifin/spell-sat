@@ -211,7 +211,7 @@ protected: //-----------------------------------------------------------------
 
 		SPELLipcMessage executorLogin( const SPELLipcMessage& msg );
 
-		SPELLipcMessage executorNotification( const SPELLipcMessage& msg );
+		void executorNotification( const SPELLipcMessage& msg );
 
 		//====================================================================
 		// INTERNAL IPC METHODS

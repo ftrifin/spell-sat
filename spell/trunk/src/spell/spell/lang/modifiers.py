@@ -494,3 +494,7 @@ Period = 'Period'
 #:
 #: Accepts strings or lists
 Select = 'Select'
+#: Overwrite files
+#:
+#: Accepts True/False
+Overwrite = 'Overwrite'

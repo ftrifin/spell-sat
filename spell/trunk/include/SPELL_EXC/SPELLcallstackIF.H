@@ -88,6 +88,13 @@ public: //--------------------------------------------------------------------
 		virtual const std::string& getStack() = 0;
 
 		//////////////////////////////////////////////////////////////////////
+		/** Obtain the current callstack string.
+		 *
+		 * \returns The current callstack string.
+		**////////////////////////////////////////////////////////////////////
+		virtual const std::string getFullStack() = 0;
+
+		//////////////////////////////////////////////////////////////////////
 		/** Obtain the current line number.
 		 *
 		 * \returns The current line number.
