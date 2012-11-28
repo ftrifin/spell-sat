@@ -691,21 +691,6 @@
          </commandParameter>
       </command>
       <command
-            description="Switch the visible execution node"
-            id="com.astra.ses.spell.gui.commands.ViewCodeId"
-            name="Change visible code">
-         <commandParameter
-               id="procedureIdentifier"
-               name="Procedure"
-               optional="false">
-         </commandParameter>
-         <commandParameter
-               id="stack"
-               name="Stack representation"
-               optional="false">
-         </commandParameter>
-      </command>
-      <command
             id="com.astra.ses.spell.gui.commands.ShowReleaseInfo"
             name="Show release info dialog">
       </command>
@@ -982,10 +967,6 @@
       <handler
             class="com.astra.ses.spell.gui.model.commands.CmdReload"
             commandId="com.astra.ses.spell.gui.commands.Reload">
-      </handler>
-      <handler
-            class="com.astra.ses.spell.gui.model.commands.ViewCodeId"
-            commandId="com.astra.ses.spell.gui.commands.ViewCodeId">
       </handler>
       <handler
             class="com.astra.ses.spell.gui.model.commands.ConfigureExecution"

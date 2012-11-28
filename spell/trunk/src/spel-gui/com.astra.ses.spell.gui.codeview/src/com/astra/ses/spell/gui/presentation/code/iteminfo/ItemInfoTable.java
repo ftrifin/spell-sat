@@ -46,7 +46,7 @@
 // SUBPROJECT: SPELL GUI Client
 //
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.code.controls;
+package com.astra.ses.spell.gui.presentation.code.iteminfo;
 
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.swt.SWT;
@@ -57,35 +57,17 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 
+import com.astra.ses.spell.gui.procs.interfaces.model.SummaryMode;
+
 /*******************************************************************************
  * @brief
  * @date 09/10/07
  ******************************************************************************/
 public class ItemInfoTable extends TableViewer
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** ContentProvider */
 	private ItemInfoTableContentProvider	m_contentProvider;
-	// PROTECTED ---------------------------------------------------------------
-	protected Table	                     m_table;
-
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
+	protected Table	                        m_table;
 
 	/***************************************************************************
 	 * Constructor.
@@ -95,11 +77,10 @@ public class ItemInfoTable extends TableViewer
 	 * @param parent
 	 *            The parent composite
 	 **************************************************************************/
-	public ItemInfoTable(int lineNumber, Composite parent)
+	public ItemInfoTable(Composite parent)
 	{
-		super(parent, SWT.SINGLE | SWT.FULL_SELECTION | SWT.BORDER
-		        | SWT.V_SCROLL);
-		m_contentProvider = new ItemInfoTableContentProvider(lineNumber);
+		super(parent, SWT.SINGLE | SWT.FULL_SELECTION | SWT.BORDER | SWT.V_SCROLL);
+		m_contentProvider = new ItemInfoTableContentProvider();
 
 		setContentProvider(m_contentProvider);
 		setLabelProvider(new ItemInfoTableLabelProvider());
@@ -109,7 +90,7 @@ public class ItemInfoTable extends TableViewer
 		m_table.setLinesVisible(true);
 		m_table.setFont(new Font(Display.getCurrent(), "Arial", 9, SWT.NORMAL));
 		m_table.setLayoutData(new GridData(GridData.FILL_BOTH));
-
+		
 		initializeTable();
 	}
 
@@ -150,8 +131,8 @@ public class ItemInfoTable extends TableViewer
 	 * 
 	 * @param summary
 	 **************************************************************************/
-	public void setSummaryMode(boolean summary)
+	public void setSummaryMode( SummaryMode mode )
 	{
-		m_contentProvider.setSummaryMode(summary);
+		m_contentProvider.setSummaryMode(mode);
 	}
 }

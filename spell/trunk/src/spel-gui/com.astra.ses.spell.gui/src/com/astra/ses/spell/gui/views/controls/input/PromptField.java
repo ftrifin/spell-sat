@@ -82,14 +82,8 @@ import com.astra.ses.spell.gui.views.controls.actions.GuiExecutorCommand;
  */
 public class PromptField implements KeyListener
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
 	private static IConfigurationManager s_cfg = null;
 	
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Defined symbol for the prompt text end */
 	public static final String	PROMPT_SYMBOL	= ">";
 
@@ -99,11 +93,6 @@ public class PromptField implements KeyListener
 		s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 	}
 
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the real text input. Cannot be subclassed */
 	private Text	           m_contents;
 	/** Prompt string */
@@ -118,13 +107,6 @@ public class PromptField implements KeyListener
 	private Vector<String>	   m_previousValues;
 	/** Current position at the history */
 	private int	               m_historyIndex;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor

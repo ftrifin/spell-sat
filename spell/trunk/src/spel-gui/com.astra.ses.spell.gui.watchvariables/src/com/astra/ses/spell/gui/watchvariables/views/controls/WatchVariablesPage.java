@@ -365,7 +365,7 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 	 *************************************************************************/
 	public void updateModel()
 	{
-		switch(m_proc.getDataProvider().getExecutorStatus())
+		switch(m_proc.getRuntimeInformation().getStatus())
 		{
 		case PAUSED:
 		case WAITING:

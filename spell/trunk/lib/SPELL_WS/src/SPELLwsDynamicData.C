@@ -183,6 +183,11 @@ void SPELLwsDynamicData::save()
 //=============================================================================
 void SPELLwsDynamicData::restore()
 {
+	if (!m_storage->isReady())
+	{
+		THROW_EXCEPTION("Failed to restore dynamic data", "Storage not ready", SPELL_ERROR_WSTART);
+	}
+
 	DEBUG("[DYN] Restore dynamic data for frame " + PYCREPR(m_frame));
 	loadParameters();
 	loadTryBlocks();

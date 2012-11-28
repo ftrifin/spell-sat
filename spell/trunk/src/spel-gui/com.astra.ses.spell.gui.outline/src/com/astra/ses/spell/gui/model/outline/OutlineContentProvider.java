@@ -48,25 +48,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.model.outline;
 
+import java.util.List;
+
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.widgets.Display;
 
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineNode;
-import com.astra.ses.spell.gui.procs.interfaces.listeners.IStackChangesListener;
+import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
 
 /**************************************************************************
  * Provides the content of the outline tree
  *************************************************************************/
-public class OutlineContentProvider implements IStructuredContentProvider, ITreeContentProvider, IStackChangesListener
+public class OutlineContentProvider implements IStructuredContentProvider, ITreeContentProvider, IExecutionListener
 {
 	/** Procedure call stack */
 	private OutlineProcedureModel m_input;
 	/** Procedure data provider reference */
-	private IProcedureDataProvider m_dataProvider;
+	private IProcedure m_model;
 
 	@Override
 	public void inputChanged(Viewer v, Object oldInput, Object newInput)
@@ -75,15 +77,15 @@ public class OutlineContentProvider implements IStructuredContentProvider, ITree
 		m_input = null;
 		if (newInput != null)
 		{
-			IProcedure proc = (IProcedure) newInput;
-			m_dataProvider = proc.getDataProvider();
+			m_model = (IProcedure) newInput;
 			// Set the input
-			m_input = new OutlineProcedureModel(proc.getProcId(), m_dataProvider);
+			m_input = new OutlineProcedureModel(m_model);
 
 			// Subscribe to events
 			if (oldInput == null)
 			{
-				m_dataProvider.addStackChangesListener(this);
+				m_model.getExecutionManager().addListener(this);
+				onCodeChanged();
 			}
 		}
 	}
@@ -91,7 +93,7 @@ public class OutlineContentProvider implements IStructuredContentProvider, ITree
 	@Override
 	public void dispose()
 	{
-		m_dataProvider.removeStackChangesListener(this);
+		m_model.getExecutionManager().removeListener(this);
 	}
 
 	@Override
@@ -131,23 +133,30 @@ public class OutlineContentProvider implements IStructuredContentProvider, ITree
 	}
 
 	@Override
-	public void viewChanged(boolean sourceCodeChanged)
+	public void onCodeChanged()
 	{
-		if (sourceCodeChanged)
+		// Force the recreation of the tree contents
+		Display.getDefault().syncExec(new Runnable()
 		{
-			// Force the recreation of the tree contents
-			Display.getDefault().syncExec(new Runnable()
+			public void run()
 			{
-				public void run()
-				{
-					m_input.createContents();
-				}
-			});
-		}
+				m_input.createContents();
+			}
+		});
 	}
 
 	@Override
-	public void lineChanged(int line)
+	public void onLineChanged( ICodeLine line )
 	{
 	}
+
+	@Override
+    public void onItemsChanged( List<ICodeLine> lines )
+    {
+    }
+
+	@Override
+    public void onProcessingDelayChanged(long delay)
+    {
+    }
 }

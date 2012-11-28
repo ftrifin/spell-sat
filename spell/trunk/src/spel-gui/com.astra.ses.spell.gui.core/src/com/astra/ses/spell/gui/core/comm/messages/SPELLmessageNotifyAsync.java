@@ -290,6 +290,9 @@ public class SPELLmessageNotifyAsync extends SPELLmessage
 		{
 			data.setSequence(99999);
 		}
+		
+		data.setTime(getTime());
+		
 		return data;
 	}
 }

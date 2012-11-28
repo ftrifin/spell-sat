@@ -48,8 +48,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.services;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +62,7 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.astra.ses.spell.gui.core.exceptions.ContextError;
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
@@ -96,6 +101,7 @@ import com.astra.ses.spell.gui.procs.model.RemoteProcedure;
  */
 class ProcedureModelManager
 {
+	private static final DateFormat s_df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 	/** Holds the reference to the context proxy */
 	private IContextProxy m_proxy;
 	/** Holds the reference to the context proxy */
@@ -201,7 +207,7 @@ class ProcedureModelManager
 
 		// Provoke the first source code acquisition
 		Logger.debug("Acquire source code for the first time", Level.PROC, this);
-		proc.getDataProvider().getRootSource(monitor);
+		proc.getExecutionManager().initialize(monitor);
 
 		Logger.debug("Store local model " + instanceId, Level.PROC, this);
 		m_localModels.put(instanceId, proc);
@@ -310,6 +316,10 @@ class ProcedureModelManager
 
 		Logger.debug("Instantiate model", Level.PROC, this);
 		IProcedure proc = new Procedure(instanceId, props, mode);
+
+		// Provoke the first source code acquisition
+		Logger.debug("Acquire source code for the first time", Level.PROC, this);
+		proc.getExecutionManager().initialize( new NullProgressMonitor() );
 
 		Logger.debug("Store local model: " + instanceId , Level.PROC, this);
 		m_localModels.put(instanceId, proc);
@@ -633,8 +643,13 @@ class ProcedureModelManager
 		ArrayList<IServerFileLine> lines = data.getLines();
 		Logger.debug("AsRun lines: " + lines.size(), Level.PROC, this);
 
+		long seq = 0;
+		
 		for (IServerFileLine tabbedLine : lines)
 		{
+			Date currentTime = Calendar.getInstance().getTime();
+			String currentTimeStr = s_df.format(currentTime);
+			seq++;
 			AsRunFileLine arLine = (AsRunFileLine) tabbedLine;
 			try
 			{
@@ -645,17 +660,35 @@ class ProcedureModelManager
 					retrievedLine = true;
 				case CALL: // Fall through
 				case RETURN:
-					StackNotification cdata = (StackNotification) arLine.getNotificationData();
-					model.getRuntimeProcessor().notifyProcedureStack(cdata);
+					StackNotification ndata = (StackNotification) arLine.getNotificationData();
+					ndata.setTime(currentTimeStr);
+					ndata.setSequence(seq);
+					try
+					{
+						model.getRuntimeProcessor().notifyProcedureStack(ndata);
+					}
+					catch(Exception ex) { ex.printStackTrace(); };
 					break;
 				case ITEM:
-					ItemNotification item = (ItemNotification) arLine.getNotificationData();
-					model.getRuntimeProcessor().notifyProcedureItem(item);
+					ItemNotification idata = (ItemNotification) arLine.getNotificationData();
+					idata.setTime(currentTimeStr);
+					idata.setSequence(seq);
+					try
+					{
+						model.getRuntimeProcessor().notifyProcedureItem(idata);
+					}					
+					catch(Exception ex) { ex.printStackTrace(); };
 					break;
 				case DISPLAY: // Fall through
 				case ANSWER:
 					DisplayData ddata = (DisplayData) arLine.getNotificationData();
-					model.getRuntimeProcessor().notifyProcedureDisplay(ddata);
+					ddata.setTime(currentTimeStr);
+					ddata.setSequence(seq);
+					try
+					{
+						model.getRuntimeProcessor().notifyProcedureDisplay(ddata);
+					}
+					catch(Exception ex) { ex.printStackTrace(); };
 					break;
 				case STATUS:
 					// Update only if the procedure is not in error

@@ -46,7 +46,7 @@
 // SUBPROJECT: SPELL GUI Client
 //
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.code.controls;
+package com.astra.ses.spell.gui.presentation.code.iteminfo;
 
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ITableColorProvider;
@@ -55,9 +55,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
-import com.astra.ses.spell.gui.procs.interfaces.model.ILineData;
 
 /***************************************************************************
  * 
@@ -83,28 +81,27 @@ class ItemInfoTableLabelProvider implements ITableLabelProvider, ITableColorProv
 	@Override
 	public String getColumnText(Object element, int columnIndex)
 	{
-		ILineData info = (ILineData) element;
+		ItemInfoElement info = (ItemInfoElement) element;
 		ItemInfoTableColumn column = ItemInfoTableColumn.values()[columnIndex];
 		switch (column)
 		{
 		case EXECUTION:
-			String ieg = info.getId().split("-")[0];
-			return String.valueOf(Integer.parseInt(ieg) + 1);
+			return info.execution;
 		case NAME:
-			String name = info.getName();
+			String name = info.name;
 			if (name.indexOf("@") != -1)
 			{
 				name = name.split("@")[1];
 			}
 			return name;
 		case VALUE:
-			return info.getValue();
+			return info.value;
 		case STATUS:
-			return info.getStatus().getName();
+			return info.status.getName();
 		case TIME:
-			return info.getTime();
+			return info.time;
 		case COMMENTS:
-			return info.getComments();
+			return info.comments;
 		default:
 			return "";
 		}
@@ -113,11 +110,10 @@ class ItemInfoTableLabelProvider implements ITableLabelProvider, ITableColorProv
 	@Override
 	public Color getBackground(Object element, int columnIndex)
 	{
-		ILineData info = (ILineData) element;
+		ItemInfoElement info = (ItemInfoElement) element;
 		if (columnIndex == ItemInfoTableColumn.STATUS.ordinal())
 		{
-			ItemStatus status = info.getStatus();
-			return s_cfg.getStatusColor(status);
+			return s_cfg.getStatusColor(info.status);
 		}
 		return null;
 	}

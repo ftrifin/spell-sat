@@ -48,7 +48,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.model.callstack;
 
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeNode;
 
 /******************************************************************************
  * 

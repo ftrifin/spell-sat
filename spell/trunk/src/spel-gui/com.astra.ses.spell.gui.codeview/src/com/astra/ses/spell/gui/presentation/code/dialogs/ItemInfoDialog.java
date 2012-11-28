@@ -63,19 +63,18 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Shell;
 
-import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.presentation.code.Activator;
-import com.astra.ses.spell.gui.presentation.code.controls.CodeViewer.ItemNotificationListener;
-import com.astra.ses.spell.gui.presentation.code.controls.ItemInfoTable;
-import com.astra.ses.spell.gui.presentation.code.controls.ItemInfoTableColumn;
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
+import com.astra.ses.spell.gui.presentation.code.iteminfo.ItemInfoTable;
+import com.astra.ses.spell.gui.presentation.code.iteminfo.ItemInfoTableColumn;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.procs.interfaces.model.SummaryMode;
 
 /*******************************************************************************
  * @brief Dialog for selecting the SPELL server connection to be used.
  * @date 18/09/07
  ******************************************************************************/
-public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationListener
+public class ItemInfoDialog extends TitleAreaDialog //implements ItemNotificationListener
 {
 	// =========================================================================
 	// # STATIC DATA MEMBERS
@@ -92,12 +91,10 @@ public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationL
 	private Image m_image;
 	/** Holds the table of items */
 	private ItemInfoTable m_items;
-	/** Procedure id */
-	private String m_procId;
 	/** Procedure line */
-	private IProcedureDataProvider m_dataProvider;
-	/** Line number */
-	private int m_lineNumber;
+	private IProcedure m_model;
+	/** Line model */
+	private ICodeLine m_line;
 
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
@@ -112,16 +109,15 @@ public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationL
 	 * @param shell
 	 *            The parent shell
 	 **************************************************************************/
-	public ItemInfoDialog(Shell shell, String procId, IProcedureDataProvider dataProvider, int lineNumber)
+	public ItemInfoDialog(Shell shell, IProcedure model, ICodeLine line)
 	{
 		super(shell);
 		setShellStyle(SWT.CLOSE | SWT.RESIZE);
 		// Obtain the image for the dialog icon
 		ImageDescriptor descr = Activator.getImageDescriptor("icons/dlg_detail.png");
 		m_image = descr.createImage();
-		m_procId = procId;
-		m_lineNumber = lineNumber;
-		m_dataProvider = dataProvider;
+		m_line = line;
+		m_model = model;
 	}
 
 	/***************************************************************************
@@ -138,7 +134,7 @@ public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationL
 	/***************************************************************************
 	 * Dynamic item notification
 	 **************************************************************************/
-	public void notifyItem(ItemNotification data, String csPos)
+	public void onNotification()
 	{
 		m_items.refresh();
 	}
@@ -157,17 +153,10 @@ public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationL
 	protected Control createContents(Composite parent)
 	{
 		Control contents = super.createContents(parent);
-		setTitle("Item information for " + m_procId);
-		String message = "Line: " + m_lineNumber;
-		try
-		{
-			int executions = m_dataProvider.getExecutionCount(m_lineNumber);
-			message += " (Executed " + executions + " times)";
-		}
-		catch (UninitProcedureException e)
-		{
-			e.printStackTrace();
-		}
+		setTitle("Item information for " + m_model.getProcName());
+		String message = "Line: " + m_line.getLineNo();
+		int executions = m_line.getNumExecutions();
+		message += " (Executed " + executions + " times)";
 		setMessage(message);
 		setTitleImage(m_image);
 		return contents;
@@ -203,16 +192,6 @@ public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationL
 	}
 
 	/***************************************************************************
-	 * Get the line number this dialog is interested in
-	 * 
-	 * @return
-	 **************************************************************************/
-	public int getLineNumber()
-	{
-		return m_lineNumber;
-	}
-
-	/***************************************************************************
 	 * Update this dialog
 	 **************************************************************************/
 	public void update()
@@ -235,22 +214,47 @@ public class ItemInfoDialog extends TitleAreaDialog implements ItemNotificationL
 	 **************************************************************************/
 	protected void createItemInfoArea(Composite parent)
 	{
-		boolean summaryValue = true;
-		Button summary = new Button(parent, SWT.CHECK);
-		summary.setSelection(summaryValue);
-		summary.setText("Show latest information");
+		Composite controls = new Composite(parent, SWT.NONE);
+		controls.setLayout( new GridLayout(3,false) );
+		
+		Button summary = new Button(controls, SWT.RADIO);
+		summary.setSelection(true);
+		summary.setText("Latest information");
 		summary.addSelectionListener(new SelectionAdapter()
 		{
 			@Override
 			public void widgetSelected(SelectionEvent e)
 			{
-				Button button = (Button) e.widget;
-				boolean val = button.getSelection();
-				m_items.setSummaryMode(val);
+				m_items.setSummaryMode(SummaryMode.LATEST);
 			}
 		});
-		m_items = new ItemInfoTable(m_lineNumber, parent);
-		m_items.setInput(m_dataProvider);
+		
+		Button history = new Button(controls, SWT.RADIO);
+		history.setSelection(false);
+		history.setText("History");
+		history.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				m_items.setSummaryMode(SummaryMode.HISTORY);
+			}
+		});
+
+		Button full = new Button(controls, SWT.RADIO);
+		full.setSelection(false);
+		full.setText("Full");
+		full.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				m_items.setSummaryMode(SummaryMode.FULL);
+			}
+		});
+
+		m_items = new ItemInfoTable(parent);
+		m_items.setInput(m_line);
 		// Resize the columns in the beginning to each fits to the contents
 		m_items.getTable().getColumns()[ItemInfoTableColumn.NAME.ordinal()].pack();
 		m_items.getTable().getColumns()[ItemInfoTableColumn.TIME.ordinal()].pack();

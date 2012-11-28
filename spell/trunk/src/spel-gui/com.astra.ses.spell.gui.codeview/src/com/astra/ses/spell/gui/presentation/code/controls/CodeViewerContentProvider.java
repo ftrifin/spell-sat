@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.model.commands
+// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls
 // 
-// FILE      : ViewCodeId.java
+// FILE      : CodeViewerContentProvider.java
 //
-// DATE      : 2010-09-02
+// DATE      : Nov 21, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,68 +43,33 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.model.commands;
+package com.astra.ses.spell.gui.presentation.code.controls;
 
-import org.eclipse.core.commands.AbstractHandler;
-import org.eclipse.core.commands.ExecutionEvent;
-import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.Viewer;
 
-import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
-import com.astra.ses.spell.gui.model.commands.args.ICommandArgument;
-import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
-/*******************************************************************************
- * 
- * {@link ViewCodeId} commands set explicitely by the user which code shall be
- * shown. This is done by changing the code to show as well as disabling the run
- * into flag
- * 
- ******************************************************************************/
-public class ViewCodeId extends AbstractHandler
+public class CodeViewerContentProvider implements IStructuredContentProvider
 {
-
-	public static final String	ID	= "com.astra.ses.spell.gui.commands.ViewCodeId";
+	private IProcedure model;
 
 	@Override
-	public Object execute(ExecutionEvent event) throws ExecutionException
-	{
-		/*
-		 * Retrieve the arguments
-		 */
-		String procId = event.getParameter(ICommandArgument.PROCEDURE_ID);
-		String stack = event.getParameter(ICommandArgument.STACK);
-		/*
-		 * Get the procedure
-		 */
-		IProcedureManager mgr = (IProcedureManager) ServiceManager
-		        .get(IProcedureManager.class);
-		IProcedure proc = mgr.getProcedure(procId);
-		/*
-		 * This command can only be executed while the procedure is paused
-		 */
-		ExecutorStatus st = proc.getDataProvider().getExecutorStatus();
-		switch (st)
-		{
-		case PAUSED:
-		case PROMPT:
-		case WAITING:
-		case ERROR:
-		case ABORTED:
-		case FINISHED:
-		case INTERRUPTED:
-			/*
-			 * Switch the view
-			 */
-			proc.getController().setVisibleNode(stack);
-			return CommandResult.SUCCESS;
-		default:
-			return CommandResult.NO_EFFECT;
-		}
-	}
+    public void dispose()
+    {
+    }
 
+	@Override
+    public void inputChanged(Viewer viewer, Object oldInput, Object newInput)
+    {
+	    model = (IProcedure) newInput;
+    }
+
+	@Override
+    public Object[] getElements(Object inputElement)
+    {
+	    return model.getExecutionManager().getLines().toArray();
+    }
+	
 }

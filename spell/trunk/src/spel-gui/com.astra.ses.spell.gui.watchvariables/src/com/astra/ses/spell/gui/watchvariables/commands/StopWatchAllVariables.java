@@ -86,7 +86,7 @@ public class StopWatchAllVariables extends AbstractHandler
 		/*
 		 * This command can only be executed while the procedure is paused
 		 */
-		ExecutorStatus st = proc.getDataProvider().getExecutorStatus();
+		ExecutorStatus st = proc.getRuntimeInformation().getStatus();
 		switch (st)
 		{
 		case PAUSED:

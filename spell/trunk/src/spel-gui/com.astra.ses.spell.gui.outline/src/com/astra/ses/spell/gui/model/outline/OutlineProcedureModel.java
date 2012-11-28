@@ -48,7 +48,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.model.outline;
 
-import org.eclipse.core.runtime.NullProgressMonitor;
+import java.util.List;
 
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineCategoryNode;
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineDefNode;
@@ -59,7 +59,8 @@ import com.astra.ses.spell.gui.model.outline.nodes.OutlineNode.OutlineNodeType;
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineRootNode;
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineStepNode;
 import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.language.ParseException;
 import com.astra.ses.spell.language.Parser;
 import com.astra.ses.spell.language.Visitor;
@@ -91,7 +92,7 @@ public class OutlineProcedureModel extends Visitor
 	/** Parser instance */
 	private Parser	               m_parser;
 	/** Data provider reference */
-	private IProcedureDataProvider	m_model;
+	private IProcedure             m_model;
 	/** Procedure identifier */
 	private String	               m_procId;
 	/** Flag for parsing token elements */
@@ -115,13 +116,13 @@ public class OutlineProcedureModel extends Visitor
 	 *            The associated procedure model, used to populate the tree
 	 *            model.
 	 *************************************************************************/
-	public OutlineProcedureModel(String name, IProcedureDataProvider model)
+	public OutlineProcedureModel(IProcedure model)
 	{
 		// If we have a model available, populate this node with the data
 		m_root = null;
 		m_errorNode = null;
 		m_parser = new Parser();
-		m_procId = name;
+		m_procId = model.getProcId();
 		m_model = model;
 		initialize();
 	}
@@ -156,13 +157,13 @@ public class OutlineProcedureModel extends Visitor
 		String codeId = null;
 		try
 		{
-			codeId = m_model.getCurrentCodeId();
-			String[] lines = m_model.getCurrentSource( new NullProgressMonitor() );
+			codeId = m_model.getExecutionManager().getCodeId();
+			List<ICodeLine> lines = m_model.getExecutionManager().getLines();
 			String code = "";
-			for (String line : lines)
+			for (ICodeLine line : lines)
 			{
 				if (!code.isEmpty()) code += "\n";
-				code += line;
+				code += line.getSource();
 			}
 			// Add a last line to ensure correct parsing at end
 			code += "\npass\n";
@@ -221,8 +222,7 @@ public class OutlineProcedureModel extends Visitor
 	public Object visitFunctionDef(FunctionDef node) throws Exception
 	{
 		NameTok name = (NameTok) node.name;
-		m_categoryFunctionDefs.addChild(new OutlineDefNode(name.id + "()",
-		        m_model.getCurrentCodeId(), node.beginLine));
+		m_categoryFunctionDefs.addChild(new OutlineDefNode(name.id + "()", m_model.getExecutionManager().getCodeId(), node.beginLine));
 		return super.visitFunctionDef(node);
 	}
 
@@ -265,16 +265,14 @@ public class OutlineProcedureModel extends Visitor
 		{
 			m_inToken = NextTokenType.None;
 			m_nextLabel = token.s + " (" + m_nextLabel + ")";
-			m_categorySteps.addChild(new OutlineStepNode(m_nextLabel, m_model
-			        .getCurrentCodeId(), m_nextLine));
+			m_categorySteps.addChild(new OutlineStepNode(m_nextLabel, m_model.getExecutionManager().getCodeId(), m_nextLine));
 			m_nextLabel = "";
 		}
 		else if (m_inToken.equals(NextTokenType.GotoCall))
 		{
 			m_inToken = NextTokenType.None;
 			m_nextLabel += token.s;
-			m_categoryGotos.addChild(new OutlineGotoNode(m_nextLabel, m_model
-			        .getCurrentCodeId(), m_nextLine));
+			m_categoryGotos.addChild(new OutlineGotoNode(m_nextLabel, m_model.getExecutionManager().getCodeId(), m_nextLine));
 			m_nextLabel = "";
 		}
 		return super.visitStr(token);

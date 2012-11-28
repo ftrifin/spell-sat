@@ -48,54 +48,43 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.presentation.code.controls;
 
-import java.nio.CharBuffer;
+import java.util.LinkedList;
+import java.util.List;
 
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
-import org.eclipse.jface.viewers.ITableColorProvider;
-import org.eclipse.jface.viewers.TableViewer;
-import org.eclipse.jface.viewers.TableViewerColumn;
+import org.eclipse.nebula.jface.gridviewer.GridTableViewer;
+import org.eclipse.nebula.jface.gridviewer.GridViewerColumn;
+import org.eclipse.nebula.widgets.grid.Grid.GridVisibleRange;
+import org.eclipse.nebula.widgets.grid.GridColumn;
+import org.eclipse.nebula.widgets.grid.GridItem;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
-import org.eclipse.swt.events.ControlAdapter;
-import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.MouseAdapter;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.TableColumn;
-import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Listener;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
-import com.astra.ses.spell.gui.core.model.types.ItemStatus;
+import com.astra.ses.spell.gui.core.model.types.Level;
+import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
-import com.astra.ses.spell.gui.preferences.keys.PreferenceCategory;
-import com.astra.ses.spell.gui.presentation.code.controls.drawing.CodeColorProvider;
-import com.astra.ses.spell.gui.presentation.code.controls.drawing.TableEventDispatcher;
 import com.astra.ses.spell.gui.presentation.code.controls.menu.CodeViewerMenuManager;
-import com.astra.ses.spell.gui.presentation.code.dialogs.ItemInfoDialog;
 import com.astra.ses.spell.gui.presentation.code.dialogs.SearchDialog;
 import com.astra.ses.spell.gui.presentation.code.search.CodeSearch;
 import com.astra.ses.spell.gui.presentation.code.search.CodeSearch.SearchMatch;
-import com.astra.ses.spell.gui.presentation.code.syntax.ISyntaxFormatter;
-import com.astra.ses.spell.gui.presentation.code.syntax.SyntaxFormatter;
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
-import com.astra.ses.spell.gui.procs.interfaces.model.ILineSummaryData;
+import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /*******************************************************************************
@@ -103,7 +92,7 @@ import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
  *        execution live status.
  * @date 09/10/07
  ******************************************************************************/
-public class CodeViewer extends TableViewer implements IPropertyChangeListener
+public class CodeViewer extends GridTableViewer implements IExecutionListener, IPropertyChangeListener
 {
 	/***************************************************************************
 	 * This interface will allow ItemInfoDialog to receive notifications
@@ -123,41 +112,22 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	// =========================================================================
 
 	// PRIVATE -----------------------------------------------------------------
-	/** Data identifier */
-	public static final String DATA_SOURCE = "com.astra.ses.spell.gui.presentation.code.Source";
-	public static final String DATA_STATUS = "com.astra.ses.spell.gui.presentation.code.Status";
-	public static final String DATA_SEARCH_RANGE = "com.astra.ses.spell.gui.presentation.code.SearchRange";
-	/** Highlight color for searchs */
-	private static Color s_hrColor = null;
-	/** Font size range */
-	private static final int FONT_RANGE = 4;
 
 	private static IConfigurationManager s_cfg = null;
 
 	/** Autoscroll flag */
 	private boolean m_autoScroll;
-	/** Currently selected font size */
-	private int m_fontSize;
-	/** Procedure code syntax formatter */
-	private ISyntaxFormatter m_syntaxFormatter;
-	/** Color provider for painters */
-	private ITableColorProvider m_colorProvider;
-	/** holds the viewer container */
-	private Composite m_container;
-	/** Min and max font size */
-	private int m_minFontSize;
-	private int m_maxFontSize;
-	/** ItemInfo dialog */
-	private ItemInfoDialog m_infoDialog;
-	/** Procedure data provider */
-	private IProcedure m_model;
+	/** Procedure model */
+	private IProcedure m_procedure;
 	/** Holds the code search mechanism */
 	private CodeSearch m_search;
 	/**
 	 * Holds the procedure status. Used to know which status transitions take
 	 * place
 	 */
-	private ExecutorStatus m_status;
+	private IProcedure m_input;
+	private ICodeLine m_currentLine = null;
+	private SourceRenderer[] m_renderers;
 
 	/***************************************************************************
 	 * Constructor.
@@ -167,80 +137,25 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 * @param parent
 	 *            The parent composite
 	 **************************************************************************/
-	public CodeViewer(Composite container, IProcedure model)
+	public CodeViewer(Composite parent, IProcedure model)
 	{
-		super(container, SWT.MULTI | SWT.FULL_SELECTION | SWT.BORDER | SWT.VIRTUAL);
+		super(parent, SWT.MULTI | SWT.FULL_SELECTION | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL );
 
 		if (s_cfg == null)
 		{
 			s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 		}
 
-		s_cfg.addPropertyChangeListener(this);
+		m_procedure = model;
 
-		m_status = ExecutorStatus.UNINIT;
-
-		m_model = model;
-		m_container = container;
-		m_colorProvider = new CodeColorProvider(m_model.getDataProvider(), getTable());
-
-		/*
-		 * Determine min and max font size
-		 */
-		Font font = s_cfg.getFont(FontKey.CODE);
-		int fontSize = font.getFontData()[0].getHeight();
-		m_minFontSize = Math.max(1, fontSize - FONT_RANGE);
-		m_maxFontSize = fontSize + FONT_RANGE;
-
-		/*
-		 * Create widgets
-		 */
-		setFont(font);
-		m_syntaxFormatter = new SyntaxFormatter(font);
 		m_autoScroll = true;
-		getTable().setHeaderVisible(true);
-		getTable().setLinesVisible(false);
-		getTable().setLayoutData(new GridData(GridData.FILL_BOTH));
-		getTable().setBackground(s_cfg.getProcedureColor(ExecutorStatus.LOADED));
+		getGrid().setHeaderVisible(true);
+		getGrid().setLinesVisible(false);
 
 		createColumns();
 
-		/*
-		 * MouseAdapter is used for catching double click events and show item
-		 * infor dialogs
-		 */
-		getTable().addMouseListener(new MouseAdapter()
-		{
-			public void mouseDoubleClick(MouseEvent e)
-			{
-				Point p = new Point(e.x, e.y);
-				TableItem item = getTable().getItem(p);
-				if (item != null)
-				{
-					int lineNumber = getTable().indexOf(item) + 1;
-
-					ILineSummaryData summary = null;
-					try
-					{
-						summary = m_model.getDataProvider().getSummary(lineNumber);
-					}
-					catch (UninitProcedureException e1)
-					{
-					}
-
-					if (summary != null)
-					{
-						m_infoDialog = new ItemInfoDialog(getControl().getShell(), m_model.getProcId(), m_model.getDataProvider(),
-						        lineNumber);
-						m_infoDialog.open();
-						m_infoDialog = null;
-					}
-				}
-			}
-		});
-
 		final CodeViewer theViewer = this;
-		getTable().addKeyListener(new KeyAdapter()
+		getGrid().addKeyListener(new KeyAdapter()
 		{
 			public void keyPressed(KeyEvent e)
 			{
@@ -249,29 +164,42 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 					if (e.keyCode == 99) // C
 					{
 						copySelected();
-						getTable().deselectAll();
+						getGrid().deselectAll();
 					}
 					else if (e.keyCode == 102) // F
 					{
-						getTable().deselectAll();
-						SearchDialog dialog = new SearchDialog(getTable().getShell(), theViewer);
+						getGrid().deselectAll();
+						SearchDialog dialog = new SearchDialog(getGrid().getShell(), theViewer);
 						dialog.open();
 					}
 				}
 			}
 		});
 
+		getGrid().getColumn(CodeViewerColumn.BREAKPOINT.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
+		getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
+		getGrid().getColumn(CodeViewerColumn.CODE.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
+		getGrid().getColumn(CodeViewerColumn.DATA.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
+		getGrid().addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.CODE));
+
 		/*
 		 * Popup menu manager
 		 */
-		new CodeViewerMenuManager(this, m_model.getProcId(), m_model.getDataProvider(), m_model.getRuntimeInformation());
+		new CodeViewerMenuManager(this, m_procedure);
 
-		m_search = new CodeSearch(getTable());
+		m_search = new CodeSearch(this);
 
-		/*
-		 * Initialize paint handlers
-		 */
-		initializeTableHandlers();
+		s_cfg.addPropertyChangeListener(this);
+		
+		getGrid().addDisposeListener(new DisposeListener()
+		{
+			@Override
+            public void widgetDisposed(DisposeEvent e)
+            {
+				dispose();
+            }
+			
+		});
 	}
 
 	/***************************************************************************
@@ -279,9 +207,38 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 **************************************************************************/
 	public void dispose()
 	{
-		m_syntaxFormatter.dispose();
-		((CodeColorProvider) m_colorProvider).dispose();
+		m_input.getExecutionManager().removeListener(this);
 		s_cfg.removePropertyChangeListener(this);
+	}
+
+	public IProcedure getModel()
+	{
+		return m_input;
+	}
+
+	private void applyItemHeight()
+	{
+		getGrid().setItemHeight(m_renderers[0].getFontSize() + 8);
+	}
+
+	public void setModel(IProcedure input)
+	{
+		Logger.debug("Set model", Level.GUI, this);
+		m_input = input;
+		m_renderers = new SourceRenderer[5];
+		m_renderers[0] = new BpRenderer(input);
+		m_renderers[1] = new LineRenderer(input);
+		m_renderers[2] = new SourceRenderer(input);
+		m_renderers[3] = new DataRenderer(input);
+		m_renderers[4] = new StatusRenderer(input);
+		for (CodeViewerColumn col : CodeViewerColumn.values())
+		{
+			getGrid().getColumn(col.ordinal()).setCellRenderer(m_renderers[col.ordinal()]);
+		}
+		input.getExecutionManager().addListener(this);
+		applyItemHeight();
+		super.setInput(input);
+		showLastLine();
 	}
 
 	/***************************************************************************
@@ -297,7 +254,8 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 **************************************************************************/
 	public void setFocus()
 	{
-		getTable().setFocus();
+		getGrid().setFocus();
+		if (m_autoScroll) showLastLine();
 	}
 
 	/***************************************************************************
@@ -308,29 +266,16 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 **************************************************************************/
 	public void zoom(boolean increase)
 	{
-		boolean changed = true;
-		if (increase)
+		boolean changed = false;
+		for (SourceRenderer rnd : m_renderers)
 		{
-			m_fontSize++;
-			if (m_fontSize > m_maxFontSize)
-			{
-				m_fontSize = m_maxFontSize;
-				changed = false;
-			}
-		}
-		else
-		{
-			m_fontSize--;
-			if (m_fontSize < m_minFontSize)
-			{
-				m_fontSize = m_minFontSize;
-				changed = false;
-			}
+			changed = changed | rnd.zoom(increase);
 		}
 		if (changed)
 		{
-			updateFontWithSize();
-			getTable().redraw();
+			getGrid().setItemHeight(m_renderers[0].getFontSize() + 8);
+			getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
+			getGrid().redraw();
 			showLastLine();
 		}
 	}
@@ -365,8 +310,8 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 		SearchMatch match = m_search.getNext();
 		if (match == null)
 			return false;
-		getTable().deselectAll();
-		getTable().select(match.lineNo - 1);
+		getGrid().deselectAll();
+		getGrid().select(match.lineNo - 1);
 		showLine(match.lineNo, false);
 		return true;
 	}
@@ -379,9 +324,9 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 		SearchMatch match = m_search.getPrevious();
 		if (match == null)
 			return false;
-		getTable().deselectAll();
-		getTable().select(match.lineNo - 1);
-		showLine(match.lineNo>1 ? match.lineNo -1 : match.lineNo, false);
+		getGrid().deselectAll();
+		getGrid().select(match.lineNo - 1);
+		showLine(match.lineNo > 1 ? match.lineNo - 1 : match.lineNo, false);
 		return true;
 	}
 
@@ -390,19 +335,15 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 **************************************************************************/
 	private void showMatches(SearchMatch[] matches)
 	{
-		if (s_hrColor == null)
-			s_hrColor = Display.getCurrent().getSystemColor(SWT.COLOR_CYAN);
-		getTable().setRedraw(false);
+		getGrid().setRedraw(false);
 		for (SearchMatch match : matches)
 		{
-			TableItem item = getTable().getItem(match.lineNo - 1);
-			// We will set colors later
-			StyleRange range = new StyleRange(match.startOffset, match.length, null, s_hrColor);
-			item.setData(DATA_SEARCH_RANGE, range);
+			GridItem item = getGrid().getItem(match.lineNo - 1);
+			item.setData("DATA_SEARCH_MATCH", match);
 		}
-		getTable().deselectAll();
-		getTable().setRedraw(true);
-		getTable().select(matches[0].lineNo - 1);
+		getGrid().deselectAll();
+		getGrid().setRedraw(true);
+		getGrid().select(matches[0].lineNo - 1);
 		showLine(matches[0].lineNo, false);
 	}
 
@@ -412,13 +353,13 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	public void clearMatches()
 	{
 		m_search.clear();
-		getTable().setRedraw(false);
-		getTable().deselectAll();
-		for (TableItem item : getTable().getItems())
+		getGrid().setRedraw(false);
+		getGrid().deselectAll();
+		for (GridItem item : getGrid().getItems())
 		{
-			item.setData(DATA_SEARCH_RANGE, null);
+			item.setData("DATA_SEARCH_MATCH", null);
 		}
-		getTable().setRedraw(true);
+		getGrid().setRedraw(true);
 	}
 
 	/***************************************************************************
@@ -426,14 +367,14 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 **************************************************************************/
 	public void copySelected()
 	{
-		TableItem[] selection = getTable().getSelection();
+		GridItem[] selection = getGrid().getSelection();
 		Clipboard clipboard = new Clipboard(Display.getCurrent());
 		String data = "";
-		for (TableItem item : selection)
+		for (GridItem item : selection)
 		{
 			if (!data.isEmpty())
 				data += "\n";
-			String line = item.getData(CodeViewer.DATA_SOURCE).toString();
+			String line = item.getText(CodeViewerColumn.CODE.ordinal());
 			if (line != null)
 			{
 				line = line.trim();
@@ -449,137 +390,6 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	}
 
 	/***************************************************************************
-	 * Set the table font
-	 **************************************************************************/
-	protected void setFont(Font font)
-	{
-		m_fontSize = font.getFontData()[0].getHeight();
-		getTable().setFont(font);
-	}
-
-	/***************************************************************************
-	 * Set the table font
-	 **************************************************************************/
-	protected void updateFontWithSize()
-	{
-		Font oldFont = getTable().getFont();
-		FontData[] data = oldFont.getFontData();
-		for (FontData fdata : data)
-		{
-			fdata.setHeight(m_fontSize);
-		}
-		Font newFont = new Font(Display.getDefault(), data);
-		getTable().setFont(newFont);
-		m_syntaxFormatter.setFont(newFont);
-
-		oldFont.dispose();
-		getTable().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
-	}
-
-	/***************************************************************************
-	 * Initialize the table drawers and the table initial settings
-	 **************************************************************************/
-	protected void initializeTableHandlers()
-	{
-		TableEventDispatcher dispatcher = new TableEventDispatcher(m_syntaxFormatter, m_model.getDataProvider(), m_colorProvider);
-
-		getTable().addListener(SWT.EraseItem, dispatcher);
-		// Now that we've set the text into the columns,
-		// we call pack() on each one to size it to the
-		// contents
-		m_container.addControlListener(new ControlAdapter()
-		{
-			public void controlResized(ControlEvent e)
-			{
-				Rectangle area = m_container.getClientArea();
-				if (area.width == 0)
-					return;
-
-				int totalWidth = area.width - 2 * getTable().getBorderWidth();
-				if (getTable().getVerticalBar().isVisible())
-				{
-					totalWidth -= getTable().getVerticalBar().getSize().x;
-				}
-
-				int fixedWidth = 0;
-				for (CodeViewerColumn column : CodeViewerColumn.values())
-				{
-					if (column == CodeViewerColumn.CODE)
-						continue;
-					TableColumn tColumn = getTable().getColumn(column.ordinal());
-					fixedWidth += tColumn.getWidth();
-				}
-
-				if (getTable().getClientArea().width == 0)
-				{
-					for (CodeViewerColumn column : CodeViewerColumn.values())
-					{
-						TableColumn tColumn = getTable().getColumn(column.ordinal());
-						tColumn.setWidth(column.getInitialWidth());
-					}
-				}
-				else if (fixedWidth == 0) // Initial case only
-				{
-					for (CodeViewerColumn column : CodeViewerColumn.values())
-					{
-						TableColumn tColumn = getTable().getColumn(column.ordinal());
-						int width = Math.min((int) (column.getWidthRatio() * totalWidth), 10);
-						tColumn.setWidth(width);
-					}
-				}
-				else
-				{
-					int width = totalWidth - fixedWidth - 4;
-					getTable().getColumn(CodeViewerColumn.CODE.ordinal()).setWidth(width);
-				}
-			}
-		});
-	}
-
-	/***************************************************************************
-	 * Generate the table rows using the procedure code model
-	 * 
-	 * @param code
-	 *            The procedure code model
-	 **************************************************************************/
-	protected void generateTableRows()
-	{
-		// Cleanup the table
-		getTable().removeAll();
-		// Get the code and generate the lines
-		String[] sourceLines;
-		try
-		{
-			sourceLines = m_model.getDataProvider().getCurrentSource(new NullProgressMonitor());
-		}
-		catch (Exception e)
-		{
-			if (m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.ERROR))
-			{
-				sourceLines = m_model.getDataProvider().getRootSource(new NullProgressMonitor());
-			}
-			else
-			{
-				return;
-			}
-		}
-
-		for (int i = 0; i < sourceLines.length; i++)
-		{
-			TableItem titem = new TableItem(getTable(), SWT.NONE);
-			titem.setText(CodeViewerColumn.LINE_NO.ordinal(), new Integer(i + 1).toString());
-			int len = sourceLines[i].length();
-			String expand = CharBuffer.allocate(len).toString().replace('\0', ' ');
-			titem.setText(CodeViewerColumn.CODE.ordinal(), expand);
-			// The executed line item is set in case we return from another node
-			// execution
-			titem.setData(CodeViewer.DATA_SOURCE, sourceLines[i]);
-		}
-		// Resize the line number column so all the digits can be shown
-		getTable().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
-	}
-
-	/***************************************************************************
 	 * Create the table columns
 	 **************************************************************************/
 	protected void createColumns()
@@ -587,12 +397,14 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 		for (CodeViewerColumn colModel : CodeViewerColumn.values())
 		{
 			// Create the TableColumn with right alignment
-			TableViewerColumn viewerColumn = new TableViewerColumn(this, colModel.getAlignment());
+			int style = colModel.getAlignment() | SWT.H_SCROLL;
+			GridViewerColumn viewerColumn = new GridViewerColumn(this, style);
 
-			TableColumn column = viewerColumn.getColumn();
+			GridColumn column = viewerColumn.getColumn();
 			column.setText(colModel.getName());
-			column.setResizable(colModel.isResizable());
 			column.setAlignment(colModel.getAlignment());
+			column.setWidth(colModel.getInitialWidth());
+			column.setResizeable(colModel.isResizable());
 		}
 	}
 
@@ -601,35 +413,37 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 	 **************************************************************************/
 	public void showLine(int lineNo, boolean select)
 	{
-		if (lineNo > 0 && getTable().getItemCount() > lineNo)
+		if (getGrid().isDisposed()) return;
+		int numLines = getGrid().getItemCount();
+		if (lineNo > 0 && numLines > lineNo)
 		{
-			Rectangle area = getTable().getClientArea();
-			int itemHeight = getTable().getItemHeight();
-			int visibleCount = (area.height + itemHeight - 1) / itemHeight;
-
-			int currentY = getTable().getItem(lineNo).getBounds().y;
-			int itemToShow = 0;
-			if (currentY < 0)
+			GridVisibleRange range = getGrid().getVisibleRange();
+			
+			int visibleCount = range.getItems().length;
+			
+			GridItem first = range.getItems()[0];
+			GridItem last  = range.getItems()[visibleCount-1];
+			int firstIndex = getGrid().getIndexOfItem(first);
+			int lastIndex = getGrid().getIndexOfItem(last);
+			
+			int itemToShow = lineNo;
+			if (lineNo<firstIndex)
 			{
-				itemToShow = lineNo - (visibleCount / 2) - 1;
+				itemToShow = lineNo - visibleCount/2;
 			}
-			else
+			else if (lineNo>lastIndex)
 			{
-				itemToShow = lineNo + (visibleCount / 2) - 1;
+				itemToShow = lineNo + visibleCount/2;
 			}
-			if (itemToShow >= getTable().getItemCount())
-			{
-				itemToShow = getTable().getItemCount() - 1;
-			}
-			else if (itemToShow < 0)
-			{
-				itemToShow = 1;
-			}
-			getTable().showItem(getTable().getItem(itemToShow));
+			
+			if (itemToShow<0) itemToShow = 0;
+			else if (itemToShow>numLines) itemToShow = numLines-1;
+			
+			getGrid().showItem(getGrid().getItem(itemToShow));
 			if (select)
 			{
-				getTable().deselectAll();
-				getTable().select(lineNo - 1);
+				getGrid().deselectAll();
+				getGrid().select(lineNo - 1);
 			}
 		}
 	}
@@ -642,238 +456,156 @@ public class CodeViewer extends TableViewer implements IPropertyChangeListener
 		if (!m_autoScroll)
 			return;
 
-		int currentLine;
-		try
-		{
-			currentLine = m_model.getDataProvider().getCurrentLine();
-		}
-		catch (UninitProcedureException e)
-		{
-			return;
-		}
+		int currentLine = m_procedure.getExecutionManager().getCurrentLineNo();
+
+		Logger.debug("Show last line: " + currentLine, Level.GUI, this);
+
 		showLine(currentLine, false);
 	}
 
-	/***************************************************************************
-	 * Updates the background color according to the executor status
-	 * 
-	 * @param st
-	 **************************************************************************/
 	public void setExecutorStatus(ExecutorStatus st)
 	{
-		getTable().setBackground(s_cfg.getProcedureColor(st));
-
-		// Force source code retrieval when reloading, no matter what
-		if (m_status.equals(ExecutorStatus.RELOADING))
+		showLastLine();
+		for (SourceRenderer r : m_renderers)
 		{
-			codeChanged(true);
+			r.setExecutorStatus(st);
 		}
-
-		// Show last line in these cases
-		switch (st)
-		{
-		case PAUSED:
-		case PROMPT:
-		case WAITING:
-		case INTERRUPTED:
-		case ERROR:
-		case FINISHED:
-		case ABORTED:
-			showLastLine();
-		}
-
-		// Store the status
-		m_status = st;
 	}
 
-	/***************************************************************************
-	 * Update the information columns for the given line
-	 * 
-	 * @param titem
-	 *            The corresponding table item (row)
-	 * @param line
-	 *            The procedure line providing information
-	 **************************************************************************/
-	private void updateItemInformation(TableItem titem)
+	public void forceRefresh()
 	{
-		Integer lineNumber = getTable().indexOf(titem) + 1;
+		GridVisibleRange range = getGrid().getVisibleRange();
+		
+		int visibleCount = range.getItems().length;
+		
+		GridItem first = range.getItems()[0];
+		GridItem last  = range.getItems()[visibleCount-1];
+		int firstIndex = getGrid().getIndexOfItem(first);
+		int lastIndex = getGrid().getIndexOfItem(last);
 
-		ILineSummaryData summary = null;
-		try
+		for(int index=firstIndex; index < lastIndex; index++)
 		{
-			summary = m_model.getDataProvider().getSummary(lineNumber);
-		}
-		catch (UninitProcedureException e1)
-		{
-			// No summary
-		}
-		String name = "";
-		String value = "";
-		String status = "";
-		ItemStatus iStatus = null;
-
-		if (summary != null)
-		{
-			/*
-			 * The status without progress is retrieved in getComments()
-			 */
-			iStatus = summary.getSummaryStatus();
-			status = iStatus.getName() + " (" + summary.getSuccessCount() + "/" + summary.getElementCount() + ")";
-			name = summary.getName();
-			name = name.split(":")[0];
-			if (name.indexOf("@") != -1)
+			ICodeLine line = m_input.getExecutionManager().getLine(index);
+			if (line.hasNotifications())
 			{
-				name = name.split("@")[1];
+				line.calculateSummary();
+				update(line,null);
 			}
-			value = summary.getValue();
 		}
-
-		titem.setText(CodeViewerColumn.NAME.ordinal(), name);
-		titem.setText(CodeViewerColumn.VALUE.ordinal(), value);
-		titem.setText(CodeViewerColumn.STATUS.ordinal(), status);
-		titem.setData(CodeViewer.DATA_STATUS, iStatus);
-	}
-
-	/***************************************************************************
-	 * Update the table rows contents using the procedure code model
-	 **************************************************************************/
-	private void fillTableRows()
-	{
-		for (TableItem item : getTable().getItems())
-		{
-			updateItemInformation(item);
-		}
-	}
-
-	/***************************************************************************
-	 * Notify that a line has been executed
-	 * 
-	 * @param lineNumber
-	 **************************************************************************/
-	public void lineChanged(int lineNumber)
-	{
-		if (getTable().isDisposed())
-			return;
-		// redraw the table
-		getTable().redraw();
-		// Show last line
 		showLastLine();
 	}
 
-	/***************************************************************************
-	 * A notification has been received for a given item
-	 * 
-	 * @param lineNumber
-	 **************************************************************************/
-	public void newItemArrived(int lineNumber)
+	public void resetColumnWidths()
 	{
-		if (getTable().isDisposed())
-			return;
-		// Get affected lines
-		Integer[] affectedLines;
-		try
+		int totalWidth = 0;
+		for (CodeViewerColumn colModel : CodeViewerColumn.values())
 		{
-			affectedLines = m_model.getDataProvider().getAffectedLines(lineNumber);
+			if (colModel.equals(CodeViewerColumn.CODE)) continue;
+			GridColumn column = getGrid().getColumn(colModel.ordinal());
+			int width = colModel.getInitialWidth();
+			totalWidth += width;
+			column.setWidth(width);
 		}
-		catch (UninitProcedureException e)
+		int gridWidth = getGrid().getBounds().width;
+		if (getGrid().getVerticalBar().isVisible())
 		{
-			affectedLines = new Integer[0];
+			gridWidth -= getGrid().getVerticalBar().getSize().x;
 		}
-		if (affectedLines.length > 0)
+		if (totalWidth < gridWidth)
 		{
-			int infoLine = -1;
-			if (m_infoDialog != null)
+			int widthForCode = gridWidth - totalWidth - 4;
+			getGrid().getColumn(CodeViewerColumn.CODE.ordinal()).setWidth( widthForCode );
+		}
+	}
+	
+	public void forceControlEvent( Control ctrl )
+	{
+		for(Listener lst : ctrl.getListeners(SWT.Resize))
+		{
+			if (lst instanceof ControlListener)
 			{
-				infoLine = m_infoDialog.getLineNumber();
+				ControlListener clst = (ControlListener) lst;
+				clst.controlResized(null);
 			}
-			for (Integer index : affectedLines)
+		}
+	}
+
+	@Override
+	public void onLineChanged(final ICodeLine line)
+	{
+		if (getGrid().isDisposed()) return;
+		Display.getDefault().syncExec(new Runnable()
+		{
+			public void run()
 			{
-				TableItem item = getTable().getItem(index - 1);
-				updateItemInformation(item);
-				if (infoLine == index)
+				if (m_currentLine != null)
 				{
-					m_infoDialog.update();
+					update(m_currentLine, null);
+				}
+				m_currentLine = line;
+				update(line, null);
+				if (m_autoScroll)
+				{
+					showLine(line.getLineNo(), false);
 				}
 			}
-			getTable().redraw();
-			showLastLine();
-		}
+		});
 	}
 
-	/***************************************************************************
-	 * Code has changed, or it least the current execution model
-	 **************************************************************************/
-	public void codeChanged(boolean sourceCodeChanged)
+	@Override
+    public void onItemsChanged( final List<ICodeLine> lines )
+    {
+		if (getGrid().isDisposed()) return;
+		Display.getDefault().syncExec(new Runnable()
+		{
+			public void run()
+			{
+				for(ICodeLine line : lines)
+				{
+					update(line,null);
+				}
+			}
+		});
+    }
+
+	@Override
+	public void onCodeChanged()
 	{
-		// Protection
-		if (getTable().isDisposed())
-			return;
-		if ((m_infoDialog != null) && sourceCodeChanged)
+		if (getGrid().isDisposed()) return;
+		Display.getDefault().syncExec(new Runnable()
 		{
-			m_infoDialog.close();
-			m_infoDialog = null;
-		}
-		// Re-create the table contents
-		getTable().setRedraw(false);
-		// Do not re-generate source lines if source didnt change!
-		if (sourceCodeChanged)
-		{
-			try
+			public void run()
 			{
-				String[] source = m_model.getDataProvider().getCurrentSource(new NullProgressMonitor());
-				String codeId = m_model.getDataProvider().getCurrentCodeId();
-				m_syntaxFormatter.newSource(codeId, source);
+				List<ICodeLine> source = m_procedure.getExecutionManager().getLines();
+				List<String> plainSource = new LinkedList<String>();
+				for (ICodeLine line : source)
+					plainSource.add(line.getSource());
+				m_renderers[CodeViewerColumn.CODE.ordinal()].onNewSource(m_procedure.getExecutionManager().getCodeId(),
+				        plainSource.toArray(new String[0]));
+				refresh();
+				getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
+				showLastLine();
 			}
-			catch (Exception ex)
-			{
-			}
-			;
-			generateTableRows();
-		}
-		// Update the notifications
-		fillTableRows();
-		showLastLine();
-		getTable().setRedraw(true);
+		});
 	}
+
+	@Override 
+    public void onProcessingDelayChanged(long delay) {}
 
 	@Override
 	public void propertyChange(PropertyChangeEvent event)
 	{
+		for (SourceRenderer rnd : m_renderers)
+		{
+			rnd.onPropertiesChanged(event);
+		}
 		String property = event.getProperty();
-		/*
-		 * If code font has changed, then update it
-		 */
 		if (property.equals(FontKey.CODE.getPreferenceName()))
 		{
-			IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-
-			Font font = cfg.getFont(FontKey.CODE);
-			FontData[] data = font.getFontData();
-			for (FontData fdata : data)
-			{
-				fdata.setHeight(m_fontSize);
-			}
-			setFont(font);
-			m_syntaxFormatter.setFont(font);
-			getTable().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
+			applyItemHeight();
+			getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
 		}
-		/*
-		 * If any of the pocedure colors has changed, then update
-		 */
-		else if (property.startsWith(PreferenceCategory.PROC_COLOR.tag))
-		{
-			String statusStr = property.substring(PreferenceCategory.PROC_COLOR.tag.length() + 1);
-			ExecutorStatus st = ExecutorStatus.valueOf(statusStr);
-
-			/*
-			 * If current status is the one whose color has changed, then update
-			 * the table background
-			 */
-			ExecutorStatus current = m_model.getDataProvider().getExecutorStatus();
-			if (current.equals(st))
-			{
-				getTable().setBackground( s_cfg.getProcedureColor(current) );
-			}
-		}
+		getGrid().redraw();
 	}
+
 }

@@ -51,8 +51,10 @@
 
 // DEFINES /////////////////////////////////////////////////////////////////
 #define MAX_MSEC_MSG_DELAY 10
+#define ACKNOWLEDGE_TIMEOUT_SEC 10
 // GLOBALS /////////////////////////////////////////////////////////////////
 SPELLserverCif* s_handle = NULL;
+
 
 //=============================================================================
 // CONSTRUCTOR: SPELLserverCif::SPELLserverCif
@@ -95,8 +97,6 @@ SPELLserverCif::SPELLserverCif()
     m_closing = false;
 
     m_lastStack = "";
-
-    m_ack.set();
 
 	m_ipcTimeoutGuiRequestMsec = SPELLconfiguration::instance().commonOrDefault( "GuiRequestTimeout", IPC_GUIREQUEST_DEFAULT_TIMEOUT_MSEC );
 	m_ipcTimeoutCtxRequestMsec = SPELLconfiguration::instance().commonOrDefault( "CtxRequestTimeout", IPC_CTXREQUEST_DEFAULT_TIMEOUT_MSEC );
@@ -152,7 +152,7 @@ void SPELLserverCif::setup( const SPELLcifStartupInfo& info )
     SPELLipcMessage response = login();
     processLogin(response);
 
-    m_lineTimer.start();
+    m_ipcInterruptionNotified = false;
 
     m_ready = true;
     DEBUG("[CIF] Ready to go");
@@ -165,7 +165,6 @@ void SPELLserverCif::cleanup( bool force )
 {
     SPELLcif::cleanup(force);
     m_ready = false;
-    m_ack.set();
     DEBUG("[CIF] Cleaning server CIF");
     cancelPrompt();
     m_buffer->stop();
@@ -176,14 +175,6 @@ void SPELLserverCif::cleanup( bool force )
         DEBUG("[CIF] Send logout message to context");
         logout();
     }
-
-    DEBUG("[CIF] Stopping notification timer");
-    m_lineTimer.cancel();
-    try
-    {
-    	m_lineTimer.join();
-    }
-    catch(SPELLsyncError& ex) {};
 
     DEBUG("[CIF] Disconnecting IPC");
 
@@ -230,13 +221,7 @@ void SPELLserverCif::resetClose()
 //=============================================================================
 bool SPELLserverCif::timerCallback( unsigned long usecs )
 {
-	//DEBUG("[CIF] Timer callback");
-	if (!m_ready) return true;
-	// Will not do anything if the last notification was the same or it was
-	// close in time
-	notifyLine();
-	//DEBUG("[CIF] Timer done");
-	return false;
+	return true;
 }
 
 //=============================================================================
@@ -798,24 +783,55 @@ void SPELLserverCif::notify( ItemNotification notification )
 //=============================================================================
 void SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
 {
-    if (m_ready)
+    if (m_ready && !m_ipcInterruptionNotified)
     {
-		while(m_ack.isClear())
-		{
-			usleep(2000);
-		}
-		m_ack.clear();
-		bool timeout = m_ack.wait(15000); // 15 seconds
-		if (timeout)
-		{
-			m_ack.set();
-			std::cerr << "\n\n####################################################" << std::endl;
-			std::cerr << "Message: " + msg.dataStr() << std::endl;
-			std::cerr << "####################################################\n\n" << std::endl;
-			LOG_ERROR("Acknowledge not received, pause");
-			warning("Acknowledge not received from GUI, pausing for safety", LanguageConstants::SCOPE_SYS);
-    		SPELLexecutor::instance().pause();
-		}
+    	bool found = false;
+    	std::string seq = msg.get(MessageField::FIELD_MSG_SEQUENCE);
+    	SPELLtime waitStart;
+    	while (!found)
+    	{
+    		std::vector<std::string>::iterator it;
+    		std::map<std::string,SPELLtime>::iterator mit;
+    		{
+        		SPELLmonitor m(m_ackLock);
+
+        		it = std::find(m_ackSequences.begin(), m_ackSequences.end(), seq);
+
+        		found = it != m_ackSequences.end();
+        		if (found)
+        		{
+        			m_ackSequences.erase(it);
+        		}
+        		else
+        		{
+        			SPELLtime now;
+					SPELLtime delta = now - waitStart;
+					if (delta.getSeconds()>ACKNOWLEDGE_TIMEOUT_SEC)
+					{
+						LOG_WARN("#########################");
+						LOG_WARN("Acknowledge not received!");
+						LOG_WARN(msg.dataStr());
+						LOG_WARN("#########################");
+						if (!m_ipcInterruptionNotified)
+						{
+							m_ipcInterruptionNotified = true;
+							SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
+							if (st == STATUS_WAITING || st == STATUS_RUNNING )
+							{
+								ExecutorCommand cmd;
+								cmd.id = CMD_PAUSE;
+								warning("Communication with controlling GUI interrupted. Procedure paused for safety.", LanguageConstants::SCOPE_SYS);
+								warning("You may try to resume execution.", LanguageConstants::SCOPE_SYS);
+								SPELLexecutor::instance().command(cmd,false);
+							}
+						}
+						return;
+					}
+        		}
+    		}
+    		if (!m_ready) return;
+    		usleep(52000);
+    	}
     }
 }
 
@@ -1234,9 +1250,17 @@ void SPELLserverCif::processMessage( const SPELLipcMessage& msg )
 
     if (m_ready && msgId == ExecutorMessages::ACKNOWLEDGE)
     {
-    	m_ack.set();
+    	std::string seq = msg.get(MessageField::FIELD_MSG_SEQUENCE);
+    	{
+    		SPELLmonitor m(m_ackLock);
+    		m_ackSequences.push_back(seq);
+    	}
     	return;
     }
+
+    // Reset the IPC interruption flag so that normal
+    // communication is restored
+    m_ipcInterruptionNotified = false;
 
     // Prompt answers
     if ( msgId == MessageId::MSG_ID_PROMPT_ANSWER )

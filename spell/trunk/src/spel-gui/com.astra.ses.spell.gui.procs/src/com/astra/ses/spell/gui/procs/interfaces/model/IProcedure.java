@@ -118,20 +118,14 @@ public interface IProcedure extends IAdaptable
 	public IExecutionInformation getRuntimeInformation();
 
 	/***************************************************************************
-	 * Return this object's data provider
-	 * 
-	 * @return an IProcedureDataProvider object whose functions are called to
-	 *         gather procedure static and runtime information.
+	 * Return this object's execution status manager
 	 **************************************************************************/
-	public IProcedureDataProvider getDataProvider();
+	public IExecutionStatusManager getExecutionManager();
 
 	/***************************************************************************
-	 * Return this object's execution tree
-	 * 
-	 * @return an IExecutionTreeInformation object that provides the structure
-	 *         of the procedure execution tree.
+	 * Return this object's source code provider
 	 **************************************************************************/
-	public IExecutionTreeInformation getExecutionTree();
+	public ISourceCodeProvider getSourceCodeProvider();
 
 	/***************************************************************************
 	 * Reset this procedure

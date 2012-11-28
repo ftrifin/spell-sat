@@ -54,6 +54,7 @@ import java.util.Vector;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -65,8 +66,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Group;
-import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Label;
 
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
@@ -78,14 +78,14 @@ import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
-import com.astra.ses.spell.gui.views.ProcedureView;
 import com.astra.ses.spell.gui.views.controls.ControlArea;
+import com.astra.ses.spell.gui.views.controls.ISashListener;
 
 /*******************************************************************************
  * @brief Special control for showing user prompts in the tabular view
  * @date 20/10/07
  ******************************************************************************/
-public class InputArea extends Composite implements SelectionListener, KeyListener
+public class InputArea extends Composite implements SelectionListener, KeyListener, ISashListener
 {
 	// =========================================================================
 	// # STATIC DATA MEMBERS
@@ -120,7 +120,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 
 	// PRIVATE -----------------------------------------------------------------
 	/** Text field for text prompts */
-	private Text m_textPrompt;
+	private Label m_promptTextLabel;
 	/** Prompt field for text prompts */
 	private PromptField m_textInput;
 	/** Future storing the prompt answers */
@@ -131,16 +131,16 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	private boolean m_numericInput;
 	/** Parent view of the input area */
 	private ControlArea m_parent;
-	/** Holds the procedure view reference */
-	private ProcedureView m_view;
 	/** Holds the radio buttons for options */
 	private ArrayList<Button> m_optionsRadio;
 	/** Holds the combo widget for options */
 	private Combo m_optionsCombo;
 	/** Holds the type of widget for options */
 	private PromptDisplayType m_promptDisplayType;
+	/** Provides the scrolling of option buttons */
+	private ScrolledComposite m_optionScroll;
 	/** Holds the set of radio buttons */
-	private Group m_optionGroup;
+	private Composite m_optionContainer;
 	/** Holds the selected option index if any */
 	private int m_selectedOption;
 	/** Commit button */
@@ -173,10 +173,9 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	 * @param top
 	 *            The container composite
 	 **************************************************************************/
-	public InputArea(ProcedureView view, ControlArea area)
+	public InputArea(ControlArea area)
 	{
 		super(area, SWT.NONE);
-		m_view = view;
 		m_parent = area;
 		m_promptData = null;
 		m_expected = null;
@@ -185,16 +184,17 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		GridLayout layout = new GridLayout();
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
+		layout.marginBottom = 5;
 		layout.numColumns = 1;
 		setLayout(layout);
 
 		setLayoutData(new GridData(GridData.FILL_BOTH));
 
-		m_textPrompt = new Text(this, SWT.MULTI | SWT.BORDER);
-		m_textPrompt.setText("Enter command");
-		m_textPrompt.setEditable(false);
+		m_promptTextLabel = new Label(this, SWT.BORDER | SWT.WRAP);
+		m_promptTextLabel.setText("Enter command");
 		GridData tpData = new GridData(GridData.FILL_HORIZONTAL);
-		m_textPrompt.setLayoutData(tpData);
+		m_promptTextLabel.setLayoutData(tpData);
+		m_promptTextLabel.setBackground( Display.getCurrent().getSystemColor(SWT.COLOR_WHITE) );
 
 		if (s_cfg == null)
 		{
@@ -203,19 +203,18 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		}
 
 		Composite inputGroup = new Composite(this, SWT.NONE);
-		GridLayout ig_layout = new GridLayout();
+		GridLayout ig_layout = new GridLayout(3,false);
 		ig_layout.marginHeight = 0;
 		ig_layout.marginTop = 0;
-		ig_layout.marginBottom = 3;
+		ig_layout.marginBottom = 5;
 		ig_layout.marginWidth = 0;
 		ig_layout.marginLeft = 3;
 		ig_layout.marginRight = 3;
-		ig_layout.numColumns = 3;
 		inputGroup.setLayout(ig_layout);
-		inputGroup.setLayoutData(new GridData(GridData.FILL_BOTH));
+		inputGroup.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
 		m_textInput = new PromptField(inputGroup, "", this);
-		GridData gd = new GridData(GridData.FILL_BOTH);
+		GridData gd = new GridData(GridData.FILL_HORIZONTAL);
 		m_textInput.getContents().setLayoutData(gd);
 
 		m_commitButton = new Button(inputGroup, SWT.PUSH);
@@ -233,7 +232,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		m_optionsRadio = new ArrayList<Button>();
 		m_optionsCombo = null;
 		m_selectedOption = -1;
-		m_optionGroup = null;
+		m_optionScroll = null;
 
 		m_blinker = null;
 		m_blinkerLauncher = null;
@@ -250,7 +249,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	{
 		if (enabled && m_clientMode != ClientMode.CONTROLLING)
 			return;
-		m_textPrompt.setEnabled(enabled);
+		m_promptTextLabel.setEnabled(enabled);
 		super.setEnabled(enabled);
 	}
 
@@ -295,12 +294,15 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		}
 		setRedraw(false);
 		m_myFont = new Font(Display.getDefault(),"Courier New", m_fontSize, SWT.NORMAL);
-		m_textPrompt.setFont(m_myFont);
+		m_promptTextLabel.setFont(m_myFont);
 		m_textInput.setFont(m_myFont);
-		for (Button opt : m_optionsRadio)
+		if (m_optionContainer != null)
 		{
-			opt.setFont(m_myFont);
-			opt.pack();
+			for (Button opt : m_optionsRadio)
+			{
+				opt.setFont(m_myFont);
+			}
+			m_optionContainer.pack();
 		}
 		setRedraw(true);
 		m_parent.layout();
@@ -352,7 +354,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		reset();
 		prepareBlinking();
 		m_promptData = promptData;
-		if (promptData.isNotification())
+		if (m_clientMode.equals(ClientMode.MONITORING))
 		{
 			promptAsMonitoring();
 		}
@@ -372,7 +374,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			m_expected = m_promptData.getExpected();
 			m_numericInput = false;
 			// Set the prompt text
-			m_textPrompt.setText(m_promptData.getText());
+			m_promptTextLabel.setText(m_promptData.getText());
 			// Set the text hint for the console input
 			String hint = "Type ";
 			for (String opt : m_expected)
@@ -391,7 +393,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		else
 		{
 			m_expected = null;
-			m_textPrompt.setText(m_promptData.getText());
+			m_promptTextLabel.setText(m_promptData.getText());
 			m_numericInput = m_promptData.isNumeric();
 
 		}
@@ -406,15 +408,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	 **************************************************************************/
 	private void promptAsMonitoring()
 	{
-		m_textPrompt.setText(m_promptData.getText());
-		m_promptDisplayType = m_promptData.getPromptDisplayType();
-		if (m_promptData.isList())
-		{
-			// Build the option list and show the option composite
-			updateOptions(m_promptData.getOptions(), m_promptData.getExpected());
-		}
-		// Reset the console input
-		m_textInput.reset();
+		promptAsControlling();
 		m_textInput.setEnabled(false);
 		m_commitButton.setEnabled(false);
 		m_resetButton.setEnabled(false);
@@ -498,20 +492,20 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	public void reset()
 	{
 		Logger.debug("Reset input area", Level.PROC, this);
-		stopBlinking();
-		m_textPrompt.setText("Enter command:");
+		m_promptTextLabel.setText("Enter command:");
 		m_textInput.delHint();
 		m_textInput.reset();
 		m_textInput.setEnabled(true);
 		clearOptions();
 		m_promptData = null;
 		m_expected = null;
+		stopBlinking();
 	}
 
 	/***************************************************************************
 	 * Prepare the blinking
 	 ***************************************************************************/
-	void prepareBlinking()
+	private void prepareBlinking()
 	{
 		m_blinkSwitch = true;
 		long msec = 10000;
@@ -530,7 +524,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	/***************************************************************************
 	 * Start the blinking
 	 ***************************************************************************/
-	void startBLinking()
+	synchronized void startBLinking()
 	{
 		m_blinker = new PromptBlinker(this);
 		String soundFile = s_cfg.getProperty(PropertyKey.PROMPT_SOUND_FILE);
@@ -552,19 +546,17 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	/***************************************************************************
 	 * Start the blinking
 	 ***************************************************************************/
-	void stopBlinking()
+	private synchronized void stopBlinking()
 	{
 		if (m_blinker != null)
 		{
 			m_blinker.stopBlinking();
 			try
 			{
+				m_blinker.interrupt();
 				m_blinker.join();
 			}
-			catch (InterruptedException e)
-			{
-			}
-			;
+			catch (Exception e){};
 			m_blinker = null;
 		}
 		if (m_sounder != null)
@@ -578,8 +570,8 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			m_blinkerLauncher = null;
 		}
 		// Ensure the text field has white background color
-		m_textPrompt.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_WHITE));
-		m_textPrompt.redraw();
+		m_promptTextLabel.setBackground( Display.getCurrent().getSystemColor(SWT.COLOR_WHITE) );
+		m_promptTextLabel.redraw();
 	}
 
 	/***************************************************************************
@@ -587,19 +579,19 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	 ***************************************************************************/
 	void blink()
 	{
-		if (!m_textPrompt.isDisposed())
+		if (!m_promptTextLabel.isDisposed())
 		{
 			if (m_blinkSwitch)
 			{
 				m_blinkSwitch = false;
-				m_textPrompt.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_YELLOW));
+				m_promptTextLabel.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_YELLOW));
 			}
 			else
 			{
 				m_blinkSwitch = true;
-				m_textPrompt.setBackground(null);
+				m_promptTextLabel.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_WHITE));
 			}
-			m_textPrompt.redraw();
+			m_promptTextLabel.redraw();
 		}
 	}
 
@@ -810,10 +802,11 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			}
 			m_optionsRadio.clear();
 		}
-		if (m_optionGroup != null)
+		if (m_optionScroll != null)
 		{
-			m_optionGroup.dispose();
-			m_optionGroup = null;
+			m_optionContainer.dispose();
+			m_optionScroll.dispose();
+			m_optionScroll = null;
 		}
 		if (m_optionsCombo != null)
 		{
@@ -822,7 +815,6 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		}
 		m_selectedOption = -1;
 		updateButtons();
-		m_view.computeSplit();
 	}
 
 	/***************************************************************************
@@ -839,9 +831,8 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			m_optionsCombo.deselectAll();
 		}
 		m_selectedOption = -1;
-		m_view.computeSplit();
 	}
-
+	
 	/***************************************************************************
 	 * Update the available options
 	 * 
@@ -853,18 +844,12 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		if (options == null || options.size() == 0)
 			return;
 
-		m_optionGroup = new Group(this, SWT.NONE);
-		GridLayout tg_layout = new GridLayout();
-		tg_layout.marginHeight = 0;
-		tg_layout.marginTop = 0;
-		tg_layout.marginBottom = 3;
-		tg_layout.marginWidth = 0;
-		tg_layout.marginLeft = 8;
-		tg_layout.marginRight = 3;
-		tg_layout.numColumns = 1;
-		m_optionGroup.setLayout(tg_layout);
-		m_optionGroup.setLayoutData(new GridData(GridData.FILL_BOTH));
-
+		m_optionScroll = new ScrolledComposite(this, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL );
+		// DO NOT PUT LAYOUT DATA FOR THE SCROLLED: IT IS ADJUSTED WITH THE SASH EVENTS!
+		
+		m_optionContainer = new Composite(m_optionScroll, SWT.NONE);
+		m_optionContainer.setLayout( new GridLayout(1,true) );
+		
 		int count = 0;
 		if (m_promptDisplayType == PromptDisplayType.RADIO)
 		{
@@ -872,7 +857,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			{
 				String expected = expectedValues.elementAt(count);
 
-				Button b = new Button(m_optionGroup, SWT.RADIO);
+				Button b = new Button(m_optionContainer, SWT.RADIO);
 				b.setFont(m_myFont);
 				String value = option.substring(option.indexOf(KEY_SEPARATOR) + 1, option.length());
 				// Take into account the LIST|ALPHA case. When keys are the same
@@ -896,7 +881,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		}
 		else
 		{
-			m_optionsCombo = new Combo(m_optionGroup, SWT.DROP_DOWN | SWT.READ_ONLY);
+			m_optionsCombo = new Combo(m_optionContainer, SWT.DROP_DOWN | SWT.READ_ONLY);
 			m_optionsCombo.setData("IDs", expectedValues);
 			for (String option : options)
 			{
@@ -906,7 +891,8 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			}
 
 		}
-		m_view.computeSplit();
+		m_optionContainer.pack();
+		m_optionScroll.setContent(m_optionContainer);
 	}
 
 	/***************************************************************************
@@ -918,4 +904,16 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		m_commitButton.setEnabled(hasInput);
 		m_resetButton.setEnabled(hasInput);
 	}
+
+	@Override
+    public void onSashMoved( int height )
+    {
+		if (m_optionScroll != null)
+		{
+			int substract = m_promptTextLabel.getBounds().height + m_textInput.getContents().getBounds().height + 25;
+			int finalHeight = height - substract;;
+			if (finalHeight<40) finalHeight=40;
+			m_optionScroll.setSize( getClientArea().width, finalHeight );
+		}
+    }
 }

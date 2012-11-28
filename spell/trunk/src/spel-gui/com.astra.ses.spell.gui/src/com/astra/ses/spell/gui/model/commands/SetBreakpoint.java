@@ -55,7 +55,6 @@ import org.eclipse.core.commands.ExecutionException;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /*******************************************************************************
@@ -67,14 +66,14 @@ public class SetBreakpoint extends AbstractHandler
 {
 
 	/** Command id */
-	public static final String	ID	       = "com.astra.ses.spell.gui.commands.SetBreakpoint";
+	public static final String ID = "com.astra.ses.spell.gui.commands.SetBreakpoint";
 
 	/** Proc id command argument */
-	public static final String	ARG_PROCID	= "com.astra.ses.spell.gui.commands.SetBreakpoint.id";
+	public static final String ARG_PROCID = "com.astra.ses.spell.gui.commands.SetBreakpoint.id";
 	/** Line number argument */
-	public static final String	ARG_LINENO	= "com.astra.ses.spell.gui.commands.SetBreakpoint.line";
+	public static final String ARG_LINENO = "com.astra.ses.spell.gui.commands.SetBreakpoint.line";
 	/** Breakpoint type */
-	public static final String	ARG_TYPE	= "com.astra.ses.spell.gui.commands.SetBreakpoint.type";
+	public static final String ARG_TYPE = "com.astra.ses.spell.gui.commands.SetBreakpoint.type";
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException
@@ -84,8 +83,7 @@ public class SetBreakpoint extends AbstractHandler
 		 */
 		String procId = event.getParameter(ARG_PROCID);
 		int lineNo = Integer.valueOf(event.getParameter(ARG_LINENO));
-		BreakpointType type = BreakpointType.valueOf(event
-		        .getParameter(ARG_TYPE));
+		BreakpointType type = BreakpointType.valueOf(event.getParameter(ARG_TYPE));
 		if (type == null)
 		{
 			type = BreakpointType.UNKNOWN;
@@ -94,23 +92,13 @@ public class SetBreakpoint extends AbstractHandler
 		/*
 		 * Retrieve the procedure
 		 */
-		IProcedureManager mgr = (IProcedureManager) ServiceManager
-		        .get(IProcedureManager.class);
+		IProcedureManager mgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
 		IProcedure proc = mgr.getProcedure(procId);
 
 		/*
 		 * Perform the action
 		 */
-		try
-		{
-			proc.getController().setBreakpoint(lineNo, type);
-		}
-		catch (UninitProcedureException e)
-		{
-			e.printStackTrace();
-			return CommandResult.FAILED;
-		}
-
+		proc.getController().setBreakpoint(lineNo, type);
 		return CommandResult.SUCCESS;
 	}
 

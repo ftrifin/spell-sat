@@ -65,6 +65,7 @@ import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 
 /*******************************************************************************
@@ -91,10 +92,6 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	private UserActionStatus m_userActionStatus;
 	/** User action severity */
 	private Severity m_userActionSeverity;
-	/** Step over execution mode */
-	private StepOverMode m_soMode;
-	/** Previous so mode */
-	private StepOverMode m_soPrevious;
 	/** By step execution mode */
 	private boolean m_byStep;
 	/** Holds the show lib state */
@@ -123,11 +120,13 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	private boolean m_executorLost;
 	/** Parent procedure */
 	private String m_parent;
+	/** Reference to procedure model */
+	private IProcedure m_model;
 
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
-	public ExecutionInformationHandler(ClientMode mode)
+	public ExecutionInformationHandler(ClientMode mode, IProcedure model )
 	{
 		m_displayMessages = new Vector<DisplayData>();
 		m_error = null;
@@ -137,8 +136,6 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		m_userAction = null;
 		m_userActionStatus = UserActionStatus.DISMISSED;
 		m_userActionSeverity = Severity.INFO;
-		m_soMode = null;
-		m_soPrevious = null;
 		m_byStep = false;
 		m_showLib = false;
 		m_tcConfirmation = false;
@@ -153,6 +150,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		m_waitingInput = false;
 		m_executorLost = false;
 		m_parent = "";
+		m_model = model;
 	}
 
 	@Override
@@ -270,39 +268,9 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	}
 
 	@Override
-	public void setStepOverMode(StepOverMode mode)
-	{
-		m_soPrevious = m_soMode;
-		m_soMode = mode;
-	}
-
-	@Override
 	public void setExecutorLost()
 	{
 		m_executorLost = true;
-	}
-
-	@Override
-	public void resetStepOverMode()
-	{
-		if (m_soPrevious != null)
-		{
-			switch (m_soMode)
-			{
-			case STEP_INTO_ONCE:
-			case STEP_OVER_ONCE:
-				m_soMode = m_soPrevious;
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	@Override
-	public StepOverMode getStepOverMode()
-	{
-		return m_soMode;
 	}
 
 	@Override
@@ -522,7 +490,7 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 	{
 		config.setBrowsableLib(m_showLib);
 		config.setExecDelay(m_execDelay);
-		config.setRunInto(m_soMode.equals(StepOverMode.STEP_INTO_ALWAYS));
+		config.setRunInto(m_model.getController().getStepOverControl().getMode().equals(StepOverMode.STEP_INTO_ALWAYS));
 		config.setStepByStep(m_byStep);
 		config.setTcConfirmation(m_tcConfirmation);
 	}
@@ -556,11 +524,11 @@ class ExecutionInformationHandler implements IExecutionInformationHandler
 		setExecutionDelay(config.getExecDelay());
 		if (config.getRunInto())
 		{
-			setStepOverMode(StepOverMode.STEP_INTO_ALWAYS);
+			m_model.getController().getStepOverControl().setMode(StepOverMode.STEP_INTO_ALWAYS);
 		}
 		else
 		{
-			setStepOverMode(StepOverMode.STEP_OVER_ALWAYS);
+			m_model.getController().getStepOverControl().setMode(StepOverMode.STEP_OVER_ALWAYS);
 		}
 		setStepByStep(config.getStepByStep());
 		setForceTcConfirmation(config.getTcConfirmation());

@@ -41,10 +41,9 @@
 //============================================================================
 // CONSTRUCTOR: SPELLastAnalyzer::SPELLastAnalyzer()
 //============================================================================
-SPELLastAnalyzer::SPELLastAnalyzer( const std::string& filename )
+SPELLastAnalyzer::SPELLastAnalyzer()
 {
 	DEBUG("[ASTN] AST analyzer created");
-	process(filename);
 };
 
 //============================================================================
@@ -61,68 +60,61 @@ SPELLastAnalyzer::~SPELLastAnalyzer()
 void SPELLastAnalyzer::process( const std::string& filename )
 {
 	DEBUG("[ASTN] Analyzing file " + filename);
-	m_lineTypes.clear();
 
-	// Read the source code
-	std::string source = SPELLpythonHelper::instance().readProcedureFile(filename);
-
-	if (source == "")
+	// Do not reparse the code if already done
+	NodeMap::iterator it = m_nodes.find(filename);
+	if (it == m_nodes.end())
 	{
-		THROW_EXCEPTION("Unable to parse script", "Cannot read source code", SPELL_ERROR_PYTHON_API);
-	}
+		NodeInfo info;
 
-	// Compile the script to obtain the AST code
-	struct _node* node = PyParser_SimpleParseStringFlags( source.c_str(), Py_file_input, 0 );
-	if (node == NULL) // Could not get ast
-	{
-		THROW_EXCEPTION("Unable to parse script", "Could not get node tree", SPELL_ERROR_PYTHON_API);
-	}
+		// Read the source code
+		std::string source = SPELLpythonHelper::instance().readProcedureFile(filename);
 
-	// The top node contains the main node statements
-	unsigned int parDepth = 0;
-	m_openLineNo = 0;
-	m_lastLineType = NONE;
-	for(unsigned int index = 0; index < (unsigned int) node->n_nchildren; index++)
-	{
-		findNodeLines( &node->n_child[index], 0, parDepth );
+		if (source == "")
+		{
+			THROW_EXCEPTION("Unable to parse script", "Cannot read source code", SPELL_ERROR_PYTHON_API);
+		}
+
+		// Compile the script to obtain the AST code
+		struct _node* node = PyParser_SimpleParseStringFlags( source.c_str(), Py_file_input, 0 );
+		if (node == NULL) // Could not get ast
+		{
+			THROW_EXCEPTION("Unable to parse script", "Could not get node tree", SPELL_ERROR_PYTHON_API);
+		}
+
+		// The top node contains the main node statements
+		unsigned int parDepth = 0;
+		m_openLineNo = 0;
+		m_lastLineType = NONE;
+		for(unsigned int index = 0; index < (unsigned int) node->n_nchildren; index++)
+		{
+			findNodeLines( &node->n_child[index], 0, parDepth, info );
+		}
+
+		PyNode_Free(node);
+
+		m_nodes.insert( std::make_pair(std::string(filename), info) );
+		m_currentNode = info;
 	}
-	PyNode_Free(node);
-//#ifdef WITH_DEBUG
-//    std::ifstream file;
-//    file.open( filename.c_str() );
-//    unsigned int lineno = 1;
-//    while(!file.eof())
-//    {
-//        std::string line = "";
-//        std::getline(file,line);
-//        LineTypes::iterator it = m_lineTypes.find(lineno);
-//        if (it != m_lineTypes.end())
-//        {
-//    		std::cout << "[" << lineno << "] " << it->second << ": " << line << std::endl;
-//        }
-//        else
-//        {
-//        	std::cout << "[" << lineno << "] 0:" << line << std::endl;
-//        }
-//        lineno++;
-//    }
-//    file.close();
-//#endif
+	else
+	{
+		m_currentNode = it->second;
+	}
 }
 
 //============================================================================
 // METHOD: SPELLastAnalyzer::findNodeLines()
 //============================================================================
-void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, unsigned int& parDepth )
+void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, unsigned int& parDepth, NodeInfo& info )
 {
 	unsigned int lineno = node->n_lineno;
-	LineTypes::iterator it = m_lineTypes.find(lineno);
+	LineTypes::iterator it = info.lineTypes.find(lineno);
 	// If the line is new, put it in the map with no type
-	if (it == m_lineTypes.end())
+	if (it == info.lineTypes.end())
 	{
 		// The line inherits the state of the previous one
-		m_lineTypes.insert( std::make_pair( lineno, m_lastLineType ));
-		m_maxLineNo = lineno;
+		info.lineTypes.insert( std::make_pair( lineno, m_lastLineType ));
+		info.maxLineNo = lineno;
 	}
 	// If the line is not new and we have an open par, mark it as multiple
 	else if (node->n_type == LPAR || node->n_type == LSQB )
@@ -182,7 +174,7 @@ void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, un
 
 	for(unsigned int index = 0; index < (unsigned int) node->n_nchildren; index++)
 	{
-		findNodeLines( &node->n_child[index], depth+1, parDepth );
+		findNodeLines( &node->n_child[index], depth+1, parDepth, info );
 	}
 
 	if (node->n_type == RPAR || node->n_type == RSQB )
@@ -196,8 +188,8 @@ void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, un
 //============================================================================
 bool SPELLastAnalyzer::isSimpleLine( unsigned int lineno )
 {
-	LineTypes::iterator it = m_lineTypes.find(lineno);
-	if (it != m_lineTypes.end())
+	LineTypes::iterator it = m_currentNode.lineTypes.find(lineno);
+	if (it != m_currentNode.lineTypes.end())
 	{
 		return (it->second == NONE);
 	}
@@ -209,8 +201,8 @@ bool SPELLastAnalyzer::isSimpleLine( unsigned int lineno )
 //============================================================================
 bool SPELLastAnalyzer::isBlockStart( unsigned int lineno )
 {
-	LineTypes::iterator it = m_lineTypes.find(lineno);
-	if (it != m_lineTypes.end())
+	LineTypes::iterator it = m_currentNode.lineTypes.find(lineno);
+	if (it != m_currentNode.lineTypes.end())
 	{
 		return (it->second == START_MULTIPLE);
 	}
@@ -222,8 +214,8 @@ bool SPELLastAnalyzer::isBlockStart( unsigned int lineno )
 //============================================================================
 bool SPELLastAnalyzer::isInsideBlock( unsigned int lineno )
 {
-	LineTypes::iterator it = m_lineTypes.find(lineno);
-	if (it != m_lineTypes.end())
+	LineTypes::iterator it = m_currentNode.lineTypes.find(lineno);
+	if (it != m_currentNode.lineTypes.end())
 	{
 		return (it->second == MULTIPLE);
 	}
@@ -236,10 +228,10 @@ bool SPELLastAnalyzer::isInsideBlock( unsigned int lineno )
 unsigned int SPELLastAnalyzer::getBlockEnd( unsigned int startLineNo )
 {
 	unsigned int firstAfterBlock = startLineNo;
-	for(unsigned int count = startLineNo+1; count < m_maxLineNo ; count++)
+	for(unsigned int count = startLineNo+1; count < m_currentNode.maxLineNo ; count++)
 	{
-		LineTypes::iterator it = m_lineTypes.find(count);
-		if (it != m_lineTypes.end())
+		LineTypes::iterator it = m_currentNode.lineTypes.find(count);
+		if (it != m_currentNode.lineTypes.end())
 		{
 			if ((it->second == NONE)||(it->second == START_MULTIPLE))
 			{

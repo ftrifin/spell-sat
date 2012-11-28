@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls
+// PACKAGE   : com.astra.ses.spell.gui.procs.interfaces.model
 // 
-// FILE      : ItemInfoTableColumn.java
+// FILE      : IStepOverControl.java
 //
-// DATE      : 2008-11-21 08:55
+// DATE      : Nov 8, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,26 +43,17 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.code.controls;
+package com.astra.ses.spell.gui.procs.interfaces.model;
 
-/*******************************************************************************
- * @brief
- * @date 09/10/07
- ******************************************************************************/
-public enum ItemInfoTableColumn
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
+
+public interface IStepOverControl
 {
-	EXECUTION("EX", 30), NAME("Name", 150), VALUE("Value", 100), STATUS(
-	        "Status", 100), TIME("Updated", 150), COMMENTS("Comments", 150);
-
-	private ItemInfoTableColumn(String title, int width)
-	{
-		this.title = title;
-		this.width = width;
-	}
-
-	public String	title;
-	public int	  width;
+	public StepOverMode getMode();
+	public void setMode( StepOverMode mode );
+	public void onExecutionCall();
+	public void onExecutionLine();
+	public void onExecutionReturn();
+	public boolean isSteppingOver();
 }

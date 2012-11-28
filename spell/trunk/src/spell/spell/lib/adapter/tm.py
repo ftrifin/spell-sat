@@ -1217,10 +1217,19 @@ class TmInterface(Configurable, Interface):
         useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         limitsList = args[0]
         return self._loadLimits( limitsList, useConfig )
+
+    #===========================================================================
+    def restoreNormalLimits(self, *args, **kargs ):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        return self._restoreNormalLimits( useConfig )
+
+    #===========================================================================
+    def _restoreNormalLimits(self, config = {} ):
+        REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
+        return True
                
     #===========================================================================
     def _refreshItem(self, param, config = {} ):
-        # SHALL RETURN eng,raw,status
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return 
 

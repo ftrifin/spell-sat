@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls.drawing
+// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls
 // 
-// FILE      : TableEventDispatcher.java
+// FILE      : ColumnSizer.java
 //
-// DATE      : 2008-11-21 08:55
+// DATE      : Nov 21, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,52 +43,41 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.code.controls.drawing;
+package com.astra.ses.spell.gui.presentation.code.controls;
 
-import java.util.ArrayList;
+import org.eclipse.nebula.widgets.grid.Grid;
+import org.eclipse.swt.events.ControlAdapter;
+import org.eclipse.swt.events.ControlEvent;
 
-import org.eclipse.jface.viewers.ITableColorProvider;
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.TableItem;
-
-import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
-import com.astra.ses.spell.gui.presentation.code.syntax.ISyntaxFormatter;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
-
-public class TableEventDispatcher implements Listener
+public class ColumnSizer extends ControlAdapter
 {
-	private ArrayList<AbstractColumnDrawer>	m_drawers;
-
-	/***************************************************************************
-	 * Constructor.
-	 **************************************************************************/
-	public TableEventDispatcher(ISyntaxFormatter formatter,
-	        IProcedureDataProvider dataProvider,
-	        ITableColorProvider colorProvider)
+	private CodeViewerColumn column;
+	private Grid grid;
+	
+	public ColumnSizer( Grid grid, CodeViewerColumn column )
 	{
-		m_drawers = new ArrayList<AbstractColumnDrawer>();
-		m_drawers.add(new BreakpointColumnDrawer(dataProvider, colorProvider));
-		m_drawers.add(new LineNumberColumnDrawer(dataProvider, colorProvider));
-		m_drawers.add(new SourceCodeColumnDrawer(formatter, dataProvider,
-		        colorProvider));
-		m_drawers.add(new ItemColumnDrawer(CodeViewerColumn.NAME.ordinal(),
-		        dataProvider, colorProvider));
-		m_drawers.add(new ItemColumnDrawer(CodeViewerColumn.VALUE.ordinal(),
-		        dataProvider, colorProvider));
-		m_drawers.add(new ItemColumnDrawer(CodeViewerColumn.STATUS.ordinal(),
-		        dataProvider, colorProvider));
+		this.column = column;
+		this.grid = grid;
 	}
-
+	
+	
 	@Override
-	public void handleEvent(Event event)
-	{
-		TableItem item = (TableItem) event.item;
-		int rowIndex = item.getParent().indexOf(item) + 1;
-		m_drawers.get(event.index).paintItem(event, item, rowIndex);
-	}
+    public void controlResized(ControlEvent e)
+    {
+		int restWidth = 0;
+        for(CodeViewerColumn col : CodeViewerColumn.values())
+        {
+        	if (col.equals(column)) continue;
+        	restWidth += grid.getColumn(col.ordinal()).getWidth();
+        }
+    	if (grid.getVerticalBar().isVisible())
+    	{
+    		restWidth += grid.getVerticalBar().getSize().x;
+    	}
+		int totalWidth = grid.getBounds().width;
+		
+		grid.getColumn(column.ordinal()).setWidth(totalWidth - restWidth - 4);
+    }
 
 }

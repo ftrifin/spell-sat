@@ -49,16 +49,17 @@
 package com.astra.ses.spell.gui.presentation.code;
 
 import java.awt.print.Printable;
-import java.util.List;
 
+import org.eclipse.nebula.widgets.grid.Grid;
+import org.eclipse.nebula.widgets.grid.GridItem;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableItem;
 
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
@@ -74,58 +75,81 @@ import com.astra.ses.spell.gui.interfaces.IProcedureStatusListener;
 import com.astra.ses.spell.gui.interfaces.ProcedurePresentationAdapter;
 import com.astra.ses.spell.gui.presentation.code.controls.CodeViewer;
 import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
+import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerContentProvider;
+import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerLabelProvider2;
+import com.astra.ses.spell.gui.presentation.code.dialogs.ItemInfoDialog;
 import com.astra.ses.spell.gui.presentation.code.printable.CodeViewPrintable;
 import com.astra.ses.spell.gui.print.SpellFooterPrinter;
 import com.astra.ses.spell.gui.print.SpellHeaderPrinter;
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
-import com.astra.ses.spell.gui.procs.interfaces.listeners.IStackChangesListener;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
 
-public class CodePresentation extends ProcedurePresentationAdapter implements
-        IStackChangesListener, IProcedurePromptListener,
-        IProcedureStatusListener, IProcedureItemsListener
+public class CodePresentation extends ProcedurePresentationAdapter implements IProcedurePromptListener, IProcedureStatusListener,
+        IProcedureItemsListener
 {
-	private static final String	   ID	              = "com.astra.ses.spell.gui.presentation.CodeView";
-	private static final String	   PRESENTATION_TITLE	= "Tabular";
-	private static final String	   PRESENTATION_DESC	= "Procedure view in source code";
-	private static final String	   PRESENTATION_ICON	= "icons/16x16/code.png";
+	private static final String ID = "com.astra.ses.spell.gui.presentation.CodeView";
+	private static final String PRESENTATION_TITLE = "Tabular";
+	private static final String PRESENTATION_DESC = "Procedure view in source code";
+	private static final String PRESENTATION_ICON = "icons/16x16/code.png";
 
 	/** Code Viewer */
-	private CodeViewer	           m_codeViewer;
-	/** Data provier */
-	private IProcedureDataProvider	m_dataProvider;
+	private CodeViewer m_codeViewer;
 	/** Parent view */
-	private IProcedure	           m_model;
+	private IProcedure m_model;
+	/** Label provider for the viewer */
+	private CodeViewerLabelProvider2 m_labelProvider;
+	/** ItemInfo dialog */
+	private ItemInfoDialog m_infoDialog;
 
 	@Override
-	public Composite createContents(IProcedure model, Composite stack)
+	public Composite createContents(IProcedure model, final Composite stack)
 	{
 		m_model = model;
-		m_dataProvider = m_model.getDataProvider();
 
-		Composite codePage = new Composite(stack, SWT.NONE);
-		GridLayout groupLayout = new GridLayout();
-		groupLayout.marginHeight = 0;
-		groupLayout.marginWidth = 0;
-		groupLayout.marginBottom = 0;
-		groupLayout.marginTop = 0;
-		groupLayout.verticalSpacing = 0;
-		groupLayout.numColumns = 1;
-		codePage.setLayout(groupLayout);
-		GridData data = new GridData();
-		data.grabExcessHorizontalSpace = true;
-		data.grabExcessVerticalSpace = true;
-		data.verticalAlignment = SWT.FILL;
-		codePage.setLayoutData(data);
+		final Composite codePage = new Composite(stack, SWT.NONE);
+		GridLayout codeLayout = new GridLayout(1,true);
+		codeLayout.marginTop = 0;
+		codeLayout.marginBottom = 0;
+		codeLayout.marginLeft = 0;
+		codeLayout.marginRight = 0;
+        codePage.setLayout( codeLayout );
+        
+        codePage.setLayoutData( new GridData( GridData.FILL_BOTH ));
 
 		Logger.debug("Creating proc viewer", Level.INIT, this);
 
-		// Register to execution changes
-		m_dataProvider.addStackChangesListener(this);
-
 		// Create the viewer, main control.
 		m_codeViewer = new CodeViewer(codePage, m_model);
+		m_codeViewer.setContentProvider(new CodeViewerContentProvider());
+		m_labelProvider = new CodeViewerLabelProvider2();
+		m_codeViewer.setLabelProvider(m_labelProvider);
+		m_codeViewer.setModel(m_model);
+		m_codeViewer.getGrid().setLayoutData(new GridData(GridData.FILL_BOTH));
+
+		/*
+		 * Catch double click events and show item info dialogs
+		 */
+		m_infoDialog = null;
+		m_codeViewer.getGrid().addMouseListener(new MouseAdapter()
+		{
+			public void mouseDoubleClick(MouseEvent e)
+			{
+				Point p = new Point(e.x, e.y);
+				GridItem item = m_codeViewer.getGrid().getItem(p);
+				if (item != null)
+				{
+					int itemIndex = m_codeViewer.getGrid().indexOf(item);
+					ICodeLine line = m_model.getExecutionManager().getLine(itemIndex);
+
+					if (line.hasNotifications() && m_infoDialog == null)
+					{
+						m_infoDialog = new ItemInfoDialog(codePage.getShell(), m_model, line);
+						m_infoDialog.open();
+						m_infoDialog = null;
+					}
+				}
+			}
+		});
 
 		return codePage;
 	}
@@ -181,15 +205,20 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 	}
 
 	@Override
-	public void notifyFinishPrompt(IProcedure model) {}
+	public void notifyFinishPrompt(IProcedure model)
+	{
+	}
 
 	@Override
-	public void notifyCancelPrompt(IProcedure model) {}
+	public void notifyCancelPrompt(IProcedure model)
+	{
+	}
 
 	@Override
 	public void notifyStatus(IProcedure model, StatusNotification data)
 	{
 		m_codeViewer.setExecutorStatus(data.getStatus());
+		m_codeViewer.refresh();
 	}
 
 	@Override
@@ -201,10 +230,12 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 	@Override
 	public void notifyItem(IProcedure model, ItemNotification data)
 	{
-		if (!data.getExecutionMode().equals(ExecutionMode.PROCEDURE)) return;
-		List<String> stack = data.getStackPosition();
-		int lineNumber = Integer.parseInt(stack.get(stack.size()-1));
-		m_codeViewer.newItemArrived(lineNumber);
+		if (!data.getExecutionMode().equals(ExecutionMode.PROCEDURE))
+			return;
+		if (m_infoDialog != null)
+		{
+			m_infoDialog.onNotification();
+		}
 	}
 
 	@Override
@@ -220,34 +251,7 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 	@Override
 	public void setEnabled(boolean enabled)
 	{
-		m_codeViewer.getTable().setEnabled(enabled);
-	}
-
-	@Override
-	public void viewChanged(boolean sourceCodeChanged)
-	{
-		final boolean changed = sourceCodeChanged;
-		Display.getDefault().asyncExec(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				m_codeViewer.codeChanged(changed);
-			}
-		});
-	}
-
-	@Override
-	public void lineChanged(final int line)
-	{
-		Display.getDefault().asyncExec(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				m_codeViewer.lineChanged(line);
-			}
-		});
+		m_codeViewer.getGrid().setEnabled(enabled);
 	}
 
 	@Override
@@ -255,8 +259,8 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 	{
 		if (adapter.equals(Printable.class))
 		{
-			Table table = m_codeViewer.getTable();
-			int columnCount = table.getColumnCount();
+			Grid table = m_codeViewer.getGrid();
+			int columnCount = CodeViewerColumn.values().length;
 			int rowCount = table.getItemCount();
 			int[] columnsLayout = new int[columnCount];
 			for (int i = 0; i < columnCount; i++)
@@ -265,22 +269,14 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 			}
 			String[][] tabbedData = new String[rowCount][columnCount];
 			int j = 0;
-			for (TableItem item : table.getItems())
+			for (GridItem item : table.getItems())
 			{
 				String[] line = new String[columnCount];
 				// Code column
-				line[CodeViewerColumn.BREAKPOINT.ordinal()] = item
-				        .getText(CodeViewerColumn.BREAKPOINT.ordinal());
-				line[CodeViewerColumn.CODE.ordinal()] = item.getData(
-				        CodeViewer.DATA_SOURCE).toString();
-				line[CodeViewerColumn.NAME.ordinal()] = item
-				        .getText(CodeViewerColumn.NAME.ordinal());
-				line[CodeViewerColumn.LINE_NO.ordinal()] = item
-				        .getText(CodeViewerColumn.LINE_NO.ordinal());
-				line[CodeViewerColumn.STATUS.ordinal()] = item
-				        .getText(CodeViewerColumn.STATUS.ordinal());
-				line[CodeViewerColumn.VALUE.ordinal()] = item
-				        .getText(CodeViewerColumn.VALUE.ordinal());
+				line[CodeViewerColumn.BREAKPOINT.ordinal()] = item.getText(CodeViewerColumn.BREAKPOINT.ordinal());
+				line[CodeViewerColumn.LINE_NO.ordinal()] = item.getText(CodeViewerColumn.LINE_NO.ordinal());
+				line[CodeViewerColumn.CODE.ordinal()] = item.getText(CodeViewerColumn.CODE.ordinal());
+				line[CodeViewerColumn.RESULT.ordinal()] = item.getText(CodeViewerColumn.RESULT.ordinal());
 				// Assign the line
 				tabbedData[j] = line;
 				j++;
@@ -288,8 +284,7 @@ public class CodePresentation extends ProcedurePresentationAdapter implements
 			String title = m_model.getProcId() + " - Code view";
 			SpellHeaderPrinter header = new SpellHeaderPrinter(title);
 			SpellFooterPrinter footer = new SpellFooterPrinter();
-			return new CodeViewPrintable(tabbedData, columnsLayout, header,
-			        footer);
+			return new CodeViewPrintable(tabbedData, columnsLayout, header, footer);
 		}
 		return null;
 	}

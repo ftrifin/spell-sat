@@ -49,6 +49,7 @@
 package com.astra.ses.spell.gui.views.controls;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -79,37 +80,31 @@ import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 import com.astra.ses.spell.gui.preferences.keys.GuiColorKey;
+import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
 import com.astra.ses.spell.gui.views.ProcedureView;
 
 /*******************************************************************************
  * @brief Composite which contains the set of controls used for changing pages
  * @date 09/10/07
  ******************************************************************************/
-public class PresentationPanel extends Composite
+public class PresentationPanel extends Composite implements IExecutionListener
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private static final String CMD_ID = "com.astra.ses.spell.gui.views.controls.CommandId";
 	private static final String PRESENTATION_INDEX = "com.astra.ses.spell.gui.views.controls.PresentationIndex";
-	private static final int NUM_ELEMENTS = 5;
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
+	private static final int NUM_ELEMENTS = 6;
+	
+	private static IConfigurationManager s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private ProcedureView m_view;
 	private Label m_stageDisplay;
 	private String m_currentStage;
 	private Text m_procDisplay;
+	private Text m_modeDisplay;
 	private Color m_okColor;
 	private Color m_warningColor;
 	private Color m_errorColor;
@@ -124,19 +119,16 @@ public class PresentationPanel extends Composite
 	private Button m_runInto;
 	/** Holds the by step checkbox */
 	private Button m_byStep;
-	/** Holds the TC cofnrimation checkbox */
-	private Label m_tcConfirm;
+	/** Holds the TC confirmation checkbox */
+	private Text m_tcConfirm;
 	/** Client mode */
 	private ClientMode m_clientMode;
 	/** Holds the current proc status */
 	private ExecutorStatus m_currentStatus;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
+	/** Holds the last notified processing delay */
+	private long m_processingDelay;
+	/** Procedure model reference, needed for dispose */
+	private IProcedure m_model;
 
 	/***************************************************************************
 	 * Constructor.
@@ -145,19 +137,57 @@ public class PresentationPanel extends Composite
 	{
 		super(parent, style);
 
-		IConfigurationManager rsc = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-
 		m_view = view;
+		m_model = model;
 
 		m_currentStage = null;
+		m_processingDelay = -1;
 		setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-		GridLayout layout = new GridLayout();
-		layout.marginHeight = 1;
-		layout.marginWidth = 1;
-		layout.numColumns = NUM_ELEMENTS;
+		GridLayout layout = new GridLayout(2,false);
 		setLayout(layout);
 
-		Composite stagePanel = new Composite(this, SWT.BORDER);
+		Composite leftBase = new Composite(this, SWT.NONE);
+		GridLayout lbl = new GridLayout(1,false);
+		lbl.marginHeight = 0;
+		lbl.marginWidth = 0;
+		leftBase.setLayout(lbl);
+		leftBase.setLayoutData( new GridData( GridData.FILL_BOTH ));
+		
+		createStagePanel( leftBase );
+		
+		Composite presentationsBase = new Composite(leftBase, SWT.NONE);
+		GridLayout pbl = new GridLayout(1,false);
+		pbl.marginHeight = 0;
+		pbl.marginWidth = 0;
+		pbl.numColumns = 5;
+		presentationsBase.setLayout(pbl);
+		presentationsBase.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
+
+		createPresentationsPanel( presentationsBase, numPresentations );
+		
+		m_satName = new Text(this, SWT.BORDER | SWT.SINGLE | SWT.READ_ONLY | SWT.CENTER);
+		m_satName.setFont(s_cfg.getFont(FontKey.BANNER));
+		m_satName.setText(m_view.getDomain());
+		m_satName.setBackground(m_okColor);
+		m_satName.setToolTipText("Satellite name");
+		m_satName.setEditable(false);
+		GridData gd = new GridData();
+		gd.heightHint = 50;
+		m_satName.setLayoutData(gd);
+
+		// Update the buttons to loaded state
+		m_clientMode = null;
+		setProcedureStatus(ExecutorStatus.UNINIT);
+		
+		m_model.getExecutionManager().addListener(this);
+	}
+
+	/***************************************************************************
+	 * Create the stage panel
+	 **************************************************************************/
+	private void createStagePanel( Composite parent )
+	{
+		Composite stagePanel = new Composite(parent, SWT.NONE);
 		GridLayout splayout = new GridLayout();
 		splayout.marginHeight = 0;
 		splayout.marginWidth = 0;
@@ -172,7 +202,7 @@ public class PresentationPanel extends Composite
 		GridData sdd = new GridData(GridData.FILL_HORIZONTAL);
 		sdd.grabExcessHorizontalSpace = true;
 		m_stageDisplay.setLayoutData(sdd);
-		Font header = rsc.getFont(FontKey.HEADER);
+		Font header = s_cfg.getFont(FontKey.HEADER);
 		m_stageDisplay.setFont(header);
 
 		m_autoScroll = new Button(stagePanel, SWT.CHECK);
@@ -211,22 +241,31 @@ public class PresentationPanel extends Composite
 			}
 		});
 
-		m_tcConfirm = new Label(stagePanel, SWT.BORDER);
-		m_tcConfirm.setText("No TC Confirm");
-		m_tcConfirm.setToolTipText("TC confirmation flag");
+		m_tcConfirm = new Text(stagePanel, SWT.BORDER | SWT.READ_ONLY | SWT.CENTER);
+		m_tcConfirm.setText("Normal TC");
+		m_tcConfirm.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_GRAY));
+		m_tcConfirm.setToolTipText("Force TC confirmation flag");
+		GridData tg = new GridData();
+		tg.widthHint = 70;
+		m_tcConfirm.setLayoutData(tg);
 
 		resetStage();
+	}
 
+	/***************************************************************************
+	 * Create the presentation controls panel
+	 **************************************************************************/
+	private void createPresentationsPanel( Composite parent, int numPresentations )
+	{
 		m_presentationButton = new ArrayList<Button>();
-
-		m_presentationsPanel = new Composite(this, SWT.NONE);
+		m_presentationsPanel = new Composite(parent, SWT.NONE);
 		GridLayout playout = new GridLayout();
 		playout.marginHeight = 0;
 		playout.marginWidth = 0;
 		playout.numColumns = numPresentations;
 		m_presentationsPanel.setLayout(playout);
 
-		m_btnIncrFont = new Button(this, SWT.PUSH);
+		m_btnIncrFont = new Button(parent, SWT.PUSH);
 		m_btnIncrFont.setText("");
 		Image image = Activator.getImageDescriptor("icons/16x16/more.png").createImage();
 		m_btnIncrFont.setImage(image);
@@ -240,7 +279,7 @@ public class PresentationPanel extends Composite
 		});
 		m_btnIncrFont.setToolTipText("Increase font size");
 
-		m_btnDecrFont = new Button(this, SWT.PUSH);
+		m_btnDecrFont = new Button(parent, SWT.PUSH);
 		m_btnDecrFont.setText("");
 		image = Activator.getImageDescriptor("icons/16x16/less.png").createImage();
 		m_btnDecrFont.setImage(image);
@@ -254,18 +293,18 @@ public class PresentationPanel extends Composite
 		});
 		m_btnDecrFont.setToolTipText("Decrease font size");
 
-		Font bigFont = rsc.getFont(FontKey.HEADER);
+		Font bigFont = s_cfg.getFont(FontKey.HEADER);
 
-		m_okColor = rsc.getGuiColor(GuiColorKey.TABLE_BG);
-		m_warningColor = rsc.getStatusColor(ItemStatus.WARNING);
-		m_errorColor = rsc.getStatusColor(ItemStatus.ERROR);
+		m_okColor = s_cfg.getGuiColor(GuiColorKey.TABLE_BG);
+		m_warningColor = s_cfg.getStatusColor(ItemStatus.WARNING);
+		m_errorColor = s_cfg.getStatusColor(ItemStatus.ERROR);
 
-		m_procDisplay = new Text(this, SWT.BORDER | SWT.SINGLE);
+		m_procDisplay = new Text(parent, SWT.BORDER | SWT.SINGLE | SWT.READ_ONLY);
 		m_procDisplay.setFont(bigFont);
 		m_procDisplay.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
 		// Initialize with the latest message, if any
-		DisplayData[] msgs = model.getRuntimeInformation().getDisplayMessages();
+		DisplayData[] msgs = m_model.getRuntimeInformation().getDisplayMessages();
 		if (msgs.length > 0)
 		{
 			DisplayData last = msgs[msgs.length - 1];
@@ -279,18 +318,32 @@ public class PresentationPanel extends Composite
 		m_procDisplay.setEditable(false);
 		m_procDisplay.setToolTipText("Procedure display");
 
-		m_satName = new Text(this, SWT.BORDER | SWT.SINGLE);
-		m_satName.setFont(rsc.getFont(FontKey.BANNER));
-		m_satName.setText(m_view.getDomain());
-		m_satName.setBackground(m_okColor);
-		m_satName.setToolTipText("Satellite name");
-		m_satName.setEditable(false);
-
-		// Update the buttons to loaded state
-		m_clientMode = null;
-		setProcedureStatus(ExecutorStatus.UNINIT);
+		m_modeDisplay = new Text(parent, SWT.BORDER | SWT.READ_ONLY | SWT.SINGLE | SWT.CENTER );
+		m_modeDisplay.setFont(bigFont);
+		GridData mg = new GridData();
+		mg.widthHint = 70;
+		m_modeDisplay.setLayoutData(mg);
+		if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
+		{
+			m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_GREEN) );
+			m_modeDisplay.setText( "CTRL" );
+		}
+		else
+		{
+			m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_CYAN) );
+			m_modeDisplay.setText( "MON" );
+		}
 	}
 
+	/***************************************************************************
+	 * Dispose
+	 **************************************************************************/
+	public void dispose()
+	{
+		m_model.getExecutionManager().removeListener(this);
+		super.dispose();
+	}
+	
 	/***************************************************************************
 	 * Add a presentation button
 	 **************************************************************************/
@@ -412,16 +465,9 @@ public class PresentationPanel extends Composite
 	public void notifyModelConfigured(IProcedure model)
 	{
 		IExecutionInformation info = model.getRuntimeInformation();
-		m_runInto.setSelection(info.getStepOverMode().equals(StepOverMode.STEP_INTO_ALWAYS));
+		IStepOverControl ctrl = model.getController().getStepOverControl();
+		m_runInto.setSelection(ctrl.getMode().equals(StepOverMode.STEP_INTO_ALWAYS));
 		m_byStep.setSelection(info.isStepByStep());
-		if (info.isForceTcConfirmation())
-		{
-			m_tcConfirm.setBackground(m_warningColor);
-		}
-		else
-		{
-			m_tcConfirm.setBackground(null);
-		}
 		if (info.isForceTcConfirmation())
 		{
 			m_tcConfirm.setText("TC Confirm");
@@ -429,8 +475,8 @@ public class PresentationPanel extends Composite
 		}
 		else
 		{
-			m_tcConfirm.setText("No TC Confirm");
-			m_tcConfirm.setBackground(null);
+			m_tcConfirm.setText("Normal TC");
+			m_tcConfirm.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_GRAY));
 		}
 	}
 		
@@ -477,5 +523,57 @@ public class PresentationPanel extends Composite
 			m_tcConfirm.setEnabled(trackingEnabled && controlling);
 		}
 	}
+
+	@Override
+    public void onCodeChanged() {}
+
+	@Override
+    public void onLineChanged(ICodeLine line) {}
+
+	@Override
+    public void onItemsChanged(List<ICodeLine> lines) {}
+
+	@Override
+    public void onProcessingDelayChanged( final long delayMsec )
+    {
+		if (delayMsec != m_processingDelay)
+		{
+			m_processingDelay = delayMsec;
+			Display.getDefault().syncExec( new Runnable()
+			{
+				public void run()
+				{
+					long delaySec = delayMsec/1000;
+					if (delayMsec > 2000 && delayMsec < 10000)
+					{
+						m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_YELLOW));
+						m_modeDisplay.setToolTipText("Processing delay is " + delaySec + " seconds");
+						m_modeDisplay.setMessage("Processing delay is " + delaySec + " seconds");
+					}
+					else if (delayMsec>10000)
+					{
+						m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
+						m_modeDisplay.setToolTipText("Processing delay is " + delaySec + " seconds");
+						m_modeDisplay.setMessage("Processing delay is " + delaySec + " seconds");
+					}
+					else
+					{
+						m_modeDisplay.setToolTipText("No relevant processing delay");
+						m_modeDisplay.setMessage("No relevant processing delay");
+						
+						if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
+						{
+							m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_GREEN) );
+						}
+						else
+						{
+							m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_CYAN) );
+						}
+					}
+					m_modeDisplay.redraw();
+				}
+			});
+		}
+    }
 
 }

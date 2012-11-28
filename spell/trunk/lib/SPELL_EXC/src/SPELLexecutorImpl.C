@@ -1254,10 +1254,10 @@ const bool SPELLexecutorImpl::canSkip()
 const bool SPELLexecutorImpl::goNextLine()
 {
 	unsigned int currentLine = m_frameManager->getCurrentLine();
-	if (m_frameManager->getModel().isBlockStart(currentLine))
+	if (m_frameManager->getAST().isBlockStart(currentLine))
 	{
 		DEBUG("[E] Skipping entire code block");
-		unsigned int nextLine = m_frameManager->getModel().getBlockEnd(currentLine);
+		unsigned int nextLine = m_frameManager->getAST().getBlockEnd(currentLine);
 		return goLine(nextLine);
 	}
 	else
@@ -1301,7 +1301,7 @@ const bool SPELLexecutorImpl::goLabel( const std::string& label, bool programmed
 //=============================================================================
 const bool SPELLexecutorImpl::goLine( const int new_lineno )
 {
-	if (m_frameManager->getModel().isInsideBlock(new_lineno))
+	if (m_frameManager->getAST().isInsideBlock(new_lineno))
 	{
 		DEBUG("[E] Cannot go to line " + ISTR(new_lineno));
         m_cif->warning("Unable to go to line '" + ISTR(new_lineno) + "'", LanguageConstants::SCOPE_SYS );

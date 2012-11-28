@@ -75,8 +75,6 @@ public class SourceCodeProvider implements ISourceCodeProvider
 
 	/** A map containing source codes for the different code ids */
 	private Map<String, String[]>	      m_sources;
-	/** Breakpoints for the different code ids */
-	private Map<String, BreakpointType[]>	m_breakpoints;
 
 	/*
 	 * static block where ContextProxy service is retrieved
@@ -92,7 +90,6 @@ public class SourceCodeProvider implements ISourceCodeProvider
 	public SourceCodeProvider()
 	{
 		m_sources = new HashMap<String, String[]>();
-		m_breakpoints = new HashMap<String, BreakpointType[]>();
 	}
 
 	@Override
@@ -109,7 +106,6 @@ public class SourceCodeProvider implements ISourceCodeProvider
 				m_sources.put(codeId, source);
 				BreakpointType[] bp = new BreakpointType[source.length];
 				Arrays.fill(bp, BreakpointType.UNKNOWN);
-				m_breakpoints.put(codeId, bp);
 			}
 		}
 		return m_sources.get(codeId);
@@ -127,50 +123,6 @@ public class SourceCodeProvider implements ISourceCodeProvider
 	public void reset()
 	{
 		m_sources.clear();
-		m_breakpoints.clear();
-	}
-
-	@Override
-	public void clearBreakpoints()
-	{
-		for (String codeId : m_breakpoints.keySet())
-		{
-			int len = m_sources.get(codeId).length;
-			BreakpointType[] bp = new BreakpointType[len];
-			Arrays.fill(bp, BreakpointType.UNKNOWN);
-			m_breakpoints.put(codeId, bp);
-		}
-	}
-
-	@Override
-	public void removeTemporaryBreakpoint(String codeId, int lineNumber)
-	{
-		// If the breakpoint is temporary, then remove it
-		BreakpointType bp = getBreakpoint(codeId, lineNumber);
-		if (bp.equals(BreakpointType.TEMPORARY))
-		{
-			setBreakpoint(codeId, lineNumber, BreakpointType.UNKNOWN);
-		}
-	}
-
-	@Override
-	public void setBreakpoint(String codeId, int line, BreakpointType type)
-	{
-		m_breakpoints.get(codeId)[line - 1] = type;
-	}
-
-	@Override
-	public BreakpointType getBreakpoint(String codeId, int line)
-	{
-		BreakpointType bp = BreakpointType.UNKNOWN;
-		if (!m_breakpoints.containsKey(codeId)) { return BreakpointType.UNKNOWN; }
-		int index = line - 1;
-		BreakpointType[] breakpoints = m_breakpoints.get(codeId);
-		if (index < breakpoints.length)
-		{
-			bp = breakpoints[index];
-		}
-		return bp;
 	}
 
 	/***************************************************************************

@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls.drawing
+// PACKAGE   : com.astra.ses.spell.gui.views.controls
 // 
-// FILE      : ICodeColumnDrawer.java
+// FILE      : ISashListener.java
 //
-// DATE      : 2008-11-21 08:55
+// DATE      : Nov 21, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,20 +43,10 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.code.controls.drawing;
+package com.astra.ses.spell.gui.views.controls;
 
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.TableItem;
-
-public interface ICodeColumnDrawer
+public interface ISashListener
 {
-	/***************************************************************************
-	 * Paint the given item in the table, at the given row, using the given
-	 * event.
-	 **************************************************************************/
-	public void paintItem(Event eraseEvent, TableItem item, int rowIndex);
-
+	public void onSashMoved( int offset );
 }

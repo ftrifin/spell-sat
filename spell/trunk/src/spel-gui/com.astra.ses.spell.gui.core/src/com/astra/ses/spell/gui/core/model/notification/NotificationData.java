@@ -55,26 +55,18 @@ import com.astra.ses.spell.gui.core.model.types.ExecutionMode;
 
 public class NotificationData implements Comparable<NotificationData>
 {
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the procedure id */
-	private String	       m_procId;
+	private String	        m_procId;
 	/** Holds the call stack position. */
 	private List<String>	m_csp;
 	/** Holds the number of executions of the current position */
-	private int	           m_numExecutions;
+	private int	            m_numExecutions;
 	/** Holds the notification time */
-	private String	       m_time;
+	private String	        m_time;
 	/** Holds the execution mode */
 	private ExecutionMode	m_mode;
 	/** Holds the notification sequence */
-	private Long	       m_sequence;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
+	private Long	        m_sequence;
 
 	/***************************************************************************
 	 * Constructor

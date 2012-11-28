@@ -103,6 +103,7 @@ public class PresentationStack
 		m_model = model;
 		// Create the stack control for presentations
 		m_stack = new Composite(parent, SWT.NONE);
+
 		m_stack.setLayoutData(new GridData(GridData.FILL_BOTH));
 		m_slayout = new StackLayout();
 		m_slayout.marginHeight = 0;

@@ -1235,6 +1235,26 @@ def LoadLimits( *args, **kargs ):
 GetTMparam = GetLimits
 
 #==============================================================================
+def RestoreNormalLimits( *args, **kargs ):
+    """
+    Reset temporary limit definitions in the GCS
+    
+    Syntax 1:
+    =========
+    
+        <True/False> = ResetLimits()
+    
+    Return:
+    =======
+    
+    True if the operation is successful.
+    """
+    from helpers.tmhelper import RestoreNormalLimits_Helper
+    helper = RestoreNormalLimits_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
 def DisableAlarm( *args, **kargs ):
     """
     Disable OOL for the given list of TM parameters.

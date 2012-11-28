@@ -192,7 +192,7 @@ public class BasicStyleScheme implements IStyleScheme
 	{
 		String face = font.getFontData()[0].getName();
 		int size = font.getFontData()[0].getHeight();
-		int style = font.getFontData()[0].getStyle() | SWT.BOLD;
+		int style = font.getFontData()[0].getStyle() | SWT.NORMAL;
 
 		FontData newData = new FontData(face, size, style);
 

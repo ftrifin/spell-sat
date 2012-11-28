@@ -103,6 +103,11 @@ void SPELLwsStaticData::cleanup()
 //=============================================================================
 PyFrameObject* SPELLwsStaticData::restore()
 {
+	if (!m_storage->isReady())
+	{
+		THROW_EXCEPTION("Failed to restore static data", "Storage not ready", SPELL_ERROR_WSTART);
+	}
+
 	DEBUG("[STC] Restoring frame information");
 	PyCodeObject* code = (PyCodeObject*) m_storage->loadObject();
 	DEBUG("[STC] Code loaded");

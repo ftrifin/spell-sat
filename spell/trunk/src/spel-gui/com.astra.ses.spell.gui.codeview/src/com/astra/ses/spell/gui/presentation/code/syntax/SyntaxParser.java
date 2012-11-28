@@ -226,7 +226,9 @@ public class SyntaxParser implements ISyntaxParser
 				{
 					ISyntaxAreas areas = m_syntaxAreas.get(m_currentCodeId);
 					if (areas != null)
+					{
 						isDocString = areas.isInCommentBlock(rowIndex);
+					}
 				}
 				// Find the applicable style, depending on the token type
 				TextStyle toApply = null;
@@ -306,7 +308,7 @@ public class SyntaxParser implements ISyntaxParser
 			{
 				if (blockStart != -1)
 				{
-					blockEnd = lineCount;
+					blockEnd = lineCount-1;
 					areas.addCommentBlock(blockStart, blockEnd);
 					blockStart = -1;
 					blockEnd = -1;

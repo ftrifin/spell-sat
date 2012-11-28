@@ -403,6 +403,52 @@ class SetLimits_Helper(WrapperHelper):
         return [False, False]
 
 ################################################################################
+class RestoreNormalLimits_Helper(WrapperHelper):
+    """
+    DESCRIPTION:
+        Helper for the RestoreNormalLimits wrapper function.
+    """    
+    
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "TM")
+        self._opName = "Reset limits" 
+
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs ):
+        pass
+    
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+
+        self._setActionString( ACTION_SKIP   ,  "Skip the limits reset and return success (True)")
+        self._setActionString( ACTION_CANCEL ,  "Skip the limits reset and return failure (False)")
+        self._setActionString( ACTION_REPEAT ,  "Repeat the limits reset")
+
+        # We don't allow resend or recheck, only repeat, abort, skip, cancel
+        self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RESEND))
+        self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RECHECK))
+
+        result = REGISTRY['TM'].restoreNormalLimits()
+        
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry limits reset", {Severity:WARNING} )
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip limits reset", {Severity:WARNING} )
+        return [False, True]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Skip limits reset", {Severity:WARNING} )
+        return [False, False]
+
+################################################################################
 class GetLimits_Helper(WrapperHelper):
     """
     DESCRIPTION:

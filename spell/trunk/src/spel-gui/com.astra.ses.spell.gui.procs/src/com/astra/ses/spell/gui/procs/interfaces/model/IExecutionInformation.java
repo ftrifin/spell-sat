@@ -196,13 +196,6 @@ public interface IExecutionInformation
 	public boolean isBlocking();
 
 	/***************************************************************************
-	 * Check runInto flag
-	 * 
-	 * @return
-	 **************************************************************************/
-	public StepOverMode getStepOverMode();
-
-	/***************************************************************************
 	 * Check browsable lib flag
 	 * 
 	 * @return

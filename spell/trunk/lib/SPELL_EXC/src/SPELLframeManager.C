@@ -76,7 +76,6 @@ SPELLframeManager::~SPELLframeManager()
     {
         Py_XDECREF(m_initialFrame);
     }
-
     m_discardedNames.clear();
 }
 
@@ -385,8 +384,8 @@ const bool SPELLframeManager::canSkip()
     SPELLsafePythonOperations ops("SPELLframeManager::canSkip()");
     int new_lineno = -1;
 
-    bool isSimpleLine = getModel().isSimpleLine( getCurrentLine() );
-    bool isBlockStart = getModel().isBlockStart( getCurrentLine() );
+    bool isSimpleLine = m_ast.isSimpleLine( getCurrentLine() );
+    bool isBlockStart = m_ast.isBlockStart( getCurrentLine() );
     bool lineAfterTryBlock = true;
 
     // Special treatment for try blocks
@@ -582,6 +581,9 @@ void SPELLframeManager::callbackEventCall( PyFrameObject* frame, const std::stri
     // Update the current frame, and create a model if needed, or reuse the existing one
 	createFrameModel( callLine, frame );
 
+	// Update the AST analyzer to set the proper current file
+	m_ast.process( PYSTR(frame->f_code->co_filename) );
+
 	DEBUG("------------------------------------------------------------------------");
 	DEBUG("[EF] Using model " + PSTR(m_model) + " -- " + m_model->getIdentifier());
         DEBUG("     Frame model: " + PSTR(m_model->getFrame()));
@@ -611,7 +613,7 @@ void SPELLframeManager::callbackEventLine( PyFrameObject* frame, const std::stri
 		// Otherwise we may break things when doing the iterator construction on
 		// a 'for' loop, for example.
 		unsigned int lineno = frame->f_lineno;
-		bool doNotify = getModel().isSimpleLine(lineno) || getModel().isBlockStart(lineno);
+		bool doNotify = m_ast.isSimpleLine(lineno) || m_ast.isBlockStart(lineno);
 		if (doNotify)
 		{
 			DEBUG("[EF] Notifying line event to warmstart");
