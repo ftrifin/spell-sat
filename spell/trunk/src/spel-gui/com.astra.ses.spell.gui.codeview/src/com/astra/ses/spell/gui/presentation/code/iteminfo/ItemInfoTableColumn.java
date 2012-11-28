@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls.drawing
+// PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls
 // 
-// FILE      : LineNumberColumnDrawer.java
+// FILE      : ItemInfoTableColumn.java
 //
 // DATE      : 2008-11-21 08:55
 //
@@ -46,49 +46,23 @@
 // SUBPROJECT: SPELL GUI Client
 //
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.code.controls.drawing;
+package com.astra.ses.spell.gui.presentation.code.iteminfo;
 
-import org.eclipse.jface.viewers.ITableColorProvider;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.TableItem;
-
-import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
-
-public class LineNumberColumnDrawer extends AbstractColumnDrawer
+/*******************************************************************************
+ * @brief
+ * @date 09/10/07
+ ******************************************************************************/
+public enum ItemInfoTableColumn
 {
-	/***************************************************************************
-	 * Constructor.
-	 **************************************************************************/
-	public LineNumberColumnDrawer(IProcedureDataProvider dataProvider,
-	        ITableColorProvider colorProvider)
+	EXECUTION("EX", 30), NAME("Name", 150), VALUE("Value", 100), STATUS(
+	        "Status", 100), TIME("Updated", 150), COMMENTS("Comments", 150);
+
+	private ItemInfoTableColumn(String title, int width)
 	{
-		super(dataProvider, colorProvider);
+		this.title = title;
+		this.width = width;
 	}
 
-	@Override
-	public void paintItem(Event event, TableItem item, int rowIndex)
-	{
-		if ((event.detail & SWT.SELECTED) != 0)
-		{
-			event.detail &= ~SWT.SELECTED;
-		}
-
-		Color background = getColorProvider().getBackground(item,
-		        CodeViewerColumn.LINE_NO.ordinal());
-		Color foreground = getColorProvider().getForeground(item,
-		        CodeViewerColumn.LINE_NO.ordinal());
-		event.gc.setBackground(background);
-		event.gc.setForeground(foreground);
-
-		// Paint basic background
-		event.gc.fillRectangle(event.x, event.y, event.width, event.height);
-
-		// Paint column border
-		event.gc.drawLine(event.x + event.width - 1, event.y, event.x
-		        + event.width - 1, event.y + event.height);
-	}
-
+	public String	title;
+	public int	  width;
 }

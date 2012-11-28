@@ -65,9 +65,9 @@ public class SPELLmessageNotify extends SPELLmessageRequest
 	private String	       m_procId;
 	private DataType	   m_dataType;
 	private ItemType	   m_notType;
-	private ExecutorStatus	m_status;
+	private ExecutorStatus m_status;
 	private String	       m_csp;
-	private ExecutionMode	m_mode;
+	private ExecutionMode  m_mode;
 
 	/***************************************************************************
 	 * Constructor
@@ -82,6 +82,7 @@ public class SPELLmessageNotify extends SPELLmessageRequest
 			m_csp = m_procId;
 			m_notType = null;
 			m_status = null;
+			
 			if (m_dataType == DataType.ITEM)
 			{
 				m_notType = ItemType
@@ -228,7 +229,6 @@ public class SPELLmessageNotify extends SPELLmessageRequest
 		if (m_dataType == DataType.ITEM)
 		{
 			data = new ItemNotification(m_procId, m_notType, m_csp);
-			((ItemNotification) data).setTime(getTime());
 			((ItemNotification) data).setItems(getItemName(), getItemValue(),
 			        getItemStatus(), getItemComment(), getItemTime());
 		}
@@ -291,8 +291,8 @@ public class SPELLmessageNotify extends SPELLmessageRequest
 			;
 			data = new StackNotification(StackNotification.StackType.RETURN,
 			        m_procId, m_csp, codeName);
+			data.setExecutionMode(m_mode);
 		}
-		data.setExecutionMode(m_mode);
 		try
 		{
 			data.setSequence(Long
@@ -302,6 +302,9 @@ public class SPELLmessageNotify extends SPELLmessageRequest
 		{
 			data.setSequence(99999);
 		}
+		
+		data.setTime(getTime());
+
 		return data;
 	}
 }

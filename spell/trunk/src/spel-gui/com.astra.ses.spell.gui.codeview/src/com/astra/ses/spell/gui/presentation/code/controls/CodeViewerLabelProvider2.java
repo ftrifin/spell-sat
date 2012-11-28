@@ -2,11 +2,11 @@
 //
 // PACKAGE   : com.astra.ses.spell.gui.presentation.code.controls
 // 
-// FILE      : ItemInfoTableContentProvider.java
+// FILE      : CodeViewerLabelProvider2.java
 //
-// DATE      : 2008-11-21 08:55
+// DATE      : Nov 21, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,80 +43,51 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.presentation.code.controls;
 
-import org.eclipse.jface.viewers.IStructuredContentProvider;
-import org.eclipse.jface.viewers.TableViewer;
-import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.swt.graphics.Image;
 
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 
-/***************************************************************************
- * ItemContentProvider will provide content to the table
- **************************************************************************/
-class ItemInfoTableContentProvider implements IStructuredContentProvider
+public class CodeViewerLabelProvider2 extends LabelProvider implements ITableLabelProvider
 {
-	/** Line number */
-	private int	                   m_lineNumber;
-	/** Procedure data provider */
-	private IProcedureDataProvider	m_dataProvider;
-	/** Viewer */
-	private TableViewer	           m_viewer;
-	/** summary mode */
-	private boolean	               m_summary;
-
-	/***********************************************************************
-	 * Constructor
-	 **********************************************************************/
-	public ItemInfoTableContentProvider(int lineNumber)
-	{
-		m_lineNumber = lineNumber;
-		m_summary = true;
-	}
-
-	/***********************************************************************
-	 * Change summary mode
-	 * 
-	 * @param summaryMode
-	 **********************************************************************/
-	public void setSummaryMode(boolean summaryMode)
-	{
-		m_summary = summaryMode;
-		m_viewer.refresh(true, true);
-	}
 
 	@Override
-	public Object[] getElements(Object inputElement)
-	{
-		Object[] elements;
-		try
-		{
-			elements = m_dataProvider.getItemData(m_lineNumber, m_summary);
-		}
-		catch (UninitProcedureException e)
-		{
-			elements = new Object[0];
-		}
-		return elements;
-	}
+    public Image getColumnImage(Object element, int columnIndex)
+    {
+	    // TODO Auto-generated method stub
+	    return null;
+    }
 
 	@Override
-	public void dispose()
-	{
-		// TODO Unsubscribe from the listener
-	}
-
-	@Override
-	public void inputChanged(Viewer viewer, Object oldInput, Object newInput)
-	{
-		m_viewer = (TableViewer) viewer;
-		if (newInput != null)
+    public String getColumnText(Object element, int columnIndex)
+    {
+		ICodeLine line = (ICodeLine) element;
+		CodeViewerColumn col = CodeViewerColumn.values()[columnIndex];
+		switch(col)
 		{
-			m_dataProvider = (IProcedureDataProvider) newInput;
+		case BREAKPOINT:
+			return "";
+		case CODE:
+			return line.getSource();
+		case LINE_NO:
+			return Integer.toString(line.getLineNo());
+		case DATA:
+			if (line.hasNotifications())
+			{
+				return line.getSummaryName() + " = " + line.getSummaryValue();
+			}
+			return "";
+		case RESULT:
+			if (line.hasNotifications())
+			{
+				return line.getSummaryStatus();
+			}
+			return "";
 		}
-	}
+	    return null;
+    }
 }

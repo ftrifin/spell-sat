@@ -42,7 +42,16 @@
 // FORWARD REFERENCES //////////////////////////////////////////////////////
 // TYPES ///////////////////////////////////////////////////////////////////
 // DEFINES /////////////////////////////////////////////////////////////////
+typedef std::map<unsigned int, unsigned int> LineTypes;
 
+typedef struct NodeInfo_
+{
+	LineTypes lineTypes;
+	unsigned int maxLineNo;
+}
+NodeInfo;
+
+typedef std::map<std::string,NodeInfo> NodeMap;
 
 //////////////////////////////////////////////////////////////////////////////
 /**
@@ -65,7 +74,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Constructor.
 		**////////////////////////////////////////////////////////////////////
-		SPELLastAnalyzer( const std::string& filename );
+		SPELLastAnalyzer();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
@@ -94,6 +103,14 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		unsigned int getBlockEnd( unsigned int startLineNo );
 
+		//////////////////////////////////////////////////////////////////////
+		/** Process a file
+		 *
+		 * \param filename IN: path to filename to process
+		 *
+		**////////////////////////////////////////////////////////////////////
+		void process( const std::string& filename );
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 protected: //-----------------------------------------------------------------
@@ -105,20 +122,12 @@ protected: //-----------------------------------------------------------------
 	// METHODS ///////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////
-		/** Process a file
-		 *
-		 * \param filename IN: path to filename to process
-		 *
-		**////////////////////////////////////////////////////////////////////
-		void process( const std::string& filename );
-
-		//////////////////////////////////////////////////////////////////////
 		/** Find relevant lines and line types in a node
 		 *
 		 * \param filename IN: path to filename to process
 		 *
 		**////////////////////////////////////////////////////////////////////
-		void findNodeLines( struct _node* node, unsigned int depth, unsigned int& parDepth );
+		void findNodeLines( struct _node* node, unsigned int depth, unsigned int& parDepth, NodeInfo& info );
 
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -137,19 +146,17 @@ private: //-------------------------------------------------------------------
 
     // TYPES /////////////////////////////////////////////////////////////////
 
-		typedef std::map<unsigned int, unsigned int> LineTypes;
-
     // LIFECYCLE /////////////////////////////////////////////////////////////
 	// METHODS ///////////////////////////////////////////////////////////////
 	// DATA MEMBERS //////////////////////////////////////////////////////////
-		/** Line types */
-		LineTypes m_lineTypes;
 		/** Last line number */
 		unsigned int m_openLineNo;
 		/** Last line type */
 		SPELLlineType m_lastLineType;
-		/** Holds the maximum line number */
-		unsigned int m_maxLineNo;
+		/** Holds the already processed AST code information structures */
+		NodeMap m_nodes;
+		/** Holds the info for the current AST code */
+		NodeInfo m_currentNode;
 };
 
 /*@}*/

@@ -48,7 +48,6 @@ SPELLexecutionModel::SPELLexecutionModel( const std::string& modelId,
 : SPELLgoto(frame->f_code),
   SPELLbytecode(frame->f_code),
   SPELLlnotab(frame->f_code),
-  SPELLastAnalyzer(filename),
   SPELLvariableChangeListener(),
   m_frame(frame),
   m_varMonitor(this,frame,initialVariables)

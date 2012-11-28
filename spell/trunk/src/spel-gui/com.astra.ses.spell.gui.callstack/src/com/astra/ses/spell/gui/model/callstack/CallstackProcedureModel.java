@@ -51,9 +51,6 @@ package com.astra.ses.spell.gui.model.callstack;
 import java.util.List;
 
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeInformation;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeLine;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeNode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /******************************************************************************
@@ -88,7 +85,6 @@ public class CallstackProcedureModel
 	{
 		// If we have a model available, populate this node with the data
 		m_root = null;
-		initialize(model);
 	}
 
 	/***************************************************************************
@@ -119,74 +115,6 @@ public class CallstackProcedureModel
 		// If we have a model available, populate this node with the data
 		m_root.clearChildren();
 		m_firstCallReceived = false;
-	}
-
-	/**************************************************************************
-	 * Initialize the tree model with the given procedure model.
-	 * 
-	 * @param model
-	 *            Procedure model to use
-	 *************************************************************************/
-	private void initialize(IProcedure model)
-	{
-		IExecutionTreeInformation info = model.getExecutionTree();
-		m_root = new CallstackRootNode(model.getProcId());
-		IExecutionTreeNode root = info.getRootNode();
-		if (root != null)
-		{
-			processExecutionNode(root, m_root);
-			m_firstCallReceived = true;
-		}
-	}
-
-	/**************************************************************************
-	 * Process recursively the data given by the execution tree node from a
-	 * procedure model. Add the data to the given tree node and recurse over
-	 * child execution tree nodes.
-	 * 
-	 * @param execNode
-	 *            the execution tree node.
-	 * @param treeNode
-	 *            the callstack tree node.
-	 *************************************************************************/
-	private void processExecutionNode(IExecutionTreeNode execNode,
-	        CallstackNode treeNode)
-	{
-		m_currentNode = treeNode;
-		// Get the total of lines that received notifications
-		IExecutionTreeLine[] lines = execNode.getLines();
-		// Get the currently executed line
-		int currentExecLine = execNode.getCurrentLine().getLineNumber();
-		// Iterate over the notified lines
-		for (IExecutionTreeLine line : lines)
-		{
-			// Get line number
-			int lineNumber = line.getLineNumber();
-
-			Integer[] executions = line.getExecutions();
-
-			for (int execution : executions)
-			{
-				// In out node, indicate that the line has been executed
-				treeNode.lineNotified(lineNumber);
-
-				IExecutionTreeNode child = line.getChildExecutionNode();
-				if (child != null)
-				{
-					CallstackNode newNode = new CallstackExecutionNode(
-					        child.getCodeId(), child.getCodeName(), lineNumber,
-					        execution);
-
-					if (lineNumber != currentExecLine)
-					{
-						newNode.returnNotified();
-					}
-					treeNode.addChild(newNode);
-					// Recurse over node children
-					processExecutionNode(child, newNode);
-				}
-			}
-		}
 	}
 
 	/**************************************************************************

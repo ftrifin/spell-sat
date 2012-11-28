@@ -96,7 +96,7 @@ public class ChangeVariable extends AbstractHandler
 		/*
 		 * Check if the Executor status allows to send messages
 		 */
-		ExecutorStatus st = proc.getDataProvider().getExecutorStatus();
+		ExecutorStatus st = proc.getRuntimeInformation().getStatus();
 		switch (st)
 		{
 		case INTERRUPTED:

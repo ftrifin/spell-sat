@@ -50,8 +50,6 @@ package com.astra.ses.spell.gui.procs.interfaces.model;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
-import com.astra.ses.spell.gui.core.model.types.BreakpointType;
-
 /*******************************************************************************
  * 
  * IProcedureSourceProvider handles procedures soruce code
@@ -59,12 +57,6 @@ import com.astra.ses.spell.gui.core.model.types.BreakpointType;
  ******************************************************************************/
 public interface ISourceCodeProvider
 {
-
-	/***************************************************************************
-	 * Remove all the breakpoints
-	 **************************************************************************/
-	public void clearBreakpoints();
-
 	/***************************************************************************
 	 * Get the source code for the given codeId
 	 * 
@@ -86,38 +78,7 @@ public interface ISourceCodeProvider
 	public String getSource(String codeId, int lineNo);
 
 	/***************************************************************************
-	 * Check if the given line at the given code has a breakpoint
-	 * 
-	 * @param codeId
-	 *            the code id
-	 * @param lineNumber
-	 *            the line number (1 as zero-index)
-	 * @return true if the line has a breapoint. false otherwise
-	 **************************************************************************/
-	public BreakpointType getBreakpoint(String codeId, int lineNumber);
-
-	/***************************************************************************
-	 * A procedure has been paused at a line in thegiven codeId
-	 * 
-	 * @param codeId
-	 *            the code identifier
-	 * @param lineNumber
-	 *            the line number
-	 **************************************************************************/
-	public void removeTemporaryBreakpoint(String codeId, int lineNumber);
-
-	/***************************************************************************
 	 * Reset this object to its original status
 	 **************************************************************************/
 	public void reset();
-
-	/***************************************************************************
-	 * Add or remove a breakpoint at the given line for the given code id
-	 * 
-	 * @param codeId
-	 *            the code id
-	 * @param lineNumber
-	 *            the line number (1 as zero-index)
-	 **************************************************************************/
-	public void setBreakpoint(String codeId, int lineNumber, BreakpointType type);
 }

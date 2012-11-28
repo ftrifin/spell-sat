@@ -71,9 +71,6 @@ preferences-plugin:
 preferences-gui-plugin: 
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.preferences.ui ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
-callstack-plugin: 
-	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.callstack ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
-
 wvariables-plugin: 
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.watchvariables ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
@@ -96,7 +93,6 @@ all-local: prepare \
            shellview-plugin \
 	   commskt-plugin \
 	   shell-plugin \
-           callstack-plugin \
            wvariables-plugin \
            outline-plugin \
            doc-plugin

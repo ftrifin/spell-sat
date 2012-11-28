@@ -210,8 +210,7 @@ public interface IProcedureController extends IProcedureInput
 	 *            the line number (using 1 for the first row)
 	 * @throws UninitProcedureException
 	 **************************************************************************/
-	public void setBreakpoint(int lineNumber, BreakpointType type)
-	        throws UninitProcedureException;
+	public void setBreakpoint(int lineNumber, BreakpointType type);
 
 	/***************************************************************************
 	 * Skip a line during procedure execution
@@ -229,15 +228,12 @@ public interface IProcedureController extends IProcedureInput
 	public void stepOver();
 
 	/***************************************************************************
+	 * Get the step over control
+	 **************************************************************************/
+	public IStepOverControl getStepOverControl();
+
+	/***************************************************************************
 	 * Perform a step over during procedure execution
 	 **************************************************************************/
 	public InputData getPromptData();
-
-	/***************************************************************************
-	 * Change the visible execution node to the one with the selected id
-	 * 
-	 * @param stack
-	 *            a stack representation for node location
-	 **************************************************************************/
-	public void setVisibleNode(String stack);
 }

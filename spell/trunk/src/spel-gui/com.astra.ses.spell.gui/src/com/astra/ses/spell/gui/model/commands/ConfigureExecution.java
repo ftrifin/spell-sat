@@ -108,7 +108,7 @@ public class ConfigureExecution extends AbstractHandler
 
 		if (result == IDialogConstants.OK_ID)
 		{
-			boolean runIntoOrig = proc.getRuntimeInformation().getStepOverMode().equals(StepOverMode.STEP_INTO_ALWAYS);
+			boolean runIntoOrig = proc.getController().getStepOverControl().getMode().equals(StepOverMode.STEP_INTO_ALWAYS);
 			boolean byStepOrig = proc.getRuntimeInformation().isStepByStep();
 			int delayOrig = proc.getRuntimeInformation().getExecutionDelay();
 

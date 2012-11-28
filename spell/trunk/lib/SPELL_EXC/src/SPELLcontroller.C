@@ -73,7 +73,7 @@ void SPELLcontroller::reset()
     m_mainProc = "";
     m_currentProc = "";
     m_skipping = false;
-    m_execDelay = 200;
+    m_execDelay = 0;
 
     m_abort = false;
     m_error = false;
@@ -208,9 +208,9 @@ void SPELLcontroller::setAutoRun()
 //=============================================================================
 void SPELLcontroller::setExecutionDelay( const long delay )
 {
-	DEBUG("[C] Set execution delay to " + ISTR(delay) + " msec");
     m_execDelay = delay;
-    if (m_execDelay < 200) m_execDelay = 200;
+    if (m_execDelay < 0) m_execDelay = 0;
+	DEBUG("[C] Set execution delay to " + ISTR(m_execDelay) + " msec");
 }
 
 //=============================================================================

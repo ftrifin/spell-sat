@@ -65,12 +65,12 @@ import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeInformation;
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionStatusManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
+import com.astra.ses.spell.gui.procs.interfaces.model.ISourceCodeProvider;
+import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
 import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 
 /*******************************************************************************
@@ -103,6 +103,8 @@ public class RemoteProcedure implements IProcedure
 	
 	class RemoteController implements IProcedureController
 	{
+		private IStepOverControl so = new StepOverControl();
+		
         @Override
         public void notifyProcedurePrompt(InputData inputData){}
         @Override
@@ -156,7 +158,7 @@ public class RemoteProcedure implements IProcedure
         @Override
         public void setExecutorStatus(ExecutorStatus status) {}
         @Override
-        public void setBreakpoint(int lineNumber, BreakpointType type) throws UninitProcedureException {}
+        public void setBreakpoint(int lineNumber, BreakpointType type) {}
         @Override
         public void skip() {}
         @Override
@@ -165,10 +167,13 @@ public class RemoteProcedure implements IProcedure
         public void step() {}
         @Override
         public void stepOver() {}
-        @Override
-        public void setVisibleNode(String stack) {}
 		@Override
         public void setForceTcConfirmation(boolean value) {}
+		@Override
+        public IStepOverControl getStepOverControl()
+        {
+	        return so;
+        }
 	};
 	
 	// =========================================================================
@@ -192,7 +197,7 @@ public class RemoteProcedure implements IProcedure
 	{
 		m_procId = procId;
 		m_properties = new HashMap<ProcProperties,String>();//TODO
-		m_executionInformation = new ExecutionInformationHandler(ClientMode.UNKNOWN);
+		m_executionInformation = new ExecutionInformationHandler(ClientMode.UNKNOWN,this);
 		m_controller = new RemoteController();
 	}
 
@@ -208,7 +213,8 @@ public class RemoteProcedure implements IProcedure
 			m_properties.put(prop, wasLocalProcedure.getProperty(prop));
 		}
 		m_controller = new RemoteController();
-		m_executionInformation = new ExecutionInformationHandler(wasLocalProcedure.getRuntimeInformation().getClientMode());
+		ClientMode cmode = wasLocalProcedure.getRuntimeInformation().getClientMode();
+		m_executionInformation = new ExecutionInformationHandler(cmode, this);
 		IExecutorInfo info = (IExecutorInfo) wasLocalProcedure.getAdapter(ExecutorInfo.class);
 		m_properties.put(ProcProperties.PROC_NAME, info.getName());
 		m_executionInformation.copyFrom(info);
@@ -231,7 +237,7 @@ public class RemoteProcedure implements IProcedure
 		}
 		catch(Exception ex)
 		{
-			m_executionInformation.setExecutorStatus(ExecutorStatus.UNKNOWN);
+			ex.printStackTrace();
 		}
 	}
 
@@ -251,24 +257,6 @@ public class RemoteProcedure implements IProcedure
 	public IProcedureController getController()
 	{
 		return m_controller;
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public IExecutionTreeInformation getExecutionTree()
-	{
-		return null;
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public IProcedureDataProvider getDataProvider()
-	{
-		return null;
 	}
 
 	/***************************************************************************
@@ -365,5 +353,17 @@ public class RemoteProcedure implements IProcedure
 	 * 
 	 **************************************************************************/
 	@Override
-	public void reset() {};
+	public void reset() {}
+
+	@Override
+    public IExecutionStatusManager getExecutionManager()
+    {
+	    return null;
+    }
+
+	@Override
+    public ISourceCodeProvider getSourceCodeProvider()
+    {
+	    return null;
+    };
 }

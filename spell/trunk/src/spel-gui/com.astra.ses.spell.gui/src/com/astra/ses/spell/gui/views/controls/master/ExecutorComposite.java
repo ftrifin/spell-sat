@@ -159,8 +159,8 @@ public class ExecutorComposite extends Composite implements IProcedureOperation,
 	 **************************************************************************/
 	public void dispose()
 	{
-		super.dispose();
 		ProcedureBridge.get().removeProcedureOperationListener(this);
+		super.dispose();
 	}
 
 	/***************************************************************************

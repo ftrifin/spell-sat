@@ -194,7 +194,7 @@ public class ConfigDialog extends TitleAreaDialog
 		spnDelay.setPageIncrement(100);
 		spnDelay.setSelection(m_model.getRuntimeInformation().getExecutionDelay());
 
-		StepOverMode mode = m_model.getRuntimeInformation().getStepOverMode();
+		StepOverMode mode = m_model.getController().getStepOverControl().getMode();
 		m_runInto = mode.equals(StepOverMode.STEP_INTO_ALWAYS);
 		chkRunInto.setSelection(m_runInto);
 

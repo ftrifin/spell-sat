@@ -33,6 +33,7 @@
 #include "SPELL_EXC/SPELLexecutionTrace.H"
 #include "SPELL_EXC/SPELLcallstackIF.H"
 #include "SPELL_EXC/SPELLbreakpoint.H"
+#include "SPELL_EXC/SPELLastAnalyzer.H"
 #include "SPELL_EXC/SPELLdispatchListener.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_UTIL/SPELLerror.H"
@@ -280,6 +281,13 @@ public: //--------------------------------------------------------------------
 		SPELLbreakpoint& getBreakpoints() { return m_breakpoints; };
 
 		//////////////////////////////////////////////////////////////////////
+		/** Get the AST model.
+		 *
+		 * \return Reference to the breakpoint map.
+		**////////////////////////////////////////////////////////////////////
+		SPELLastAnalyzer& getAST() { return m_ast; };
+
+		//////////////////////////////////////////////////////////////////////
 		/** Get the trace model corresponding to the given code identifier
 		 *
 		 * \param codeId IN: the code identifier
@@ -405,6 +413,8 @@ private: //-------------------------------------------------------------------
 		PyObject*             m_definitions;
 		/** Holds the currently active execution model */
 		SPELLexecutionModel*  m_model;
+		/** Holds the AST analyzer */
+		SPELLastAnalyzer      m_ast;
 		/** Map of model objects per code object */
 		ModelMap              m_modelMap;
 		/** Ordered list of model keys */

@@ -85,19 +85,9 @@ public interface IExecutionInformationHandler extends IExecutionInformation
 	public void setExecutorStatus(ExecutorStatus status);
 
 	/***************************************************************************
-	 * Set the step over algorith
-	 **************************************************************************/
-	public void setStepOverMode(StepOverMode mode);
-
-	/***************************************************************************
 	 * Mark executor process lost
 	 **************************************************************************/
 	public void setExecutorLost();
-
-	/***************************************************************************
-	 * Reset the temporal step over algorithm
-	 **************************************************************************/
-	public void resetStepOverMode();
 
 	/***************************************************************************
 	 * Set the current stage

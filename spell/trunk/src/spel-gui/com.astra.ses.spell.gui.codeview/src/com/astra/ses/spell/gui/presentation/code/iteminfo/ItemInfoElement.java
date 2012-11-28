@@ -1,12 +1,12 @@
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.procs.model
+// PACKAGE   : com.astra.ses.spell.gui.presentation.code.iteminfo
 // 
-// FILE      : LineSummaryData.java
+// FILE      : ItemInfoElement.java
 //
-// DATE      : 2010-07-30
+// DATE      : Nov 7, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,52 +43,23 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
-////////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.procs.model;
+///////////////////////////////////////////////////////////////////////////////
+package com.astra.ses.spell.gui.presentation.code.iteminfo;
 
 import com.astra.ses.spell.gui.core.model.types.ItemStatus;
-import com.astra.ses.spell.gui.procs.interfaces.model.ILineData;
-import com.astra.ses.spell.gui.procs.interfaces.model.ILineSummaryData;
 
-/***************************************************************************
- * 
- * LineData is the {@link ILineData} implementation for the ProcedureModel
- * 
- **************************************************************************/
-class LineSummaryData extends LineData implements ILineSummaryData
+public class ItemInfoElement implements Comparable<ItemInfoElement>
 {
-	private int	       m_totalCount;
-	private int	       m_successCount;
-	private ItemStatus	m_summaryStatus;
-
-	public LineSummaryData(int execution, String name, String value,
-	        ItemStatus status, String comments, String time, int totalCount,
-	        int successCount, ItemStatus summaryStatus)
-	{
-		super(0, execution, name, status, value, comments, time);
-		m_totalCount = totalCount;
-		m_successCount = successCount;
-		m_summaryStatus = summaryStatus;
-	}
-
+	public String execution;
+	public String name;
+	public String value;
+	public ItemStatus status;
+	public String time;
+	public String comments;
+	
 	@Override
-	public int getElementCount()
-	{
-		return m_totalCount;
-	}
-
-	@Override
-	public int getSuccessCount()
-	{
-		return m_successCount;
-	}
-
-	@Override
-	public ItemStatus getSummaryStatus()
-	{
-		return m_summaryStatus;
-	}
-
+    public int compareTo(ItemInfoElement other)
+    {
+	    return execution.compareTo(other.execution);
+    }
 }

@@ -50,10 +50,10 @@ package com.astra.ses.spell.gui.presentation.code.search;
 
 import java.util.ArrayList;
 
-import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.nebula.widgets.grid.GridItem;
 
 import com.astra.ses.spell.gui.presentation.code.controls.CodeViewer;
+import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
 
 /*******************************************************************************
  * @brief Used to search for text occurences in the code viewer.
@@ -83,19 +83,19 @@ public class CodeSearch
 	// PRIVATE -----------------------------------------------------------------
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
-	/** Code viewer table */
-	private Table	      m_table;
 	/** Holds the search result */
-	private SearchMatch[]	m_result;
+	private SearchMatch[] m_result;
 	/** Holds the current index in the result */
 	private int	          m_resultIndex;
+	/** Holds the reference to the table model */
+	private CodeViewer   m_viewer;
 
 	/***************************************************************************
 	 * Constructor.
 	 **************************************************************************/
-	public CodeSearch(Table table)
+	public CodeSearch( CodeViewer viewer )
 	{
-		m_table = table;
+		m_viewer = viewer;
 		m_result = null;
 		m_resultIndex = -1;
 	}
@@ -106,9 +106,9 @@ public class CodeSearch
 	public int searchString(String toSearch)
 	{
 		ArrayList<SearchMatch> occurrences = new ArrayList<SearchMatch>();
-		for (TableItem item : m_table.getItems())
+		for (GridItem item : m_viewer.getGrid().getItems())
 		{
-			String source = item.getData(CodeViewer.DATA_SOURCE).toString();
+			String source = item.getText(CodeViewerColumn.CODE.ordinal());
 			int idx = source.indexOf(toSearch);
 			// If the string is found
 			if (idx != -1)

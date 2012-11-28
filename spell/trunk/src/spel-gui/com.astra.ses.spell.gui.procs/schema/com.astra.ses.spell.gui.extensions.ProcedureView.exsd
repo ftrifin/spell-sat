@@ -3,10 +3,10 @@
 <schema targetNamespace="com.astra.ses.spell.gui.procs" xmlns="http://www.w3.org/2001/XMLSchema">
 <annotation>
       <appInfo>
-         <meta.schema plugin="com.astra.ses.spell.gui.procs" id="com.astra.ses.spell.gui.interfaces.ProcedureView" name="Procedure View"/>
+         <meta.schema plugin="com.astra.ses.spell.gui.procs" id="com.astra.ses.spell.gui.extensions.ProcedureView" name="Procedure View"/>
       </appInfo>
       <documentation>
-         This extension point allows consumer plugins to implement views for procedure models.
+         [Enter description of this extension point.]
       </documentation>
    </annotation>
 
@@ -81,7 +81,7 @@
          <meta.section type="since"/>
       </appInfo>
       <documentation>
-         0.1.0
+         [Enter the first release in which this extension point appears.]
       </documentation>
    </annotation>
 

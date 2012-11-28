@@ -72,7 +72,7 @@ import com.astra.ses.spell.gui.views.ProcedureView;
 import com.astra.ses.spell.gui.views.controls.actions.GuiExecutorCommand;
 import com.astra.ses.spell.gui.views.controls.input.InputArea;
 
-public class ControlArea extends Composite
+public class ControlArea extends Composite implements ISashListener
 {
 	/** Handle to the console manager */
 	private static IProcedureManager	s_pmgr	= null;
@@ -88,6 +88,8 @@ public class ControlArea extends Composite
 	/** Holds the prompt message if any */
 	private InputData	             m_promptData;
 
+	private static final int LAYOUT_MARGIN = 5;
+	
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
@@ -104,10 +106,10 @@ public class ControlArea extends Composite
 
 		GridLayout ca_layout = new GridLayout();
 		// We do not want extra margins
-		ca_layout.marginTop = 5;
-		ca_layout.marginBottom = 5;
-		ca_layout.marginLeft = 5;
-		ca_layout.marginRight = 5;
+		ca_layout.marginTop = LAYOUT_MARGIN;
+		ca_layout.marginBottom = LAYOUT_MARGIN;
+		ca_layout.marginLeft = LAYOUT_MARGIN;
+		ca_layout.marginRight = LAYOUT_MARGIN;
 		ca_layout.marginHeight = 0;
 		ca_layout.marginWidth = 0;
 		// Will place each component below the previous one
@@ -122,7 +124,7 @@ public class ControlArea extends Composite
 
 		// Create the input area
 		Logger.debug("Creating input area", Level.INIT, this);
-		m_input = new InputArea(view, this);
+		m_input = new InputArea(this);
 
 		GridData ldata = new GridData(GridData.FILL_HORIZONTAL);
 		m_input.setLayoutData(ldata);
@@ -194,22 +196,17 @@ public class ControlArea extends Composite
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	public void prompt(InputData promptData)
+	public void startPrompt(InputData promptData)
 	{
 		// Store the prompt data, used later for cancel or reset
 		m_promptData = promptData;
 
-		// If it is not a notification but a controlling prompt, update
-		// the control panel buttons. If it is a notification the
-		// buttons are already grayed out since this is a monitoring GUI.
-		if (!promptData.isNotification())
-		{
-			// Prompt panel buttons to be updated accordingly
-			m_controlPanel.onPrompt(true);
-		}
+		// Prompt panel buttons to be updated accordingly
+		m_controlPanel.onPrompt(true);
 
 		// Update the prompt input field and re-layout the area
 		m_input.prompt(promptData);
+
 		m_top.layout();
 	}
 
@@ -311,11 +308,14 @@ public class ControlArea extends Composite
 		m_controlPanel.updateUserAction(st, action, sev);
 	}
 
-	/***************************************************************************
-	 * Get height of input area
-	 **************************************************************************/
-	public int getInputAreaHeight()
-	{
-		return m_input.getClientArea().height;
-	}
+	@Override
+    public void onSashMoved( int offset )
+    {
+		// Substract the margins and the height of the control panel
+		int toSubstract = (m_controlPanel.getBounds().height + LAYOUT_MARGIN*2);
+		int height = getClientArea().height-toSubstract;
+		m_input.setSize( getClientArea().width-10, height ); // Take into account the height of the internal controls
+	    m_input.onSashMoved( height );
+    }
+
 }

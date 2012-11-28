@@ -57,12 +57,9 @@ import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTrace;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeController;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeInformation;
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionStatusManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
 import com.astra.ses.spell.gui.procs.interfaces.model.ISourceCodeProvider;
 import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 
@@ -88,38 +85,32 @@ public class Procedure implements IProcedure
 
 	// PRIVATE -----------------------------------------------------------------
 	/** Holds the procedure identifier */
-	private String m_procId;
+	private String m_instanceId;
 	/** Procedure properties */
 	private Map<ProcProperties, String> m_properties;
 	/** Execution information */
 	private IExecutionInformationHandler m_executionInformation;
 	/** Execution controller */
-	private IProcedureController m_executionController;
+	private IProcedureController m_procedureController;
 	/** Procedure runtime manager */
-	private IExecutionTreeController m_treeController;
-	/** Source Provider */
-	private IProcedureDataProvider m_viewDataProvider;
+	private IExecutionStatusManager m_executionStatusManager;
 	/** Source provider */
 	private ISourceCodeProvider m_sourceCodeProvider;
-	/** Execution trace */
-	private IExecutionTrace m_executionTrace;
 	/** Holds the runtime processor */
 	private IProcedureRuntimeExtension m_runtimeProcessor;
 
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
-	public Procedure(String procId, Map<ProcProperties, String> properties, ClientMode mode)
+	public Procedure(String instanceId, Map<ProcProperties, String> properties, ClientMode mode)
 	{
-		m_procId = procId;
+		m_instanceId = instanceId;
 		m_properties = properties;
-		m_executionTrace = new ExecutionTrace();
 		m_sourceCodeProvider = new SourceCodeProvider();
-		m_executionInformation = new ExecutionInformationHandler(mode);
-		m_treeController = new ExecutionTreeController(procId, m_executionInformation, m_executionTrace);
-		m_executionController = new ProcedureController(this, m_sourceCodeProvider, m_treeController);
-		m_runtimeProcessor = new ProcedureRuntimeProcessor(this, m_treeController);
-		m_viewDataProvider = new ProcedureDataProvider(m_executionInformation, m_treeController, m_executionTrace, m_sourceCodeProvider);
+		m_procedureController = new ProcedureController(this);
+		m_executionInformation = new ExecutionInformationHandler(mode,this);
+		m_executionStatusManager = new ExecutionStatusManager(instanceId,this);
+		m_runtimeProcessor = new ProcedureRuntimeProcessor(this);
 	}
 
 	/***************************************************************************
@@ -128,25 +119,16 @@ public class Procedure implements IProcedure
 	@Override
 	public IProcedureController getController()
 	{
-		return m_executionController;
+		return m_procedureController;
 	}
 
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
 	@Override
-	public IExecutionTreeInformation getExecutionTree()
+	public IExecutionStatusManager getExecutionManager()
 	{
-		return (IExecutionTreeInformation) m_treeController;
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public IProcedureDataProvider getDataProvider()
-	{
-		return m_viewDataProvider;
+		return m_executionStatusManager;
 	}
 
 	/***************************************************************************
@@ -164,7 +146,7 @@ public class Procedure implements IProcedure
 	@Override
 	public String getProcId()
 	{
-		return m_procId;
+		return m_instanceId;
 	}
 
 	/***************************************************************************
@@ -209,7 +191,7 @@ public class Procedure implements IProcedure
 	@Override
 	public void setReplayMode(boolean doingReplay)
 	{
-		m_treeController.setReplayMode(doingReplay);
+		m_executionStatusManager.setReplay(doingReplay);
 	}
 
 	/***************************************************************************
@@ -218,7 +200,7 @@ public class Procedure implements IProcedure
 	@Override
 	public boolean isInReplayMode()
 	{
-		return m_treeController.isInReplayMode();
+		return m_executionStatusManager.isInReplay();
 	}
 
 	/***************************************************************************
@@ -227,7 +209,7 @@ public class Procedure implements IProcedure
 	@Override
 	public void onClose()
 	{
-		m_treeController.dispose();
+		m_executionStatusManager.dispose();
 	}
 
 	/***************************************************************************
@@ -240,7 +222,7 @@ public class Procedure implements IProcedure
 		Object result = null;
 		if (adapter.equals(ExecutorInfo.class))
 		{
-			IExecutorInfo info = new ExecutorInfo(m_procId);
+			IExecutorInfo info = new ExecutorInfo(m_instanceId);
 			// TODO info.setParent(getParent().getProcId());
 			getRuntimeInformation().visit(info);
 			result = info;
@@ -260,9 +242,17 @@ public class Procedure implements IProcedure
 	@Override
 	public void reset()
 	{
-		m_executionTrace.reset();
+		m_executionStatusManager.reset();
 		m_sourceCodeProvider.reset();
-		m_treeController.reset();
 		m_executionInformation.reset();
 	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+    public ISourceCodeProvider getSourceCodeProvider()
+    {
+	    return m_sourceCodeProvider;
+    }
 }

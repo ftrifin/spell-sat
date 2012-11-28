@@ -29,10 +29,11 @@ DRIVER_SRC=src
 DRIVER_CFG=config
 
 all-local:
-	if [[ ! -d ${DRIVER_SRC} ]] ;\
+	if [[  -d ${DRIVER_SRC} ]] ;\
 	then \
-		cp -r ${top_srcdir}/drivers/${DRIVER}/${DRIVER_SRC} . > /dev/null ;\
+		rm -f ${DRIVER_SRC}/build.date ;\
 	fi  
+	cp -r ${top_srcdir}/drivers/${DRIVER}/${DRIVER_SRC} . > /dev/null ;\
 	${top_srcdir}/py-compiledir ${DRIVER_SRC}
 
 clean-local:

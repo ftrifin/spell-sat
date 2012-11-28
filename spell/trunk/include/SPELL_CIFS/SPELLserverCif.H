@@ -500,8 +500,10 @@ private: //-------------------------------------------------------------------
 		SPELLtimer m_lineTimer;
 		/** Synchronization with line notification timer */
 		SPELLmutex m_lineLock;
-		/** Execution synchronization master lock */
-		SPELLevent m_ack;
+		/** Notification synchronization */
+		SPELLmutex m_ackLock;
+		std::vector<std::string> m_ackSequences;
+		bool m_ipcInterruptionNotified;
 };
 
 /*@}*/

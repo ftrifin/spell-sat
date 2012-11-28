@@ -33,7 +33,6 @@
 #include "SPELL_EXC/SPELLgoto.H"
 #include "SPELL_EXC/SPELLbytecode.H"
 #include "SPELL_EXC/SPELLlnotab.H"
-#include "SPELL_EXC/SPELLastAnalyzer.H"
 #include "SPELL_EXC/SPELLvariableMonitor.H"
 // Project includes --------------------------------------------------------
 
@@ -58,7 +57,6 @@
 class SPELLexecutionModel : public SPELLgoto,
 							public SPELLbytecode,
 							public SPELLlnotab,
-							public SPELLastAnalyzer,
 							public SPELLvariableChangeListener
 {
 public: //--------------------------------------------------------------------
@@ -140,7 +138,7 @@ private: //-------------------------------------------------------------------
 		/** Reference to the associated frame */
 		PyFrameObject* m_frame;
 		/** Monitor of variables */
-		SPELLvariableMonitor	m_varMonitor;
+		SPELLvariableMonitor m_varMonitor;
 		/** If true, use the variable monitor */
 		bool m_monitorVars;
 };

@@ -1506,6 +1506,14 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		SPELLmessage ack = new SPELLmessage();
 		ack.setId("ACKNOWLEDGE");
 		ack.setType(IMessageType.MSG_TYPE_ONEWAY);
+		try
+		{
+			ack.set(IMessageField.FIELD_MSG_SEQUENCE,msg.get(IMessageField.FIELD_MSG_SEQUENCE));
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+		}
 		ack.setSender(msg.getReceiver());
 		ack.setReceiver(msg.getSender());
 		try

@@ -66,7 +66,7 @@ SPELLwsStorage::SPELLwsStorage( std::string filename, Mode mode )
     }
     if (m_file == NULL)
     {
-        THROW_EXCEPTION("Unable to setup persistent storage", "Cannot open file: '" + filename + "'", SPELL_ERROR_FILESYSTEM);
+        LOG_ERROR("Unable to setup persistent storage, cannot open file: '" + filename + "'");
     }
 }
 
@@ -76,7 +76,6 @@ SPELLwsStorage::SPELLwsStorage( std::string filename, Mode mode )
 SPELLwsStorage::~SPELLwsStorage()
 {
 	m_trace.close();
-
     if (m_file != NULL)
     {
         DEBUG("[*] Close persistent file: " + m_filename)
@@ -98,14 +97,11 @@ SPELLwsStorage::Mode SPELLwsStorage::getMode()
 //=============================================================================
 void SPELLwsStorage::reset()
 {
-	//m_trace << "########### RESET ############" << std::endl;
-	//m_traceCounter = 0;
-
-    DEBUG("[*] Reset persistent file")
     if (m_file == NULL)
     {
-        THROW_EXCEPTION("Unable to reset persistent storage","No file open", SPELL_ERROR_FILESYSTEM);
+        return;
     }
+    DEBUG("[*] Reset persistent file");
     fclose(m_file);
     if (m_mode == MODE_READ)
     {
@@ -135,6 +131,7 @@ void SPELLwsStorage::reset( const SPELLwsStorage::Mode& mode )
 //=============================================================================
 void SPELLwsStorage::storeObject( PyObject* object )
 {
+	if (m_file == NULL) return;
     if (object == NULL)
     {
         THROW_EXCEPTION("Unable to store object", "Null reference given", SPELL_ERROR_WSTART);
@@ -160,6 +157,7 @@ void SPELLwsStorage::storeObject( PyObject* object )
 //=============================================================================
 void SPELLwsStorage::storeLong( long value )
 {
+	if (m_file == NULL) return;
     if (m_mode == MODE_READ)
     {
         THROW_EXCEPTION("Unable to store long value", "Initialized in read mode", SPELL_ERROR_WSTART);
@@ -181,6 +179,7 @@ void SPELLwsStorage::storeLong( long value )
 //=============================================================================
 void SPELLwsStorage::storeObjectOrNone( PyObject* object )
 {
+	if (m_file == NULL) return;
     if (m_mode == MODE_READ)
     {
         THROW_EXCEPTION("Unable to store object", "Initialized in read mode", SPELL_ERROR_WSTART);
@@ -205,6 +204,7 @@ void SPELLwsStorage::storeObjectOrNone( PyObject* object )
 //=============================================================================
 PyObject* SPELLwsStorage::loadObject()
 {
+	if (m_file == NULL) return NULL;
     if (m_mode == MODE_WRITE)
     {
         THROW_EXCEPTION("Unable to load object", "Initialized in write mode", SPELL_ERROR_WSTART);
@@ -225,6 +225,7 @@ PyObject* SPELLwsStorage::loadObject()
 //=============================================================================
 long SPELLwsStorage::loadLong()
 {
+	if (m_file == NULL) return -1;
     if (m_mode == MODE_WRITE)
     {
         THROW_EXCEPTION("Unable to load long value", "Initialized in write mode", SPELL_ERROR_WSTART);

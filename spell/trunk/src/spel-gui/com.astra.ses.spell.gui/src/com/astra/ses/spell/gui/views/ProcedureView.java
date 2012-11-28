@@ -86,6 +86,7 @@ import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
 import com.astra.ses.spell.gui.views.controls.ControlArea;
@@ -263,7 +264,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationPanel = new PresentationPanel(this, m_model, m_top, SWT.NONE, numAvailablePresentations);
 
 		// Splitter panel
-		m_splitPanel = new SplitPanel(m_top, SplitPanel.Orientation.HORIZONTAL, 40, 185, SplitPanel.Section.CONTROL_AREA);
+		m_splitPanel = new SplitPanel(m_top, 40, 83);
 		m_splitPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
 		GridLayout section1_layout = new GridLayout();
 		section1_layout.numColumns = 1;
@@ -322,11 +323,8 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 
 		// Create the control area
 		m_controlArea = new ControlArea(this, m_model, m_splitPanel.getSection(SplitPanel.Section.CONTROL_AREA), m_model.getProcId());
-		m_controlArea.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-
-		m_splitPanel.computeSection(SplitPanel.Section.BOTH);
-		m_presentationPanel.layout();
-		m_splitPanel.computeSize();
+		m_controlArea.setLayoutData(new GridData(GridData.FILL_BOTH));
+		m_splitPanel.addSashListener(m_controlArea);
 
 		Logger.debug("Controls created", Level.INIT, this);
 		m_controlArea.setFocus();
@@ -369,15 +367,12 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Compute split panel sections (size and scroll values)
 	 **************************************************************************/
-	public void computeSplit()
+	public void computeSplit( boolean options )
 	{
-		m_splitPanel.computeSection(SplitPanel.Section.CONTROL_AREA);
 		Point ssSize = m_splitPanel.getSection(SplitPanel.Section.CONTROL_AREA).computeSize(SWT.DEFAULT, SWT.DEFAULT);
-		int offset = 300;
-		offset = m_top.getClientArea().height - m_presentationPanel.getClientArea().height - ssSize.y;
-		if (offset < 300)
-			offset = 300;
-		m_splitPanel.setDivision(offset - 10);
+		int offset = m_top.getClientArea().height - m_presentationPanel.getClientArea().height - ssSize.y + (options ? 15 : 0);
+		if (offset < 200) offset = 200;
+		m_splitPanel.setDivision(offset);
 	}
 
 	/***************************************************************************
@@ -411,7 +406,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationManager.zoomPresentations(increase);
 		m_controlArea.zoom(increase);
 		m_splitPanel.layout();
-		computeSplit();
+		computeSplit(false);
 	}
 
 	/***************************************************************************
@@ -705,14 +700,18 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	 **************************************************************************/
 	public void notifyPrompt()
 	{
+		// Do not process the notification update, a second notification of prompt
+		// will be done in monitoring clients
+		if (m_model.getController().getPromptData().isNotification()) return;
+
 		Logger.debug("Prompt start notified", Level.GUI, this);
 		// Notify the control area so that the input area creates the
 		// appropriate controls
-		m_controlArea.prompt( m_model.getController().getPromptData() );
-		// Then compute the split of the view
-		computeSplit();
+		m_controlArea.startPrompt( m_model.getController().getPromptData() );
 		// Report to presentations
 		m_presentationNotifier.notifyProcedurePrompt(m_model.getController().getPromptData());
+		// Then compute the split of the view
+		computeSplit( m_model.getController().getPromptData().getOptions() != null );
 	}
 
 	/***************************************************************************
@@ -722,6 +721,8 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	public void notifyFinishPrompt()
 	{
 		Logger.debug("Prompt finish notified", Level.GUI, this);
+		// Compute the split of the view
+		computeSplit(false);
 		// Report to presentations
 		m_presentationNotifier.notifyProcedureFinishPrompt(m_model.getController().getPromptData());
 	}
@@ -734,6 +735,8 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	{
 		Logger.debug("Prompt cancel notified", Level.GUI, this);
 		m_controlArea.cancelPrompt();
+		// Then compute the split of the view
+		computeSplit(false);
 		// Report to presentations
 		m_presentationNotifier.notifyProcedureCancelPrompt(m_model.getController().getPromptData());
 	}
@@ -834,9 +837,10 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		// Update command states for those commands which depend on the model
 		// configuration
 		IExecutionInformation info = m_model.getRuntimeInformation();
+		IStepOverControl so = m_model.getController().getStepOverControl();
 		try
 		{
-			boolean stateValue = info.getStepOverMode().equals(StepOverMode.STEP_INTO_ALWAYS);
+			boolean stateValue = so.getMode().equals(StepOverMode.STEP_INTO_ALWAYS);
 			CommandHelper.setToggleCommandState(ToggleRunInto.ID, ToggleRunInto.STATE_ID, stateValue);
 			stateValue = info.isStepByStep();
 			CommandHelper.setToggleCommandState(ToggleByStep.ID, ToggleByStep.STATE_ID, stateValue);

@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.procs.interfaces.model
+// PACKAGE   : com.astra.ses.spell.gui.procs.interfaces.listeners
 // 
-// FILE      : ILineData.java
+// FILE      : IExecutionListener.java
 //
 // DATE      : 2010-08-03
 //
@@ -46,73 +46,38 @@
 // SUBPROJECT: SPELL GUI Client
 //
 ////////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.procs.interfaces.model;
+package com.astra.ses.spell.gui.procs.interfaces.listeners;
 
-import com.astra.ses.spell.gui.core.model.types.ItemStatus;
+import java.util.List;
+
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 
 /***************************************************************************
  * 
- * ILineData contains information "Ready to use" about the
- * {@link IExecutionTreeLine}
+ * {@link IExecutionListener} is used to notify interested objects on how the
+ * procedure should be shown to the user. Notifications consist of source code
+ * view switches and line notifications
  * 
  **************************************************************************/
-public interface ILineData extends Comparable<ILineData>
+public interface IExecutionListener
 {
 	/***********************************************************************
-	 * Return the identifier of this data
 	 * 
-	 * @return The identifier
 	 **********************************************************************/
-	public String getId();
+	public void onCodeChanged();
 
 	/***********************************************************************
-	 * Get the comments data if any
 	 * 
-	 * @return
 	 **********************************************************************/
-	public String getComments();
+	public void onLineChanged( ICodeLine line );
 
 	/***********************************************************************
-	 * Get the name of the associated item
 	 * 
-	 * @return
 	 **********************************************************************/
-	public String getName();
+	public void onItemsChanged( List<ICodeLine> lines );
 
 	/***********************************************************************
-	 * Get the status of the associated item
 	 * 
-	 * @return
 	 **********************************************************************/
-	public ItemStatus getStatus();
-
-	/***********************************************************************
-	 * Get the time of the associated item
-	 * 
-	 * @return
-	 **********************************************************************/
-	public String getTime();
-
-	/***********************************************************************
-	 * Get the value of the associated item
-	 * 
-	 * @return
-	 **********************************************************************/
-	public String getValue();
-
-	/***********************************************************************
-	 * Get the sequence number of the data. Used for filtering past or future
-	 * events.
-	 * 
-	 * @return
-	 **********************************************************************/
-	public long getSequence();
-
-	/***********************************************************************
-	 * Update this instance with the information contained in the recent
-	 * {@link ILineData} object
-	 * 
-	 * @param recent
-	 **********************************************************************/
-	public void update(ILineData recent);
+	public void onProcessingDelayChanged( long delay );
 }

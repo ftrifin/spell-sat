@@ -1,12 +1,12 @@
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 // PACKAGE   : com.astra.ses.spell.gui.procs.interfaces.model
 // 
-// FILE      : ILineSummaryData.java
+// FILE      : SummaryMode.java
 //
-// DATE      : 2010-08-03
+// DATE      : Nov 20, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,39 +43,17 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.interfaces.model;
 
-import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 
-/***************************************************************************
- * 
- * ILineSummaryData contains information "Ready to use" about the
- * {@link IExecutionTreeLine}
- * 
- **************************************************************************/
-public interface ILineSummaryData extends ILineData
+/*******************************************************************************
+ * @brief
+ * @date 09/10/12
+ ******************************************************************************/
+public enum SummaryMode
 {
-	/***********************************************************************
-	 * Get the number of notifications in the line.
-	 * 
-	 * @return
-	 **********************************************************************/
-	public int getElementCount();
-
-	/***********************************************************************
-	 * Get the number of success notifications in the line.
-	 * 
-	 * @return
-	 **********************************************************************/
-	public int getSuccessCount();
-
-	/***********************************************************************
-	 * Get the summary status.
-	 * 
-	 * @return
-	 **********************************************************************/
-	public ItemStatus getSummaryStatus();
+	LATEST,
+	HISTORY,
+	FULL
 }

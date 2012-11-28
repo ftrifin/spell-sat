@@ -84,6 +84,11 @@ class TmInterface( superClass ):
         return True
     
     #==========================================================================
+    def _restoreNormalLimits(self, config ):
+        REGISTRY['CIF'].write("Reset all GCS limit definitions", {Severity:WARNING})
+        return True 
+
+    #==========================================================================
     def _refreshItem(self, param, config ):
         name = param.name()
         param._setStatus(True)

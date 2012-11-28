@@ -58,10 +58,11 @@ import org.eclipse.swt.SWT;
 public enum CodeViewerColumn
 {
 
-	BREAKPOINT(" ", 0.02, 20, SWT.CENTER, false), LINE_NO("#", 0.04, 60,
-	        SWT.RIGHT, true), CODE("Code", 0.63, 0, SWT.LEFT, true), NAME(
-	        "Name", 0.1, 100, SWT.CENTER, true), VALUE("Value", 0.1, 100,
-	        SWT.CENTER, true), STATUS("Status", 0.1, 100, SWT.CENTER, true);
+	BREAKPOINT(" ", 0.02, 20, SWT.CENTER, false), 
+	LINE_NO("#", 0.04, 60, SWT.RIGHT, true), 
+	CODE("Code", 0.62, 500, SWT.LEFT, true), 
+	DATA("Data", 0.1, 200, SWT.CENTER, true), 
+	RESULT("Result", 0.1, 150, SWT.CENTER, true); 
 
 	/** Column's Name */
 	private String	m_name;

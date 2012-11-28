@@ -65,7 +65,6 @@ import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.procs.ProcExtensions;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionTreeController;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 
@@ -92,16 +91,13 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 	// PRIVATE -----------------------------------------------------------------
 	/** Holds the procedure model */
 	private IProcedure m_model;
-	/** Reference to the tree controller */
-	private IExecutionTreeController m_treeController;
 
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
-	public ProcedureRuntimeProcessor(IProcedure model, IExecutionTreeController treeController)
+	public ProcedureRuntimeProcessor(IProcedure model)
 	{
 		m_model = model;
-		m_treeController = treeController;
 	}
 
 	/*
@@ -143,7 +139,7 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 	@Override
 	public void notifyProcedureItem(ItemNotification data)
 	{
-		m_treeController.notifyProcedureItem(data);
+		m_model.getExecutionManager().onItemNotification(data);
 		// Redirect the data to the consumers
 		ProcExtensions.get().fireProcedureItem(m_model, data);
 	}
@@ -158,6 +154,7 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 		{
 		case CALL:
 			Logger.info("Notified CALL: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
+			m_model.getController().getStepOverControl().onExecutionCall();
 			break;
 		case LINE:
 			Logger.info("Notified LINE: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
@@ -169,7 +166,21 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 			Logger.info("Notified STAGE: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
 			break;
 		}
-		m_treeController.notifyProcedureStack(data);
+
+		m_model.getExecutionManager().onStackNotification(data);
+		
+		switch(data.getStackType())
+		{
+		case RETURN:
+			m_model.getController().getStepOverControl().onExecutionReturn();
+			break;
+		case LINE:
+			m_model.getController().getStepOverControl().onExecutionLine();
+			break;
+		case CALL:
+		case STAGE:
+			break;
+		}
 		((IExecutionInformationHandler) m_model.getRuntimeInformation()).setStage(data.getStageId(), data.getStageTitle());
 		// Redirect the data to the consumers
 		ProcExtensions.get().fireProcedureStack(m_model, data);

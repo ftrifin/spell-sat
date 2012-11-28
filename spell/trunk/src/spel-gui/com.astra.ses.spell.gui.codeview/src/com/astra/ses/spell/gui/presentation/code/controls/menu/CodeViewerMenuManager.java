@@ -50,6 +50,7 @@ package com.astra.ses.spell.gui.presentation.code.controls.menu;
 
 import java.util.HashMap;
 
+import org.eclipse.nebula.widgets.grid.GridItem;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MenuEvent;
 import org.eclipse.swt.events.MenuListener;
@@ -57,7 +58,6 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
-import org.eclipse.swt.widgets.TableItem;
 
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
@@ -68,10 +68,9 @@ import com.astra.ses.spell.gui.model.commands.CmdRun;
 import com.astra.ses.spell.gui.model.commands.SetBreakpoint;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.presentation.code.controls.CodeViewer;
+import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
 import com.astra.ses.spell.gui.presentation.code.dialogs.SearchDialog;
-import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureDataProvider;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /*******************************************************************************
  * 
@@ -82,29 +81,22 @@ public class CodeViewerMenuManager
 {
 
 	/** Popup's parent widget */
-	private CodeViewer	           m_viewer;
+	private CodeViewer m_viewer;
 	/** Procedure data provider */
-	private IProcedureDataProvider m_data;
-	/** Runtime information */
-	private IExecutionInformation  m_runtime;
+	private IProcedure m_model;
 	/** Menu */
-	private Menu	               m_menu;
-	/** Procedure id */
-	private String	               m_procedureId;
+	private Menu m_menu;
 
 	/***************************************************************************
 	 * Constructor
 	 * 
 	 * @param parent
 	 **************************************************************************/
-	public CodeViewerMenuManager(CodeViewer viewer, String procedureId,
-	        IProcedureDataProvider procData, IExecutionInformation runtimeInfo )
+	public CodeViewerMenuManager(CodeViewer viewer, IProcedure model )
 	{
 		m_viewer = viewer;
-		m_data = procData;
-		m_runtime = runtimeInfo;
-		m_procedureId = procedureId;
-		m_menu = new Menu(viewer.getTable());
+		m_model = model;
+		m_menu = new Menu(viewer.getGrid());
 
 		m_menu.addMenuListener(new MenuListener()
 		{
@@ -121,27 +113,29 @@ public class CodeViewerMenuManager
 			}
 		});
 
-		m_viewer.getTable().setMenu(m_menu);
+		m_viewer.getGrid().setMenu(m_menu);
 	}
 
 	/**************************************************************************
-	 * Check if control actions can be performed 
+	 * Check if control actions can be performed
 	 *************************************************************************/
 	private boolean gotoDoable()
 	{
-		if (!isExecutableLine()) return false;
-		ExecutorStatus status = m_runtime.getStatus();
-		if (status.equals(ExecutorStatus.PAUSED)) return true;
+		if (!isExecutableLine())
+			return false;
+		ExecutorStatus status = m_model.getRuntimeInformation().getStatus();
+		if (status.equals(ExecutorStatus.PAUSED))
+			return true;
 		return false;
 	}
-	
+
 	/**************************************************************************
-	 * Check if control actions can be performed 
+	 * Check if control actions can be performed
 	 *************************************************************************/
 	private boolean breakpointsDoable()
 	{
-		ExecutorStatus status = m_runtime.getStatus();
-		switch(status)
+		ExecutorStatus status = m_model.getRuntimeInformation().getStatus();
+		switch (status)
 		{
 		case RELOADING:
 		case ABORTED:
@@ -162,19 +156,22 @@ public class CodeViewerMenuManager
 	}
 
 	/**************************************************************************
-	 * Check if control actions can be performed 
+	 * Check if control actions can be performed
 	 *************************************************************************/
 	private boolean isExecutableLine()
 	{
-		ClientMode mode = m_runtime.getClientMode();
-		if (!mode.equals(ClientMode.CONTROLLING)) return false;
-		int tableSelectedItems = m_viewer.getTable().getSelectionCount();
+		ClientMode mode = m_model.getRuntimeInformation().getClientMode();
+		if (!mode.equals(ClientMode.CONTROLLING))
+			return false;
+		int tableSelectedItems = m_viewer.getGrid().getSelectionCount();
 		if (tableSelectedItems == 1)
 		{
-			TableItem item = m_viewer.getTable().getSelection()[0];
-			String code = (String) item.getData( CodeViewer.DATA_SOURCE );
-			if (code.trim().isEmpty()) return false;
-			if (code.startsWith("#")) return false;
+			GridItem item = m_viewer.getGrid().getSelection()[0];
+			String code = item.getText(CodeViewerColumn.CODE.ordinal());
+			if (code.trim().isEmpty())
+				return false;
+			if (code.startsWith("#"))
+				return false;
 			return true;
 		}
 		else
@@ -189,7 +186,7 @@ public class CodeViewerMenuManager
 	private void fillMenu()
 	{
 		// The items we provide depend on the client mode and executor status
-		ClientMode mode = m_runtime.getClientMode();
+		ClientMode mode = m_model.getRuntimeInformation().getClientMode();
 
 		/*
 		 * Remove current items from the menu
@@ -218,11 +215,11 @@ public class CodeViewerMenuManager
 				public void widgetSelected(SelectionEvent e)
 				{
 					HashMap<String, String> args = new HashMap<String, String>();
-					args.put(ClearBreakpoints.ARG_PROCID, m_procedureId);
+					args.put(ClearBreakpoints.ARG_PROCID, m_model.getProcId());
 					CommandHelper.execute(ClearBreakpoints.ID, args);
 				}
 			});
-	
+
 			/*
 			 * Separator
 			 */
@@ -249,6 +246,39 @@ public class CodeViewerMenuManager
 		new MenuItem(m_menu, SWT.SEPARATOR);
 
 		/*
+		 * Refresh table information
+		 */
+		MenuItem refresh = new MenuItem(m_menu, SWT.PUSH);
+		refresh.setText("Refresh");
+		refresh.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				m_viewer.forceRefresh();
+			}
+		});
+
+		/*
+		 * Reset column widths
+		 */
+		MenuItem resetC = new MenuItem(m_menu, SWT.PUSH);
+		resetC.setText("Reset column widths");
+		resetC.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				m_viewer.resetColumnWidths();
+			}
+		});
+
+		/*
+		 * Separator
+		 */
+		new MenuItem(m_menu, SWT.SEPARATOR);
+
+		/*
 		 * Search code
 		 */
 		MenuItem search = new MenuItem(m_menu, SWT.PUSH);
@@ -258,8 +288,7 @@ public class CodeViewerMenuManager
 			@Override
 			public void widgetSelected(SelectionEvent e)
 			{
-				SearchDialog dialog = new SearchDialog(m_viewer.getTable()
-				        .getShell(), m_viewer);
+				SearchDialog dialog = new SearchDialog(m_viewer.getGrid().getShell(), m_viewer);
 				dialog.open();
 			}
 		});
@@ -289,8 +318,8 @@ public class CodeViewerMenuManager
 	private void fillMenuControlActions()
 	{
 		BreakpointType type = BreakpointType.UNKNOWN;
-		TableItem[] selection = m_viewer.getTable().getSelection();
-		final int lineNo = m_viewer.getTable().indexOf(selection[0]) + 1;
+		GridItem[] selection = m_viewer.getGrid().getSelection();
+		final int lineNo = m_viewer.getGrid().indexOf(selection[0])+1;
 
 		if (gotoDoable())
 		{
@@ -305,7 +334,7 @@ public class CodeViewerMenuManager
 				public void widgetSelected(SelectionEvent e)
 				{
 					HashMap<String, String> args = new HashMap<String, String>();
-					args.put(CmdGotoLine.ARG_PROCID, m_procedureId);
+					args.put(CmdGotoLine.ARG_PROCID, m_model.getProcId());
 					args.put(CmdGotoLine.ARG_LINENO, String.valueOf(lineNo));
 					CommandHelper.execute(CmdGotoLine.ID, args);
 				}
@@ -322,19 +351,21 @@ public class CodeViewerMenuManager
 				public void widgetSelected(SelectionEvent e)
 				{
 					BreakpointType type = BreakpointType.TEMPORARY;
-	
+
 					HashMap<String, String> args = new HashMap<String, String>();
-					args.put(SetBreakpoint.ARG_PROCID, m_procedureId);
+					args.put(SetBreakpoint.ARG_PROCID, m_model.getProcId());
 					args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
 					args.put(SetBreakpoint.ARG_TYPE, type.toString());
 					CommandHelper.execute(SetBreakpoint.ID, args);
-	
+
+					m_viewer.onLineChanged( m_model.getExecutionManager().getLine(lineNo) );
+					
 					HashMap<String, String> runArgs = new HashMap<String, String>();
-					runArgs.put(CmdRun.ARG_PROCID, m_procedureId);
+					runArgs.put(CmdRun.ARG_PROCID, m_model.getProcId());
 					CommandHelper.execute(CmdRun.ID, runArgs);
 				}
 			});
-	
+
 			/*
 			 * Separator
 			 */
@@ -347,15 +378,9 @@ public class CodeViewerMenuManager
 			/*
 			 * Get the line's breakpoint type
 			 */
-			try
-			{
-				type = m_data.getBreakpoint(lineNo);
-			}
-			catch (UninitProcedureException e1)
-			{
-			}
-	
-			if (type.equals(BreakpointType.PERMANENT))
+			type = m_model.getExecutionManager().getLine(lineNo-1).getBreakpoint();
+
+			if ( type != null && type.equals(BreakpointType.PERMANENT))
 			{
 				/*
 				 * Remove permanent breakpoint
@@ -367,17 +392,14 @@ public class CodeViewerMenuManager
 					@Override
 					public void widgetSelected(SelectionEvent e)
 					{
-						TableItem[] selection = m_viewer.getTable()
-						        .getSelection();
-						int lineNo = m_viewer.getTable().indexOf(selection[0]) + 1;
 						BreakpointType type = BreakpointType.UNKNOWN;
-	
 						HashMap<String, String> args = new HashMap<String, String>();
-						args.put(SetBreakpoint.ARG_PROCID, m_procedureId);
-						args.put(SetBreakpoint.ARG_LINENO,
-						        String.valueOf(lineNo));
+						args.put(SetBreakpoint.ARG_PROCID, m_model.getProcId());
+						args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
 						args.put(SetBreakpoint.ARG_TYPE, type.toString());
 						CommandHelper.execute(SetBreakpoint.ID, args);
+						
+						m_viewer.onLineChanged( m_model.getExecutionManager().getLine(lineNo) );
 					}
 				});
 			}
@@ -393,17 +415,15 @@ public class CodeViewerMenuManager
 					@Override
 					public void widgetSelected(SelectionEvent e)
 					{
-						TableItem[] selection = m_viewer.getTable()
-						        .getSelection();
-						int lineNo = m_viewer.getTable().indexOf(selection[0]) + 1;
 						BreakpointType type = BreakpointType.PERMANENT;
-	
+
 						HashMap<String, String> args = new HashMap<String, String>();
-						args.put(SetBreakpoint.ARG_PROCID, m_procedureId);
-						args.put(SetBreakpoint.ARG_LINENO,
-						        String.valueOf(lineNo));
+						args.put(SetBreakpoint.ARG_PROCID, m_model.getProcId());
+						args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
 						args.put(SetBreakpoint.ARG_TYPE, type.toString());
 						CommandHelper.execute(SetBreakpoint.ID, args);
+						
+						m_viewer.onLineChanged( m_model.getExecutionManager().getLine(lineNo) );
 					}
 				});
 			}

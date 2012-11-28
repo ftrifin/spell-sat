@@ -48,7 +48,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.model.notification;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.astra.ses.spell.gui.core.model.types.ItemType;
@@ -67,15 +67,15 @@ public class ItemNotification extends NotificationData
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
 	/** Holds the item name */
-	private List<String>	m_itemName	   = new ArrayList<String>();
+	private List<String>	m_itemName	   = new LinkedList<String>();
 	/** Holds the item value */
-	private List<String>	m_itemValue	   = new ArrayList<String>();
+	private List<String>	m_itemValue	   = new LinkedList<String>();
 	/** Holds the item status */
-	private List<String>	m_itemStatus	= new ArrayList<String>();
+	private List<String>	m_itemStatus	= new LinkedList<String>();
 	/** Holds the item time */
-	private List<String>	m_itemTime	   = new ArrayList<String>();
+	private List<String>	m_itemTime	   = new LinkedList<String>();
 	/** Holds the item comments */
-	private List<String>	m_itemComments	= new ArrayList<String>();
+	private List<String>	m_itemComments	= new LinkedList<String>();
 	/** Holds the item type */
 	private ItemType	      m_itemType;
 
@@ -194,11 +194,28 @@ public class ItemNotification extends NotificationData
 		return m_itemName.size();
 	}
 
+	/***************************************************************************
+	 * Compare contained items
+	 **************************************************************************/
+	public boolean referToSame( ItemNotification other )
+	{
+		if (getItemName().size() != other.getItemName().size() ) return false;
+		int index = 0;
+		for(String oname : other.getItemName())
+		{
+			String name = getItemName().get(index);
+			if (!name.equals(oname)) return false;
+			index++;
+		}
+		return true;
+	}
+
 	/**
 	 * Debugging
 	 */
 	public void dump()
 	{
+		System.err.println("Notification for exec number " + getNumExecutions());
 		for (int idx = 0; idx < m_itemName.size(); idx++)
 		{
 			System.err.println(m_itemName.get(idx) + "=" + m_itemValue.get(idx)

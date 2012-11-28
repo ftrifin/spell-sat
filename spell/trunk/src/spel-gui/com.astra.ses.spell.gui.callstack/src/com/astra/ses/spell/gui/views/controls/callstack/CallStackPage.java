@@ -48,13 +48,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.views.controls.callstack;
 
-import java.util.HashMap;
-
-import org.eclipse.jface.action.Action;
-import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerFilter;
@@ -66,9 +59,6 @@ import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.model.callstack.CallstackContentProvider;
 import com.astra.ses.spell.gui.model.callstack.CallstackLabelProvider;
 import com.astra.ses.spell.gui.model.callstack.CallstackNode;
-import com.astra.ses.spell.gui.model.commands.ViewCodeId;
-import com.astra.ses.spell.gui.model.commands.args.ICommandArgument;
-import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 
 /******************************************************************************
@@ -83,8 +73,6 @@ public class CallStackPage extends Page
 	private TreeViewer	              m_viewer;
 	/** Proc id */
 	private String	                  m_procId;
-	/** Action to perform when an item is double clicked */
-	private Action	                  m_doubleClickAction;
 	/** Finished nodes filter */
 	private static final ViewerFilter	FINISHED_NODES_FILTER;
 
@@ -121,9 +109,6 @@ public class CallStackPage extends Page
 		m_viewer = new TreeViewer(parent);
 		m_viewer.setContentProvider(new CallstackContentProvider());
 		m_viewer.setLabelProvider(new CallstackLabelProvider());
-		// Actions
-		createActions();
-		hookDoubleClickAction();
 		// Set the input
 		IProcedureManager mgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
 		m_viewer.setInput(mgr.getProcedure(m_procId));
@@ -140,46 +125,6 @@ public class CallStackPage extends Page
 	{
 		m_viewer.refresh();
 		m_viewer.getControl().setFocus();
-	}
-
-	/***************************************************************************
-	 * Create actions to performs on events
-	 **************************************************************************/
-	private void createActions()
-	{
-		m_doubleClickAction = new Action()
-		{
-			public void run()
-			{
-				ISelection selection = m_viewer.getSelection();
-				CallstackNode node = (CallstackNode) ((IStructuredSelection) selection).getFirstElement();
-				/*
-				 * Prepare command arguments
-				 */
-				HashMap<String, String> args = new HashMap<String, String>();
-				args.put(ICommandArgument.PROCEDURE_ID, m_procId);
-				args.put(ICommandArgument.STACK, node.getStack());
-
-				/*
-				 * Execute the command
-				 */
-				CommandHelper.execute(ViewCodeId.ID, args);
-			}
-		};
-	}
-
-	/***************************************************************************
-	 * Register the double click action
-	 **************************************************************************/
-	private void hookDoubleClickAction()
-	{
-		m_viewer.addDoubleClickListener(new IDoubleClickListener()
-		{
-			public void doubleClick(DoubleClickEvent event)
-			{
-				m_doubleClickAction.run();
-			}
-		});
 	}
 
 	/***************************************************************************
