@@ -345,4 +345,10 @@ public class PresentationNotifier implements IPresentationNotifier,
     {
     }
 
+	@Override
+    public void clearNotifications()
+    {
+	    // Nothing to do
+    }
+
 }

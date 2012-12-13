@@ -172,7 +172,7 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		m_satName.setToolTipText("Satellite name");
 		m_satName.setEditable(false);
 		GridData gd = new GridData();
-		gd.heightHint = 50;
+		gd.heightHint = 47;
 		m_satName.setLayoutData(gd);
 
 		// Update the buttons to loaded state
@@ -534,23 +534,22 @@ public class PresentationPanel extends Composite implements IExecutionListener
     public void onItemsChanged(List<ICodeLine> lines) {}
 
 	@Override
-    public void onProcessingDelayChanged( final long delayMsec )
+    public void onProcessingDelayChanged( final long delaySec )
     {
-		if (delayMsec != m_processingDelay)
+		if (delaySec != m_processingDelay)
 		{
-			m_processingDelay = delayMsec;
+			m_processingDelay = delaySec;
 			Display.getDefault().syncExec( new Runnable()
 			{
 				public void run()
 				{
-					long delaySec = delayMsec/1000;
-					if (delayMsec > 2000 && delayMsec < 10000)
+					if (delaySec > 2 && delaySec < 10)
 					{
 						m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_YELLOW));
 						m_modeDisplay.setToolTipText("Processing delay is " + delaySec + " seconds");
 						m_modeDisplay.setMessage("Processing delay is " + delaySec + " seconds");
 					}
-					else if (delayMsec>10000)
+					else if (delaySec>10)
 					{
 						m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
 						m_modeDisplay.setToolTipText("Processing delay is " + delaySec + " seconds");

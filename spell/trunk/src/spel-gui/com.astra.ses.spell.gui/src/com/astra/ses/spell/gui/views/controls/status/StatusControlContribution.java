@@ -55,12 +55,16 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.astra.ses.spell.gui.core.interfaces.ICoreContextOperationListener;
 import com.astra.ses.spell.gui.core.interfaces.ICoreServerOperationListener;
+import com.astra.ses.spell.gui.core.interfaces.ICoreStatusListener;
+import com.astra.ses.spell.gui.core.interfaces.IStatusManager;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.model.notification.ClientStatus;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.server.ContextInfo;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
@@ -72,7 +76,7 @@ import com.astra.ses.spell.gui.model.ConnectionStatusConstants;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 
-public class StatusControlContribution extends WorkbenchWindowControlContribution implements ICoreServerOperationListener, ICoreContextOperationListener
+public class StatusControlContribution extends WorkbenchWindowControlContribution implements ICoreServerOperationListener, ICoreContextOperationListener, ICoreStatusListener
 {
 	IConfigurationManager s_cfg = null;
 
@@ -91,6 +95,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 	private Label m_domain;
 	private Label m_driver;
 	private Label m_family;
+	private Label m_memory;
 
 	private Composite m_base;
 
@@ -122,7 +127,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		GridLayout layout = new GridLayout();
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
-		layout.numColumns = 12;
+		layout.numColumns = 14;
 		m_base.setLayout(layout);
 
 		// LABEL
@@ -201,6 +206,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		label6.setFont(s_boldFont);
 		label6.setText("Driver: ");
 		label6.setLayoutData(driverLabelData);
+		
 		// WIDGET
 		GridData driverWidgetData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
 		m_driver = new Label(m_base, SWT.BORDER);
@@ -209,10 +215,28 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		m_driver.setAlignment(SWT.CENTER);
 		m_driver.setLayoutData(driverWidgetData);
 
+		// LABEL
+		GridData memoryLabelData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
+		Label label7 = new Label(m_base, SWT.NONE);
+		label7.setFont(s_boldFont);
+		label7.setText("Memory: ");
+		label7.setLayoutData(memoryLabelData);
+		
+		// WIDGET
+		GridData memoryWidgetData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
+		memoryWidgetData.widthHint = 60;
+		m_memory = new Label(m_base, SWT.BORDER);
+		m_memory.setText("0%");
+		m_memory.setBackground(s_warnColor);
+		m_memory.setAlignment(SWT.CENTER);
+		m_memory.setLayoutData(memoryWidgetData);
+
 		m_base.pack();
 
 		ServerBridge.get().addContextListener(this);
 		ServerBridge.get().addServerListener(this);
+		IStatusManager st = (IStatusManager) ServiceManager.get(IStatusManager.class);
+		st.addListener(this);
 
 		updateServer(false);
 		updateContext(false);
@@ -227,6 +251,8 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 	@Override
 	public void dispose()
 	{
+		IStatusManager st = (IStatusManager) ServiceManager.get(IStatusManager.class);
+		st.removeListener(this);
 		ServerBridge.get().removeContextListener(this);
 		ServerBridge.get().removeServerListener(this);
 		super.dispose();
@@ -409,4 +435,33 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		}
 		m_base.pack();
 	}
+
+	@Override
+    public void onClientStatus( final ClientStatus status )
+    {
+	    Display.getDefault().asyncExec( new Runnable()
+	    {
+	    	public void run()
+	    	{
+	    		Double pc = status.freeMemoryPC;
+	    		String pcs = pc.toString();
+	    		int idx = pcs.indexOf(".");
+	    		pcs = pcs.substring(0,idx+3);
+	    		m_memory.setText(pcs + " %");
+	    		if (pc<10.0)
+	    		{
+	    			m_memory.setBackground(s_errorColor);
+	    		}
+	    		else if (pc < 50.0)
+	    		{
+	    			m_memory.setBackground(s_warnColor);
+	    		}
+	    		else
+	    		{
+	    			m_memory.setBackground(s_okColor);
+	    		}
+	    	}
+	    });
+	    
+    }
 }

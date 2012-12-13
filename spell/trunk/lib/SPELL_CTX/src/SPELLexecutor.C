@@ -610,7 +610,7 @@ void SPELLexecutor::command( const ExecutorCommand& command )
 //=============================================================================
 void SPELLexecutor::setControllingClient( SPELLclient* client )
 {
-	SPELLmonitor m(m_clientLock);
+	SPELLtryMonitor m(m_clientLock);
 	LOG_INFO("Set controlling client: " + ISTR(client->getClientKey()));
 	m_controllingClient = client;
 
@@ -629,7 +629,7 @@ void SPELLexecutor::setControllingClient( SPELLclient* client )
 //=============================================================================
 void SPELLexecutor::removeControllingClient()
 {
-	SPELLmonitor m(m_clientLock);
+	SPELLtryMonitor m(m_clientLock);
 	DEBUG("Removing controlling client");
 
 	int cKey = m_controllingClient->getClientKey();
@@ -691,7 +691,7 @@ void SPELLexecutor::removeControllingClient()
 //=============================================================================
 bool SPELLexecutor::hasControllingClient()
 {
-	SPELLmonitor m(m_clientLock);
+	SPELLtryMonitor m(m_clientLock);
 	return (m_controllingClient != NULL);
 }
 
@@ -700,7 +700,7 @@ bool SPELLexecutor::hasControllingClient()
 //=============================================================================
 SPELLclient* SPELLexecutor::getControllingClient()
 {
-	SPELLmonitor m(m_clientLock);
+	SPELLtryMonitor m(m_clientLock);
 	return m_controllingClient;
 }
 
@@ -709,8 +709,6 @@ SPELLclient* SPELLexecutor::getControllingClient()
 //=============================================================================
 void SPELLexecutor::forwardMessageToClient( const SPELLipcMessage& msg )
 {
-	TICK_IN;
-	SPELLmonitor m(m_clientLock);
 	if (m_controllingClient)
 	{
 		m_controllingClient->sendMessageToClient(msg);
@@ -719,7 +717,6 @@ void SPELLexecutor::forwardMessageToClient( const SPELLipcMessage& msg )
 	{
 		LOG_ERROR("Cannot forward message, no controlling client! " + msg.getId());
 	}
-	TICK_OUT;
 }
 
 //=============================================================================
@@ -727,10 +724,8 @@ void SPELLexecutor::forwardMessageToClient( const SPELLipcMessage& msg )
 //=============================================================================
 SPELLipcMessage SPELLexecutor::forwardRequestToClient( const SPELLipcMessage& msg )
 {
-	TICK_IN;
 	SPELLipcMessage resp = VOID_MESSAGE;
 	resp = m_controllingClient->sendRequestToClient(msg);
-	TICK_OUT;
 	return resp;
 }
 

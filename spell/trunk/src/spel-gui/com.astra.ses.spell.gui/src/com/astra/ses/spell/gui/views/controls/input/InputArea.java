@@ -60,13 +60,14 @@ import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Text;
 
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
@@ -120,7 +121,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 
 	// PRIVATE -----------------------------------------------------------------
 	/** Text field for text prompts */
-	private Label m_promptTextLabel;
+	private Text m_promptText;
 	/** Prompt field for text prompts */
 	private PromptField m_textInput;
 	/** Future storing the prompt answers */
@@ -190,11 +191,12 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 
 		setLayoutData(new GridData(GridData.FILL_BOTH));
 
-		m_promptTextLabel = new Label(this, SWT.BORDER | SWT.WRAP);
-		m_promptTextLabel.setText("Enter command");
+		m_promptText = new Text(this, SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+		m_promptText.setText("Enter command");
+		m_promptText.getVerticalBar().setVisible(false);
 		GridData tpData = new GridData(GridData.FILL_HORIZONTAL);
-		m_promptTextLabel.setLayoutData(tpData);
-		m_promptTextLabel.setBackground( Display.getCurrent().getSystemColor(SWT.COLOR_WHITE) );
+		m_promptText.setLayoutData(tpData);
+		m_promptText.setBackground( Display.getCurrent().getSystemColor(SWT.COLOR_WHITE) );
 
 		if (s_cfg == null)
 		{
@@ -249,7 +251,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	{
 		if (enabled && m_clientMode != ClientMode.CONTROLLING)
 			return;
-		m_promptTextLabel.setEnabled(enabled);
+		m_promptText.setEnabled(enabled);
 		super.setEnabled(enabled);
 	}
 
@@ -294,7 +296,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		}
 		setRedraw(false);
 		m_myFont = new Font(Display.getDefault(),"Courier New", m_fontSize, SWT.NORMAL);
-		m_promptTextLabel.setFont(m_myFont);
+		m_promptText.setFont(m_myFont);
 		m_textInput.setFont(m_myFont);
 		if (m_optionContainer != null)
 		{
@@ -374,7 +376,23 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			m_expected = m_promptData.getExpected();
 			m_numericInput = false;
 			// Set the prompt text
-			m_promptTextLabel.setText(m_promptData.getText());
+			m_promptText.setText(m_promptData.getText());
+
+			// Adjust the height and visibility of scroll bar depending on
+			// the control doing text wrapping or not
+			int areaWidth = m_promptText.getClientArea().width;
+			GC gc = new GC(m_promptText);
+			int textWidth = gc.getFontMetrics().getAverageCharWidth() * m_promptText.getText().length();
+			boolean wrapping = textWidth >= areaWidth; 
+			gc.dispose();
+			m_promptText.getVerticalBar().setVisible(wrapping);
+			if (wrapping)
+			{
+				GridData gd = (GridData) m_promptText.getLayoutData();
+				gd.heightHint = 45;
+				layout();
+			}
+
 			// Set the text hint for the console input
 			String hint = "Type ";
 			for (String opt : m_expected)
@@ -393,7 +411,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 		else
 		{
 			m_expected = null;
-			m_promptTextLabel.setText(m_promptData.getText());
+			m_promptText.setText(m_promptData.getText());
 			m_numericInput = m_promptData.isNumeric();
 
 		}
@@ -492,7 +510,10 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	public void reset()
 	{
 		Logger.debug("Reset input area", Level.PROC, this);
-		m_promptTextLabel.setText("Enter command:");
+		m_promptText.setText("Enter command:");
+		GridData gd = (GridData) m_promptText.getLayoutData();
+		gd.heightHint = SWT.DEFAULT;
+		m_promptText.getVerticalBar().setVisible(false);
 		m_textInput.delHint();
 		m_textInput.reset();
 		m_textInput.setEnabled(true);
@@ -570,8 +591,8 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 			m_blinkerLauncher = null;
 		}
 		// Ensure the text field has white background color
-		m_promptTextLabel.setBackground( Display.getCurrent().getSystemColor(SWT.COLOR_WHITE) );
-		m_promptTextLabel.redraw();
+		m_promptText.setBackground( Display.getCurrent().getSystemColor(SWT.COLOR_WHITE) );
+		m_promptText.redraw();
 	}
 
 	/***************************************************************************
@@ -579,19 +600,19 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
 	 ***************************************************************************/
 	void blink()
 	{
-		if (!m_promptTextLabel.isDisposed())
+		if (!m_promptText.isDisposed())
 		{
 			if (m_blinkSwitch)
 			{
 				m_blinkSwitch = false;
-				m_promptTextLabel.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_YELLOW));
+				m_promptText.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_YELLOW));
 			}
 			else
 			{
 				m_blinkSwitch = true;
-				m_promptTextLabel.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_WHITE));
+				m_promptText.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_WHITE));
 			}
-			m_promptTextLabel.redraw();
+			m_promptText.redraw();
 		}
 	}
 
@@ -910,7 +931,7 @@ public class InputArea extends Composite implements SelectionListener, KeyListen
     {
 		if (m_optionScroll != null)
 		{
-			int substract = m_promptTextLabel.getBounds().height + m_textInput.getContents().getBounds().height + 25;
+			int substract = m_promptText.getBounds().height + m_textInput.getContents().getBounds().height + 25;
 			int finalHeight = height - substract;;
 			if (finalHeight<40) finalHeight=40;
 			m_optionScroll.setSize( getClientArea().width, finalHeight );

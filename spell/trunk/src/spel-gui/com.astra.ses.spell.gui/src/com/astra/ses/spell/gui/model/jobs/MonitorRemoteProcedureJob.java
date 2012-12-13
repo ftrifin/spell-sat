@@ -51,12 +51,16 @@ package com.astra.ses.spell.gui.model.jobs;
 import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.ui.PlatformUI;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.model.commands.CommandResult;
 import com.astra.ses.spell.gui.procs.exceptions.LoadFailed;
 import com.astra.ses.spell.gui.procs.exceptions.NotConnected;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunProcessing;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 
 public class MonitorRemoteProcedureJob extends AbstractProcedureJob
 {
@@ -74,10 +78,30 @@ public class MonitorRemoteProcedureJob extends AbstractProcedureJob
 		try
 		{
 			monitor.setTaskName("Monitoring procedure " + m_instanceId);
-			mgr.monitorProcedure(m_instanceId, monitor);
-			if (monitor.isCanceled())
+			
+			AsRunReplayResult ar = new AsRunReplayResult();
+			mgr.monitorProcedure(m_instanceId, ar, monitor);
+
+			if (ar.status.equals(AsRunProcessing.PARTIAL))
 			{
-				result = CommandResult.CANCELLED;
+				if (monitor.isCanceled())
+				{
+					String message = "Retrieval of ASRUN information was not complete: canceled by user";
+					MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Monitor Procedure", message);
+					result = CommandResult.CANCELLED;
+				}
+				else
+				{
+					String message = "Retrieval of ASRUN information was not complete: " + ar.message;
+					MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Monitor Procedure", message);
+					result = CommandResult.SUCCESS;
+				}
+			}
+			else if (ar.status.equals(AsRunProcessing.FAILED))
+			{
+				String message = "Retrieval of ASRUN information failed: " + ar.message;
+				MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Monitor Procedure", message);
+				result = CommandResult.FAILED;
 			}
 			else
 			{

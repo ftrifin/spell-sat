@@ -129,4 +129,10 @@ public class ProcedureRuntimeExtension implements IProcedureRuntimeExtension
 		s_mgr.notifyProcedureControl(data);
     }
 
+	@Override
+    public void clearNotifications()
+    {
+	    s_mgr.clearNotifications();
+    }
+
 }

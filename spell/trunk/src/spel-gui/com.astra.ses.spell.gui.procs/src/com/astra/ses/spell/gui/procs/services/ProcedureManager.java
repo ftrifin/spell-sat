@@ -91,6 +91,7 @@ import com.astra.ses.spell.gui.procs.exceptions.NoSuchProcedure;
 import com.astra.ses.spell.gui.procs.exceptions.NotConnected;
 import com.astra.ses.spell.gui.procs.exceptions.UnloadFailed;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.utils.GrabProcedureTask;
@@ -99,11 +100,8 @@ import com.astra.ses.spell.gui.procs.utils.GrabProcedureTask;
  * @brief Manages procedure models.
  * @date 09/10/07
  ******************************************************************************/
-public class ProcedureManager extends BaseService implements IProcedureManager,
-															 ICoreContextOperationListener, 
-															 IProcedureInput,
-															 IProcedureRuntimeExtension, 
-															 IProcedureOperation
+public class ProcedureManager extends BaseService implements IProcedureManager, ICoreContextOperationListener, IProcedureInput,
+        IProcedureRuntimeExtension, IProcedureOperation
 {
 	// =========================================================================
 	// # STATIC DATA MEMBERS
@@ -111,13 +109,13 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 
 	// PRIVATE -----------------------------------------------------------------
 	/** Holds the server proxy handle */
-	private static IContextProxy s_ctx	= null;
+	private static IContextProxy s_ctx = null;
 	/** Holds the file manager handle */
 	private static IFileManager s_fileMgr = null;
 	// PROTECTED ---------------------------------------------------------------
 	// PUBLIC ------------------------------------------------------------------
 	/** The service identifier */
-	public static final String ID =  "com.astra.ses.spell.gui.procs.ProcedureManager";
+	public static final String ID = "com.astra.ses.spell.gui.procs.ProcedureManager";
 
 	// =========================================================================
 	// # INSTANCE DATA MEMBERS
@@ -127,9 +125,9 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	// PUBLIC ------------------------------------------------------------------
 	// PRIVATE -----------------------------------------------------------------
 	/** Holds the model manager */
-	private ProcedureModelManager	          m_models;
+	private ProcedureModelManager m_models;
 	/** Holds the procedure load monitor(s) */
-	private Map<String, ProcedureLoadMonitor>	m_loadMonitors;
+	private Map<String, ProcedureLoadMonitor> m_loadMonitors;
 
 	// =========================================================================
 	// # ACCESSIBLE METHODS
@@ -175,7 +173,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	{
 		s_ctx = (IContextProxy) ServiceManager.get(IContextProxy.class);
 		s_fileMgr = (IFileManager) ServiceManager.get(IFileManager.class);
-		m_models = new ProcedureModelManager(s_ctx,s_fileMgr);
+		m_models = new ProcedureModelManager(s_ctx, s_fileMgr);
 	}
 
 	/***************************************************************************
@@ -211,8 +209,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 *             if the procedure could not be loaded
 	 **************************************************************************/
 	@Override
-	public void openProcedure(String procedureId, Map<String, String> arguments, IProgressMonitor monitor)
-	        throws LoadFailed
+	public void openProcedure(String procedureId, Map<String, String> arguments, IProgressMonitor monitor) throws LoadFailed
 	{
 		Logger.info("Opening procedure " + procedureId, Level.PROC, this);
 		// Will hold the model
@@ -224,7 +221,8 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		monitor.beginTask("Opening procedure", 6);
 
 		// Check cancellation
-		if (monitor.isCanceled()) return;
+		if (monitor.isCanceled())
+			return;
 
 		try
 		{
@@ -316,7 +314,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			// Once the model is loaded and the process is up and running,
 			// update the model with the information.
 			monitor.subTask("Updating procedure status");
-			m_models.updateLocalProcedureModel(instanceId, null, ClientMode.CONTROLLING, false, monitor);
+			m_models.updateLocalProcedureModel(instanceId, null, ClientMode.CONTROLLING, null, monitor);
 			// Report progress
 			monitor.worked(1);
 		}
@@ -360,7 +358,8 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		// Start the task in the monitor
 		monitor.beginTask("Recovering procedure", 6);
 		// Check cancellation
-		if (monitor.isCanceled()) return;
+		if (monitor.isCanceled())
+			return;
 
 		// -----------------------------
 		// PHASE 1, create a local model
@@ -453,8 +452,10 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			// update the model with the information
 			monitor.subTask("Updating procedure status");
 			// Use the AsRun of the PREVIOUS procedure execution this time
-			m_models.updateLocalProcedureModel(instanceId, procedure.getFile() + ".ASRUN", ClientMode.CONTROLLING, true,
-			        monitor);
+
+			AsRunReplayResult result = new AsRunReplayResult();
+
+			m_models.updateLocalProcedureModel(instanceId, procedure.getFile() + ".ASRUN", ClientMode.CONTROLLING, result, monitor);
 			// Report progress
 			monitor.worked(1);
 		}
@@ -496,9 +497,9 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 *             if the procedure could not be attached
 	 **************************************************************************/
 	@Override
-	public void controlProcedure(String instanceId, IProgressMonitor monitor) throws LoadFailed
+	public void controlProcedure(String instanceId, AsRunReplayResult result, IProgressMonitor monitor) throws LoadFailed
 	{
-		attachToRemoteProcedure(instanceId, ClientMode.CONTROLLING, monitor);
+		attachToRemoteProcedure(instanceId, ClientMode.CONTROLLING, result, monitor);
 	}
 
 	/***************************************************************************
@@ -510,9 +511,9 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 *             if the procedure could not be attached
 	 **************************************************************************/
 	@Override
-	public void monitorProcedure(String instanceId, IProgressMonitor monitor) throws LoadFailed
+	public void monitorProcedure(String instanceId, AsRunReplayResult result, IProgressMonitor monitor) throws LoadFailed
 	{
-		attachToRemoteProcedure(instanceId, ClientMode.MONITORING, monitor);
+		attachToRemoteProcedure(instanceId, ClientMode.MONITORING, result, monitor);
 	}
 
 	/***************************************************************************
@@ -536,7 +537,8 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		monitor.beginTask("Opening procedure", 6);
 
 		// Check cancellation
-		if (monitor.isCanceled()) return;
+		if (monitor.isCanceled())
+			return;
 
 		try
 		{
@@ -631,7 +633,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			// Once the model is loaded and the process is up and running,
 			// update the model with the information
 			monitor.subTask("Updating procedure status");
-			m_models.updateLocalProcedureModel(instanceId, null, ClientMode.CONTROLLING, false, monitor);
+			m_models.updateLocalProcedureModel(instanceId, null, ClientMode.CONTROLLING, null, monitor);
 			// Report progress
 			monitor.worked(1);
 		}
@@ -800,9 +802,9 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 * @return The procedure list
 	 **************************************************************************/
 	@Override
-	public Map<String, String> getAvailableProcedures( boolean refresh )
+	public Map<String, String> getAvailableProcedures(boolean refresh)
 	{
-		return m_models.getAvailableProcedures( refresh );
+		return m_models.getAvailableProcedures(refresh);
 	}
 
 	/***************************************************************************
@@ -829,7 +831,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 * 
 	 **************************************************************************/
 	@Override
-	public Set<String> getOpenRemoteProcedures( boolean refresh )
+	public Set<String> getOpenRemoteProcedures(boolean refresh)
 	{
 		if (refresh)
 		{
@@ -913,8 +915,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		// Check that the procedure is loaded
 		if (m_models.isLocal(instanceId))
 		{
-			Logger.error("Procedure '" + instanceId + "' error: " + data.getMessage() + ", " + data.getReason(),
-			        Level.PROC, this);
+			Logger.error("Procedure '" + instanceId + "' error: " + data.getMessage() + ", " + data.getReason(), Level.PROC, this);
 
 			// Set the model to error status
 			IProcedure procedure = m_models.getProcedure(instanceId);
@@ -1008,7 +1009,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	public void notifyProcedureConfiguration(ExecutorConfig data)
 	{
 		String instanceId = data.getProcId();
-		// If we are monitoring the procedure (locally loaded) 
+		// If we are monitoring the procedure (locally loaded)
 		if (m_models.isLocal(instanceId))
 		{
 			IProcedure model = m_models.getProcedure(instanceId);
@@ -1063,11 +1064,12 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	public void notifyRemoteProcedureControlled(String instanceId, String guiKey)
 	{
 		Logger.debug("NOTIFIED from context: remote procedure controlled: " + instanceId, Level.PROC, this);
-		
+
 		// If the procedure was local but the client key is not mine
 		if (m_models.isLocal(instanceId) && !s_ctx.getClientKey().equals(guiKey))
 		{
-			// If the procedure was being controlled, the control has been stolen.
+			// If the procedure was being controlled, the control has been
+			// stolen.
 			IProcedure model = m_models.getProcedure(instanceId);
 			if (model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
 			{
@@ -1081,7 +1083,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			{
 				m_models.updateRemoteProcedureModel(instanceId);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				ex.printStackTrace();
 			}
@@ -1152,7 +1154,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			Logger.debug("Adding new monitoring client to local model", Level.PROC, this);
 			IProcedure proc = getProcedure(instanceId);
 			IExecutionInformationHandler handler = (IExecutionInformationHandler) proc.getRuntimeInformation();
-			handler.addMonitoringClient( new ProcedureClient(guiKey, "???"));
+			handler.addMonitoringClient(new ProcedureClient(guiKey, "???"));
 		}
 		else
 		{
@@ -1161,7 +1163,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			{
 				m_models.updateRemoteProcedureModel(instanceId);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				ex.printStackTrace();
 			}
@@ -1207,7 +1209,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			Logger.debug("Removing monitoring client from local model", Level.PROC, this);
 			IProcedure proc = getProcedure(instanceId);
 			IExecutionInformationHandler handler = (IExecutionInformationHandler) proc.getRuntimeInformation();
-			handler.removeMonitoringClient( new ProcedureClient(guiKey, "???") );
+			handler.removeMonitoringClient(new ProcedureClient(guiKey, "???"));
 		}
 		else
 		{
@@ -1216,7 +1218,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			{
 				m_models.updateRemoteProcedureModel(instanceId);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				ex.printStackTrace();
 			}
@@ -1229,15 +1231,16 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	@Override
 	public void notifyRemoteProcedureStatus(String instanceId, ExecutorStatus status, String guiKey)
 	{
-		// Filter out if the procedure is local. Extra notifications may arrive during a transition to local or opposite
+		// Filter out if the procedure is local. Extra notifications may arrive
+		// during a transition to local or opposite
 		if (!m_models.isLocal(instanceId))
-		{	
+		{
 			Logger.debug("NOTIFIED from context: remote procedure status (" + status.name() + "): " + instanceId, Level.PROC, this);
 			try
 			{
 				m_models.updateRemoteProcedureModel(instanceId);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				ex.printStackTrace();
 			}
@@ -1247,12 +1250,12 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-    @Override
-    public void notifyProcedureControl(ControlNotification data)
-    {
-	    // TODO Auto-generated method stub
-	    
-    }
+	@Override
+	public void notifyProcedureControl(ControlNotification data)
+	{
+		// TODO Auto-generated method stub
+
+	}
 
 	/*
 	 * #########################################################################
@@ -1325,12 +1328,12 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		m_models.obtainAvailableProcedures();
 		// Build the list of remote procedure models
 		m_models.obtainRemoteProcedures();
-		
+
 		// FIXME: this is still not possible since re-attached contexts
 		// do not have control on procedures open in previous context instances
 		// We shall enable any open model since we can control the SEE
 		// counterpart again
-		//m_models.enableProcedures();
+		// m_models.enableProcedures();
 	}
 
 	/***************************************************************************
@@ -1346,7 +1349,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		m_models.clearRemoteProcedures();
 		// We shall disable any open model since we cannot control the SEE
 		// counterpart
-		m_models.disableProcedures( "Context detached" );
+		m_models.disableProcedures("Context detached");
 	}
 
 	/***************************************************************************
@@ -1362,7 +1365,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		m_models.clearRemoteProcedures();
 		// We shall disable any open model since we cannot control the SEE
 		// counterpart
-		m_models.disableProcedures( "Lost connection with context" );
+		m_models.disableProcedures("Lost connection with context");
 	}
 
 	/*
@@ -1379,7 +1382,10 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 **************************************************************************/
 	private void checkConnectivity() throws NotConnected
 	{
-		if (!s_ctx.isConnected()) { throw new NotConnected("Cannot operate: not conected to context"); }
+		if (!s_ctx.isConnected())
+		{
+			throw new NotConnected("Cannot operate: not conected to context");
+		}
 	}
 
 	/***************************************************************************
@@ -1388,8 +1394,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 	 * @param instanceId
 	 *            Procedure instance identifier
 	 **************************************************************************/
-	private void attachToRemoteProcedure(String instanceId, ClientMode mode, IProgressMonitor monitor)
-	        throws LoadFailed
+	private void attachToRemoteProcedure(String instanceId, ClientMode mode, AsRunReplayResult result, IProgressMonitor monitor) throws LoadFailed
 	{
 		Logger.info("Attaching to remote procedure in mode " + mode, Level.PROC, this);
 
@@ -1400,7 +1405,8 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		monitor.beginTask("Attaching to procedure", 8);
 
 		// Check cancellation
-		if (monitor.isCanceled()) return;
+		if (monitor.isCanceled())
+			return;
 
 		try
 		{
@@ -1430,10 +1436,11 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 		// which is the procedure data known at core level.
 		try
 		{
-			
+
 			if (mode.equals(ClientMode.CONTROLLING))
 			{
-				// Update the model before, we may not need to attach. Also, if it is controlled
+				// Update the model before, we may not need to attach. Also, if
+				// it is controlled
 				// by somebody else we need to fail
 				Logger.debug("Getting controlling client information" + instanceId, Level.PROC, this);
 				model.getController().refresh();
@@ -1448,7 +1455,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 					// Report progress
 					monitor.worked(1);
 				}
-				else 
+				else
 				{
 					if (!model.getRuntimeInformation().getControllingClient().getKey().equals(s_ctx.getClientKey()))
 					{
@@ -1495,7 +1502,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			// Once the model is loaded and the process is up and running,
 			// update the model with the information
 			monitor.subTask("Updating procedure status");
-			m_models.updateLocalProcedureModel(instanceId, null, mode, true, monitor);
+			m_models.updateLocalProcedureModel(instanceId, null, mode, result, monitor);
 			// Report progress
 			monitor.worked(1);
 		}
@@ -1689,8 +1696,7 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 				// processing
 				monitor.setCanceled(true);
 				monitor.done();
-				throw new UnloadFailed("Failed to release the procedure " + instanceId + ": "
-				        + err.getLocalizedMessage());
+				throw new UnloadFailed("Failed to release the procedure " + instanceId + ": " + err.getLocalizedMessage());
 			}
 		}
 
@@ -1893,4 +1899,10 @@ public class ProcedureManager extends BaseService implements IProcedureManager,
 			m_loadMonitors.get(instanceId).setProcedureStatus(status);
 		}
 	}
+
+	@Override
+    public void clearNotifications()
+    {
+	    // Nothing to do
+    }
 }

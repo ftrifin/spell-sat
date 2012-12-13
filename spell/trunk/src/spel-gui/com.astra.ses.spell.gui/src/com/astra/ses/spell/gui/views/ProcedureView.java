@@ -233,7 +233,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		Logger.debug("Creating controls", Level.INIT, this);
 
 		// Set the top composite layout
-		m_top = parent; // new Composite(parent, SWT.NONE);
+		m_top = parent; 
 		GridLayout layout = new GridLayout();
 		// We do not want extra margins
 		layout.marginHeight = 0;

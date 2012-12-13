@@ -80,7 +80,7 @@ void SPELLexecutorIPC::setup()
 //=============================================================================
 void SPELLexecutorIPC::cleanup()
 {
-	SPELLmonitor m(m_notifyLock);
+	SPELLtryMonitor m(m_notifyLock);
 	DEBUG("[EXCIPC] Cleanup");
 	m_connected = false;
 	DEBUG("[EXCIPC] Close executor connection");
@@ -212,7 +212,7 @@ void SPELLexecutorIPC::processConnectionClosed( int peerKey )
 void SPELLexecutorIPC::notifyMessage( const SPELLipcMessage& msg )
 {
 	TICK_IN;
-	SPELLmonitor m(m_notifyLock);
+	SPELLtryMonitor m(m_notifyLock);
 	if (m_connected)
 	{
 		if (m_notifiers.size()>0)
@@ -233,7 +233,7 @@ void SPELLexecutorIPC::notifyMessage( const SPELLipcMessage& msg )
 void SPELLexecutorIPC::notifyRequest( const SPELLipcMessage& msg )
 {
 	TICK_IN;
-	SPELLmonitor m(m_notifyLock);
+	SPELLtryMonitor m(m_notifyLock);
 	if (m_connected)
 	{
 		if (m_notifiers.size()>0)
@@ -254,7 +254,7 @@ void SPELLexecutorIPC::notifyRequest( const SPELLipcMessage& msg )
 void SPELLexecutorIPC::registerExecutorNotifier( SPELLexecutorListener* notifier )
 {
 	DEBUG("[EXCIPC] TRY-IN Register notifier listener: " + PSTR(notifier));
-	SPELLmonitor m(m_notifyLock);
+	SPELLtryMonitor m(m_notifyLock);
 	DEBUG("[EXCIPC] Register notifier listener: " + PSTR(notifier));
 	NotifierList::iterator it;
 	for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)
@@ -270,7 +270,7 @@ void SPELLexecutorIPC::registerExecutorNotifier( SPELLexecutorListener* notifier
 void SPELLexecutorIPC::deregisterExecutorNotifier( SPELLexecutorListener* notifier )
 {
 	DEBUG("[EXCIPC] TRY-IN De-register notifier listener: " + PSTR(notifier));
-	SPELLmonitor m(m_notifyLock);
+	SPELLtryMonitor m(m_notifyLock);
 	DEBUG("[EXCIPC] De-register notifier listener: " + PSTR(notifier));
 	NotifierList::iterator it;
 	for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)

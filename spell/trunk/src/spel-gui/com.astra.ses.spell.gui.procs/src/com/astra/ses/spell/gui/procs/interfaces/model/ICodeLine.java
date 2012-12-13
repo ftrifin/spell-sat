@@ -23,6 +23,8 @@ public interface ICodeLine
 	
 	public List<ItemNotification> getNotifications( SummaryMode mode );
 	public boolean hasNotifications();
+	public void clearNotifications();
+	public void clearFullHistory();
 	
 	public void onItemNotification( ItemNotification data );
 	public void onExecuted();

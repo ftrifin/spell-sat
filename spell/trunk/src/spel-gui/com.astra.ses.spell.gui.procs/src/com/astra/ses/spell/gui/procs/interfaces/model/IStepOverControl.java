@@ -56,4 +56,5 @@ public interface IStepOverControl
 	public void onExecutionLine();
 	public void onExecutionReturn();
 	public boolean isSteppingOver();
+	public void reset();
 }

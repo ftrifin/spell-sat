@@ -52,6 +52,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 public class GrabProcedureTask extends Thread
@@ -89,7 +90,8 @@ public class GrabProcedureTask extends Thread
 				;
 			}
 		}
-		m_mgr.controlProcedure(m_procId, new NullProgressMonitor());
+		AsRunReplayResult result = new AsRunReplayResult();
+		m_mgr.controlProcedure(m_procId, result, new NullProgressMonitor());
 		// Once it is controlled, run it if it is automatic and visible.
 		// IMPORTANT if it is not visible, the procedure is in background and
 		// will run by itself.

@@ -8,7 +8,6 @@ import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 
 public interface IExecutionStatusManager
 {
@@ -27,6 +26,7 @@ public interface IExecutionStatusManager
 	public void reset();
 	public void dispose();
 	
+	public void clearNotifications();
 	public void clearBreakpoints();
 	public void setBreakpoint( int lineNo, BreakpointType type );
 

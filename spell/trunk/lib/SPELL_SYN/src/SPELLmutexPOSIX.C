@@ -58,6 +58,24 @@ void SPELLmutexPOSIX::lock()
 }
 
 //=============================================================================
+// METHOD    : SPELLmutexPOSIX::trylock
+//=============================================================================
+bool SPELLmutexPOSIX::trylock()
+{
+    errno = 0;
+    int result = pthread_mutex_trylock(&m_mutex);
+    if (result == EBUSY)
+    {
+    	return false;
+    }
+    else if (result == 0)
+    {
+    	return true;
+    }
+    return false;
+}
+
+//=============================================================================
 // METHOD    : SPELLmutexPOSIX::unlock
 //=============================================================================
 void SPELLmutexPOSIX::unlock()

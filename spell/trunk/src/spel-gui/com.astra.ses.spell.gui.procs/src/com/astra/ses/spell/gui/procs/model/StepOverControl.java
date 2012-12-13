@@ -54,108 +54,112 @@ import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
 public class StepOverControl implements IStepOverControl
 {
 	private StepOverMode m_mode;
-	private StepOverMode m_temporaryMode;
 	private int m_currentDepth;
-	private int m_stepOverStartDepth;
-	
+	private int m_tempMaxDepth;
+	private int m_maxDepth;
+	private boolean m_intoOne;
+
 	public StepOverControl()
 	{
 		m_mode = null;
-		m_temporaryMode = null;
-		m_currentDepth = 0;
-		m_stepOverStartDepth = -1;
+		reset();
 	}
 
 	@Override
     public StepOverMode getMode()
     {
-		if (m_temporaryMode != null)
-		{
-			return m_temporaryMode;
-		}
 	    return m_mode;
     }
 
 	@Override
     public void setMode(StepOverMode mode)
     {
-		Logger.debug("Set mode " + mode + ", current " + m_mode + ", temporary " + m_temporaryMode, Level.PROC, this);
-
+		Logger.debug("Set mode " + mode + ", current " + m_mode, Level.PROC, this);
 		switch(mode)
 		{
-		case STEP_INTO_ALWAYS:
 		case STEP_OVER_ALWAYS:
-			m_mode = mode;
-			m_temporaryMode = null;
+			// If this mode is set, we need to stick to the current level or above. This means that
+			// any level above this maximum shall not be notified.
+			m_maxDepth = m_currentDepth;
+			m_tempMaxDepth = -1;
+			break;
+		case STEP_OVER_ONCE:
+			// There is a temporary maximum level. This level will be reset when the current level
+			// is back equal to this temporary max.
+			m_tempMaxDepth = m_currentDepth;
+			// Do not modify the absolute maximum level: a click on STEP OVER button shall not affect
+			// the fact that we are still in step over always
 			break;
 		case STEP_INTO_ONCE:
-		case STEP_OVER_ONCE:
-			m_temporaryMode = mode;
+			// Modify the absolute maximum level: a click on STEP INTO button will change the
+			// step over always mode, in a way that now the maximum level is updated to the current one
+			if ((m_mode != null) && (m_mode.equals(StepOverMode.STEP_OVER_ALWAYS))) m_intoOne = true;
+			break;
+		case STEP_INTO_ALWAYS:
+			// There is no maximum level
+			m_maxDepth = -1;
+			m_tempMaxDepth = -1;
+			break;
+		default:
 			break;
 		}
-		
-		Logger.debug("Assigned mode " + m_mode + ", temporary " + m_temporaryMode, Level.PROC, this);
-
-	    switch(mode)
-	    {
-		case STEP_OVER_ALWAYS:
-			// We are going to remain at the present depth:
-			m_stepOverStartDepth = m_currentDepth;
-			break;
-		case STEP_INTO_ALWAYS:
-			// We are going notify all calls
-			m_stepOverStartDepth = -1;
-			break;
-		case STEP_INTO_ONCE:
-			// We are going notify only the next call, afterwards we go back to
-			// the previous mode
-			m_stepOverStartDepth = -1;
-			break;
-		case STEP_OVER_ONCE:
-			// We are going to remain at the present depth, but only
-			// for the next function call/return pair (functions inside that call
-			// need to be stepped over as well)
-			m_stepOverStartDepth = m_currentDepth;
-			break;
-	    }
-		Logger.debug("Current depth: " + m_currentDepth + ", so depth: " + m_stepOverStartDepth, Level.PROC, this);
+		m_mode = mode;
     }
 
 	@Override
     public void onExecutionCall()
     {
 		m_currentDepth++;
-		Logger.debug("On execution call: " + m_currentDepth + ", so: " + m_stepOverStartDepth, Level.PROC, this);
-		Logger.debug("Reset temporary mode", Level.PROC, this);
-		m_temporaryMode = null;
+		if (m_intoOne) 
+		{
+			m_maxDepth++;
+			m_intoOne = false;
+		}
     }
 
 	@Override
     public void onExecutionLine()
     {
-		Logger.debug("Reset temporary mode", Level.PROC, this);
-		m_temporaryMode = null;
     }
 
 	@Override
     public void onExecutionReturn()
     {
 		m_currentDepth--;
-		Logger.debug("On execution return: " + m_currentDepth + ", so: " + m_stepOverStartDepth, Level.PROC, this);
-		// If we have come back to the depth where SO started,
-		// reset the mode
-		if (m_stepOverStartDepth == m_currentDepth)
+		// If we started the SO in a level 3 but we return to level 2, now
+		// the maximum level shall be 2 as well
+		if (m_currentDepth < m_maxDepth)
 		{
-			Logger.debug("Reset temporary mode", Level.PROC, this);
-			m_temporaryMode = null;
+			m_maxDepth = m_currentDepth;
+		}
+		// Reset the temporary max level if we come back to the level were it was set
+		if (m_currentDepth == m_tempMaxDepth)
+		{
+			m_tempMaxDepth = -1;
 		}
     }
 
 	@Override
     public boolean isSteppingOver()
     {
-	    if (m_stepOverStartDepth==-1) return false;
-	    return m_currentDepth > m_stepOverStartDepth;
+		if ( (m_tempMaxDepth != -1) && (m_tempMaxDepth < m_currentDepth))
+		{
+			return true;
+		}
+		if ( (m_maxDepth != -1) && (m_maxDepth < m_currentDepth))
+		{
+			return true;
+		}
+		return false;
     }
 
+	@Override
+	public void reset()
+	{
+		m_intoOne = false;
+		m_mode = null;
+		m_currentDepth = 0;
+		m_tempMaxDepth = -1;
+		m_maxDepth = -1;
+	}
 }
