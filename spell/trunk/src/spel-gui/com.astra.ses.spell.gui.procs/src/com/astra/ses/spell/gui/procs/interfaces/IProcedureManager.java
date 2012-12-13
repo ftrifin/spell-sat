@@ -61,6 +61,7 @@ import com.astra.ses.spell.gui.core.model.types.ProcProperties;
 import com.astra.ses.spell.gui.procs.exceptions.LoadFailed;
 import com.astra.ses.spell.gui.procs.exceptions.NoSuchProcedure;
 import com.astra.ses.spell.gui.procs.exceptions.UnloadFailed;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 
@@ -99,7 +100,7 @@ public interface IProcedureManager extends IService
 	 * @throws LoadFailed
 	 *             if the procedure could not be attached
 	 **************************************************************************/
-	public void controlProcedure(String instanceId, IProgressMonitor monitor) throws LoadFailed;
+	public void controlProcedure(String instanceId, AsRunReplayResult result, IProgressMonitor monitor) throws LoadFailed;
 
 	/***************************************************************************
 	 * Attach an existing procedure instance in monitoring mode.
@@ -109,7 +110,7 @@ public interface IProcedureManager extends IService
 	 * @throws LoadFailed
 	 *             if the procedure could not be attached
 	 **************************************************************************/
-	public void monitorProcedure(String instanceId, IProgressMonitor monitor) throws LoadFailed;
+	public void monitorProcedure(String instanceId, AsRunReplayResult result, IProgressMonitor monitor) throws LoadFailed;
 
 	/***************************************************************************
 	 * Schedule a new procedure instance for the given procedure.

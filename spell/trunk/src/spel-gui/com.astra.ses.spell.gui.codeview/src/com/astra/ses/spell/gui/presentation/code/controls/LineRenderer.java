@@ -129,7 +129,7 @@ public class LineRenderer extends SourceRenderer
 
 		String text = item.getText(getColumn());
 		text = text.replace("\t", "    ");
-		text = getShortString(gc, text, width);
+		text = getShortString(gc, text, width,true);
 
 		x += setupAlignment( gc, text, width );
 		

@@ -121,7 +121,7 @@ public class DataRenderer extends SourceRenderer
 				else if (textValue.trim().isEmpty())
 				{
 					// Draw name
-					textName = getShortString(gc, textName, cellW );
+					textName = getShortString(gc, textName, cellW, true);
 					x += setupAlignment( gc, textName, cellW );
 					gc.drawString(textName, getBounds().x + x, getBounds().y + m_textTopMargin + m_topMargin);
 				}
@@ -130,7 +130,7 @@ public class DataRenderer extends SourceRenderer
 				{
 					// Draw name
 					textName = textName + " = " + textValue;
-					textName = getShortString(gc, textName, cellW );
+					textName = getShortString(gc, textName, cellW, true);
 					x += setupAlignment( gc, textName, cellW );
 					gc.drawString(textName, getBounds().x + x, getBounds().y + m_textTopMargin + m_topMargin);
 				}
@@ -151,5 +151,39 @@ public class DataRenderer extends SourceRenderer
 			}
 		}
 		catch(Exception ignore) {};
+	}
+
+	@Override
+	protected Color getBackground( ICodeLine line )
+	{
+		// If the line is executed, darken the color a bit
+		Color result = null;
+
+		// If we are in the current line, use highlight color instead
+		try
+		{
+			if (!line.hasNotifications() && (getModel().getExecutionManager().getCurrentLine() == line) )
+			{
+				result = getHighlightColor();
+			}
+			else if (getStatus() != null)
+			{
+				if (line.getNumExecutions()>0)
+				{
+					result = s_cfg.getProcedureColorDark(getStatus());
+				}
+				else
+				{
+					result = s_cfg.getProcedureColor(getStatus());
+				}
+			}
+		}
+		catch(Exception ignore) {}
+
+		if (result == null)
+		{
+			result = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
+		}
+		return result;
 	}
 }

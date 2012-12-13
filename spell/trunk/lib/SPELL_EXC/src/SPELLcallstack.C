@@ -317,14 +317,6 @@ void SPELLcallstack::callbackEventReturn( PyFrameObject* frame, const std::strin
         }
     }
 
-    // Update the stack string
-    m_stack = std::string(file + ":" + ISTR(line));
-    m_fullStack.pop_back();
-    m_fullStack[m_fullStack.size()-1] = m_stack;
-
-    // Update the code name string
-    m_codeName = name;
-
     // If in error state, do not move up the call stack
     // FIXME: to be checked that we dont need to put the
     // error state filter above in this function to prevent further changes
@@ -334,6 +326,15 @@ void SPELLcallstack::callbackEventReturn( PyFrameObject* frame, const std::strin
     	DEBUG("[CSTACK] Event return notify");
     	SPELLexecutor::instance().getCIF().notifyReturn();
     }
+
+    // Update the stack string
+    m_stack = std::string(file + ":" + ISTR(line));
+    m_fullStack.pop_back();
+    m_fullStack[m_fullStack.size()-1] = m_stack;
+
+    // Update the code name string
+    m_codeName = name;
+
 }
 
 //=============================================================================

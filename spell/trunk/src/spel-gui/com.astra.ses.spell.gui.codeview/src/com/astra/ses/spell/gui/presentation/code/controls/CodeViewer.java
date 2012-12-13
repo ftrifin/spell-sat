@@ -489,8 +489,8 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 			if (line.hasNotifications())
 			{
 				line.calculateSummary();
-				update(line,null);
 			}
+			update(line,null);
 		}
 		showLastLine();
 	}

@@ -55,11 +55,13 @@ import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.IFileManager;
 import com.astra.ses.spell.gui.core.interfaces.IServerProxy;
 import com.astra.ses.spell.gui.core.interfaces.IShellManager;
+import com.astra.ses.spell.gui.core.interfaces.IStatusManager;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.services.ContextProxy;
 import com.astra.ses.spell.gui.core.services.FileManager;
 import com.astra.ses.spell.gui.core.services.ServerProxy;
 import com.astra.ses.spell.gui.core.services.ShellManager;
+import com.astra.ses.spell.gui.core.services.StatusManager;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -133,6 +135,7 @@ public class Activator extends Plugin
 			ServiceManager.registerService(IContextProxy.class, new ContextProxy());
 			ServiceManager.registerService(IShellManager.class, new ShellManager());
 			ServiceManager.registerService(IFileManager.class, new FileManager());
+			ServiceManager.registerService(IStatusManager.class, new StatusManager());
 		}
 		catch (Exception e)
 		{
@@ -149,6 +152,7 @@ public class Activator extends Plugin
 		ServiceManager.get(IContextProxy.class).setup();
 		ServiceManager.get(IShellManager.class).setup();
 		ServiceManager.get(IFileManager.class).setup();
+		ServiceManager.get(IStatusManager.class).setup();
 	}
 
 	/***************************************************************************
@@ -160,6 +164,7 @@ public class Activator extends Plugin
 		ServiceManager.get(IContextProxy.class).subscribe();
 		ServiceManager.get(IShellManager.class).subscribe();
 		ServiceManager.get(IFileManager.class).subscribe();
+		ServiceManager.get(IStatusManager.class).subscribe();
 	}
 
 	/***************************************************************************
@@ -171,5 +176,6 @@ public class Activator extends Plugin
 		ServiceManager.get(IContextProxy.class).cleanup();
 		ServiceManager.get(IShellManager.class).cleanup();
 		ServiceManager.get(IFileManager.class).cleanup();
+		ServiceManager.get(IStatusManager.class).cleanup();
 	}
 }

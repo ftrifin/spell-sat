@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.presentation.text.model
+// PACKAGE   : com.astra.ses.spell.gui.procs.interfaces.model
 // 
-// FILE      : TextViewLine.java
+// FILE      : AsRunProcessing.java
 //
-// DATE      : 2008-11-21 13:54
+// DATE      : Nov 29, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,89 +43,12 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.presentation.text.model;
+package com.astra.ses.spell.gui.procs.interfaces.model;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.TimeZone;
-
-import com.astra.ses.spell.gui.core.model.types.Scope;
-
-public class TextViewLine implements Comparable<TextViewLine>
+public enum AsRunProcessing
 {
-	private static DateFormat s_format ;
-	
-	static
-	{
-		s_format = new SimpleDateFormat("HH:mm:ss");
-		s_format.setTimeZone(TimeZone.getTimeZone("GMT"));
-	}
-	
-	private String m_text;
-	private ParagraphType m_type;
-	private Scope m_scope;
-	private long m_sequence;
-	private String m_timestamp;
-	private boolean m_showTimestamp;
-
-	public TextViewLine(String text, Scope scope, ParagraphType iconId, long sequence, boolean showTimestamp )
-	{
-		m_text = text;
-		m_type = iconId;
-		m_sequence = sequence;
-		m_scope = scope;
-		m_timestamp = s_format.format(Calendar.getInstance().getTime());
-		m_showTimestamp = showTimestamp;
-	}
-
-	public String getText()
-	{
-		if (m_showTimestamp)
-		{
-			return "[ " + m_timestamp + " ] " + m_text;
-		}
-		return m_text;
-	}
-
-	public void setShowTimestamp(boolean show)
-	{
-		m_showTimestamp = show;
-	}
-
-	public long getSequence()
-	{
-		return m_sequence;
-	}
-
-	public ParagraphType getType()
-	{
-		return m_type;
-	}
-
-	public Scope getScope()
-	{
-		return m_scope;
-	}
-
-	public int length()
-	{
-		return m_text.length();
-	}
-
-	public String toString()
-	{
-		return m_text;
-	}
-
-	@Override
-	public int compareTo(TextViewLine that)
-	{
-		Long n1 = new Long(this.getSequence());
-		Long n2 = new Long(that.getSequence());
-		return n1.compareTo(n2);
-	}
+	COMPLETE,
+	PARTIAL,
+	FAILED
 }

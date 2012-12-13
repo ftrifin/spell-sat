@@ -26,7 +26,7 @@
 
 ACLOCAL_AMFLAGS = -I m4  
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = lib src drivers config doc rcp scripts procs data
+SUBDIRS = lib drivers src config doc rcp scripts procs data
 
 install-exec-hook:
 	mkdir -p ${exec_prefix}/log

@@ -54,9 +54,16 @@ import java.util.Calendar;
 import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 
+import com.astra.ses.spell.gui.core.interfaces.ICoreStatusListener;
+import com.astra.ses.spell.gui.core.interfaces.IStatusManager;
+import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.model.notification.ClientStatus;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification.StackType;
@@ -68,21 +75,37 @@ import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionStatusManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
-public class ExecutionStatusManager implements IExecutionStatusManager
+public class ExecutionStatusManager implements IExecutionStatusManager, ICoreStatusListener
 {
 	private static final DateFormat s_df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 	
+	/** Holds the base code identifier */
+	private String m_instanceId;
+	/** Holds the current code identifier */
 	private String m_codeId;
+	/** Holds the current line number */
 	private int m_currentLineNo;
-	private List<ICodeLine> m_lines;
+	/** Holds code lines per code identifier */
+	private Map<String,List<ICodeLine>> m_lines;
+	/** True if in replay mode */
 	private boolean m_replay;
+	/** Holds the listeners */
 	private List<IExecutionListener> m_listeners;
+	/** Reference to the model */
 	private IProcedure m_model;
 	
+	/** Used to order the notifications */
 	private long m_lastLineNotificationSequence;
+	
+	/** USed to detect processing delays */
 	private long m_processingDelaySec;
 	
 	
+	/**************************************************************************
+	 * Constructor
+	 * @param instanceId
+	 * @param model
+	 *************************************************************************/
 	public ExecutionStatusManager( String instanceId, IProcedure model )
 	{
 		Logger.debug("Created", Level.PROC, this);
@@ -91,45 +114,68 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		{
 			instanceId = instanceId.substring(0, idx);
 		}
+		m_instanceId = instanceId;
 		m_codeId = instanceId;
 		m_model = model;
-		m_lines = new LinkedList<ICodeLine>();
+		m_lines = new TreeMap<String,List<ICodeLine>>();
+		m_lines.put(instanceId,new LinkedList<ICodeLine>());
 		m_replay = false;
 		m_listeners = new LinkedList<IExecutionListener>();
 		m_lastLineNotificationSequence = 0;
 		m_processingDelaySec = 0;
+		
+		IStatusManager st = (IStatusManager) ServiceManager.get(IStatusManager.class);
+		st.addListener(this);
 	}
 	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public String getCodeId()
     {
 	    return m_codeId;
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public int getCurrentLineNo()
     {
 	    return m_currentLineNo;
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public ICodeLine getCurrentLine()
     {
-	    return m_lines.get(m_currentLineNo);
+	    return m_lines.get(m_codeId).get(m_currentLineNo);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public ICodeLine getLine(int lineNo)
     {
-	    return m_lines.get(lineNo);
+	    return m_lines.get(m_codeId).get(lineNo);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public List<ICodeLine> getLines()
     {
-	    return m_lines;
+	    return m_lines.get(m_codeId);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void initialize(IProgressMonitor monitor)
     {
@@ -139,19 +185,37 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 	    for(String source : lines)
 	    {
 	    	ICodeLine codeLine = new CodeLine(index, source);
-	    	m_lines.add(codeLine);
+	    	getLines().add(codeLine);
 	    	index++;
 	    }
-		Logger.debug("Initialized, lines " + m_lines.size(), Level.PROC, this);
+		Logger.debug("Initialized, lines " + getLines().size(), Level.PROC, this);
 	    notifyCodeChanged();
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public boolean isInReplay()
     {
 	    return m_replay;
     }
+	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public void clearNotifications()
+	{
+		for(ICodeLine line : getLines())
+		{
+			line.clearNotifications();
+		}
+	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void onItemNotification(ItemNotification data)
     {
@@ -160,10 +224,12 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		
 		List<ICodeLine> updatedLines = new LinkedList<ICodeLine>();
 	    placeNotification( stack, data, updatedLines );
-	    
 	    notifyItemsChanged(updatedLines);
     }
 	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	private void placeNotification( List<String> stack, ItemNotification data, List<ICodeLine> updatedLines )
 	{
 		Logger.debug("Place notification: " + Arrays.toString(stack.toArray()), Level.PROC, this);
@@ -196,6 +262,9 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		}
 	}
 	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void onStackNotification(StackNotification data)
     {
@@ -204,16 +273,35 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 	    
 		if (data.getStackType().equals(StackNotification.StackType.STAGE)) return;
 		
-		// Only on line events: if the sequence of the notification is lower than the last
-		// one processed, do not place it. We need to do this is messages come
-		// in bad order from the server, to avoid weird line jumping.
+		// If the code changes, update the current model
+		String currentCodeId = stack.get(stack.size()-2);
 		
+		if (!m_codeId.equals(currentCodeId))
+		{
+			m_codeId = currentCodeId;
+			if (!m_lines.containsKey(m_codeId))
+			{
+			    m_lines.put(m_codeId, new LinkedList<ICodeLine>() );
+				initialize( new NullProgressMonitor() );
+			}
+			else
+			{
+				notifyCodeChanged();
+			}
+		}
+		
+		// Only on line events: if the sequence of the notification is lower than the last
+		// one processed, do not NOTIFY IT to GUI components. 
+		// We need to do this is messages come in bad order from the server, to avoid 
+		// weird line jumping.
+		
+		boolean notifyGUI = true;
 		if (data.getStackType().equals(StackType.LINE))
 		{
 			long seq = data.getSequence();
 			if (seq < m_lastLineNotificationSequence)
 			{
-				return;
+				notifyGUI = false;
 			}
 			else
 			{
@@ -223,11 +311,10 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 			}
 		}
 		
-		Logger.debug("Notified stack: " + Arrays.toString(stack.toArray()), Level.PROC, this);
-	    placeExecution( stack, data.getStackType() );
+	    placeExecution( stack, data.getStackType(), notifyGUI );
 
 	    // Update processing delay
-	    if (!m_replay)
+	    if (!m_replay && notifyGUI)
 	    {
 		    try
 	        {
@@ -235,13 +322,13 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		    	System.out.println("CURRENT TIME     : " + s_df.format( Calendar.getInstance().getTime() ));
 		    	long currentTime = Calendar.getInstance().getTime().getTime();
 		        long notificationTime = s_df.parse( data.getTime() ).getTime();
-		        long diff = Math.abs(notificationTime - currentTime);
-		        long diffSec = diff/1000000;
+		        long diffUsec = Math.abs(notificationTime - currentTime);
+		        long diffSec = diffUsec/1000000;
 		    	System.out.println("DIFF IN SECONDS  : " + diffSec);
 		        if (m_processingDelaySec != diffSec)
 		        {
 		        	m_processingDelaySec = diffSec;
-		        	notifyDelayChanged(diff);
+		        	notifyDelayChanged(diffSec);
 		        }
 	        }
 	        catch (ParseException e)
@@ -251,10 +338,13 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 	    }
     }
 
-	private void placeExecution( List<String> stack, StackNotification.StackType type )
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	private void placeExecution( List<String> stack, StackNotification.StackType type, boolean notifyGUI )
 	{
 		Logger.debug("Place execution: " + Arrays.toString(stack.toArray()), Level.PROC, this);
-		//TODO consider steop over
+
 		if (stack.size()>2)
 		{
 			// NOTE: the stack notifications start at index 1
@@ -266,7 +356,7 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 				return;
 			}
 			line.onExecuted();
-			placeExecution( stack.subList(2, stack.size()), type);
+			placeExecution( stack.subList(2, stack.size()), type, notifyGUI);
 		}
 		else
 		{
@@ -280,7 +370,7 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 			}
 			line.onExecuted();
 			// If the SO is inactive, notify clients
-			if (!m_model.getController().getStepOverControl().isSteppingOver())
+			if (!m_model.getController().getStepOverControl().isSteppingOver() && notifyGUI)
 			{
 				// This is the head, update the current line
 				Logger.debug("Current line:" + lineNo, Level.PROC, this);
@@ -290,35 +380,55 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		}
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void reset()
     {
 		Logger.debug("Reset model", Level.PROC, this);
-	    for(ICodeLine line : m_lines)
+	    for(ICodeLine line : getLines())
 	    {
 	    	line.reset();
+	    }
+	    for(String id : m_lines.keySet())
+	    {
+	    	if (!id.equals(m_instanceId))
+	    	{
+	    		m_lines.remove(id);
+	    	}
 	    }
 		m_lastLineNotificationSequence = 0;
 		m_replay = false;
 		m_processingDelaySec = 0;
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void dispose()
     {
-	    
+		IStatusManager st = (IStatusManager) ServiceManager.get(IStatusManager.class);
+		st.removeListener(this);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void clearBreakpoints()
     {
 		Logger.debug("Clear breakpoints", Level.PROC, this);
-	    for(ICodeLine line : m_lines)
+	    for(ICodeLine line : getLines())
 	    {
 	    	line.removeBreakpoint();
 	    }
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void setBreakpoint(int lineNo, BreakpointType type)
     {
@@ -326,6 +436,9 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 	    getLine(lineNo).setBreakpoint(type);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void setReplay(boolean replay)
     {
@@ -335,6 +448,9 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 	    m_processingDelaySec = 0;
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	private void notifyLineChanged( ICodeLine line )
 	{
 		try
@@ -347,19 +463,25 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		catch(ConcurrentModificationException ignore){};
 	}
 
-	private void notifyDelayChanged( final long delayMsec )
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	private void notifyDelayChanged( final long delaySec )
 	{
-		System.err.println("PROCESSING DELAY IS " + delayMsec/1000 + " seconds");
+		System.err.println("PROCESSING DELAY IS " + delaySec + " seconds");
 		try
 		{
 			for(IExecutionListener listener: m_listeners)
 			{
-				listener.onProcessingDelayChanged(delayMsec);
+				listener.onProcessingDelayChanged(delaySec);
 			}
 		}
 		catch(ConcurrentModificationException ignore){};
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	private void notifyCodeChanged()
 	{
 		try
@@ -372,6 +494,9 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		catch(ConcurrentModificationException ignore){};
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	private void notifyItemsChanged( List<ICodeLine> lines )
 	{
 		try
@@ -384,6 +509,9 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 		catch(ConcurrentModificationException ignore){};
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void addListener(IExecutionListener listener)
     {
@@ -393,12 +521,28 @@ public class ExecutionStatusManager implements IExecutionStatusManager
 	    }
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void removeListener(IExecutionListener listener)
     {
 	    if (m_listeners.contains(listener))
 	    {
 	    	m_listeners.remove(listener);
+	    }
+    }
+
+	@Override
+    public void onClientStatus(ClientStatus status)
+    {
+	    if (status.freeMemoryPC<10.0)
+	    {
+	    	System.err.println("############ CLEAR FULL HISTORY");
+	    	for(List<ICodeLine> lines : m_lines.values())
+	    	{
+	    		for(ICodeLine line : lines) line.clearFullHistory();
+	    	}
 	    }
     }
 }

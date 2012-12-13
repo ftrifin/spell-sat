@@ -66,26 +66,39 @@ public class StatusRenderer extends SourceRenderer
 	@Override
 	protected Color getBackground( ICodeLine line )
 	{
+		// If the line is executed, darken the color a bit
+		Color result = null;
+
+		// If we are in the current line, use highlight color instead
 		try
 		{
-			// If we are in the current line, use highlight color instead
-			if (getModel().getExecutionManager().getCurrentLine() == line)
+			if (!line.hasNotifications() && (getModel().getExecutionManager().getCurrentLine() == line) )
 			{
-				return getHighlightColor();
+				result = getHighlightColor();
 			}
 			else if (line.hasNotifications())
 			{
 				return s_cfg.getStatusColor(line.getStatus());
 			}
-			else
+			else if (getStatus() != null)
 			{
-				return super.getBackground(line);
+				if (line.getNumExecutions()>0)
+				{
+					result = s_cfg.getProcedureColorDark(getStatus());
+				}
+				else
+				{
+					result = s_cfg.getProcedureColor(getStatus());
+				}
 			}
 		}
-		catch(Exception ex)
+		catch(Exception ignore) {}
+
+		if (result == null)
 		{
-			return Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
+			result = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
 		}
+		return result;
 	}
 
 	@Override
@@ -141,7 +154,7 @@ public class StatusRenderer extends SourceRenderer
 				
 				// Draw Status
 				x = m_leftMargin;
-				textStatus = getShortString(gc, textStatus, cellW);
+				textStatus = getShortString(gc, textStatus, cellW, true);
 				x += setupAlignment( gc, textStatus, cellW );
 				gc.drawString(textStatus, getBounds().x + x, getBounds().y + m_textTopMargin + m_topMargin);
 	

@@ -136,6 +136,14 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
+	public void clearNotifications()
+	{
+		m_model.getExecutionManager().clearNotifications();
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void notifyProcedureItem(ItemNotification data)
 	{
@@ -158,6 +166,7 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 			break;
 		case LINE:
 			Logger.info("Notified LINE: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
+			m_model.getController().getStepOverControl().onExecutionLine();
 			break;
 		case RETURN:
 			Logger.info("Notified RETURN: " + Arrays.toString(data.getStackPosition().toArray()), Level.PROC, this);
@@ -168,19 +177,16 @@ public class ProcedureRuntimeProcessor implements IProcedureRuntimeExtension
 		}
 
 		m_model.getExecutionManager().onStackNotification(data);
-		
+
 		switch(data.getStackType())
 		{
 		case RETURN:
 			m_model.getController().getStepOverControl().onExecutionReturn();
 			break;
-		case LINE:
-			m_model.getController().getStepOverControl().onExecutionLine();
-			break;
-		case CALL:
-		case STAGE:
+		default:
 			break;
 		}
+
 		((IExecutionInformationHandler) m_model.getRuntimeInformation()).setStage(data.getStageId(), data.getStageTitle());
 		// Redirect the data to the consumers
 		ProcExtensions.get().fireProcedureStack(m_model, data);

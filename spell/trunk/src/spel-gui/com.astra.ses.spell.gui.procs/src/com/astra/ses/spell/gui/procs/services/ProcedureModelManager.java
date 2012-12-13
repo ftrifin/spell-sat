@@ -90,6 +90,8 @@ import com.astra.ses.spell.gui.procs.ProcExtensions;
 import com.astra.ses.spell.gui.procs.exceptions.LoadFailed;
 import com.astra.ses.spell.gui.procs.exceptions.NoSuchProcedure;
 import com.astra.ses.spell.gui.procs.exceptions.NotConnected;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunProcessing;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.model.Procedure;
@@ -97,7 +99,7 @@ import com.astra.ses.spell.gui.procs.model.RemoteProcedure;
 
 /**
  * @author Rafael Chinchilla
- *
+ * 
  */
 class ProcedureModelManager
 {
@@ -111,12 +113,12 @@ class ProcedureModelManager
 	/** Holds the list of remote procedures */
 	private Map<String, IProcedure> m_remoteModels;
 	/** Holds the list of valid procedure identifiers */
-	private Map<String, String>	    m_availableProcedures;
-	
+	private Map<String, String> m_availableProcedures;
+
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
-	public ProcedureModelManager( IContextProxy proxy, IFileManager fileMgr )
+	public ProcedureModelManager(IContextProxy proxy, IFileManager fileMgr)
 	{
 		m_localModels = new TreeMap<String, IProcedure>();
 		m_remoteModels = new TreeMap<String, IProcedure>();
@@ -124,7 +126,7 @@ class ProcedureModelManager
 		m_proxy = proxy;
 		m_fileMgr = fileMgr;
 	}
-	
+
 	/***************************************************************************
 	 * Request the list of available procedures to the context. Called as soon
 	 * as the context proxy Connected Event is received.
@@ -160,7 +162,8 @@ class ProcedureModelManager
 			for (String instanceId : executorIds)
 			{
 				// Do not load those which are local
-				if (m_localModels.containsKey(instanceId)) continue;
+				if (m_localModels.containsKey(instanceId))
+					continue;
 				createRemoteProcedureModel(instanceId);
 			}
 		}
@@ -170,7 +173,6 @@ class ProcedureModelManager
 			clearRemoteProcedures();
 		}
 	}
-
 
 	/***************************************************************************
 	 * Create a new procedure model for the given procedure identifier. The
@@ -194,7 +196,7 @@ class ProcedureModelManager
 		// Procedure ID shall exist
 		if (!m_availableProcedures.containsKey(procedureId))
 		{
-			throw new LoadFailed("No such procedure: '" + procedureId + "'"); 
+			throw new LoadFailed("No such procedure: '" + procedureId + "'");
 		}
 
 		// Obtain a valid instance identifier from the context
@@ -214,7 +216,7 @@ class ProcedureModelManager
 
 		return proc;
 	}
-	
+
 	/***************************************************************************
 	 * Create a remote procedure model and add it to the list
 	 * 
@@ -227,9 +229,9 @@ class ProcedureModelManager
 		{
 			if (!m_remoteModels.containsKey(instanceId))
 			{
-				Logger.debug("Registered remote model: " + instanceId,Level.PROC, this);
+				Logger.debug("Registered remote model: " + instanceId, Level.PROC, this);
 				IProcedure proc = new RemoteProcedure(instanceId);
-				Logger.debug("Updating remote model for " + instanceId , Level.PROC, this);
+				Logger.debug("Updating remote model for " + instanceId, Level.PROC, this);
 				proc.getController().refresh();
 				Logger.debug("Store remote model " + instanceId, Level.PROC, this);
 				m_remoteModels.put(instanceId, proc);
@@ -251,7 +253,7 @@ class ProcedureModelManager
 	{
 		if (m_remoteModels.containsKey(instanceId))
 		{
-			Logger.debug("Deleting remote model: " + instanceId , Level.PROC, this);
+			Logger.debug("Deleting remote model: " + instanceId, Level.PROC, this);
 			m_remoteModels.remove(instanceId);
 		}
 	}
@@ -266,7 +268,7 @@ class ProcedureModelManager
 	{
 		if (m_localModels.containsKey(instanceId))
 		{
-			Logger.debug("Deleting local model: " + instanceId , Level.PROC, this);
+			Logger.debug("Deleting local model: " + instanceId, Level.PROC, this);
 			IProcedure proc = m_localModels.remove(instanceId);
 			proc.onClose();
 		}
@@ -278,7 +280,7 @@ class ProcedureModelManager
 	 * @param instanceId
 	 *            Procedure model to convert
 	 **************************************************************************/
-	synchronized void convertToRemote(String instanceId, IProgressMonitor monitor )
+	synchronized void convertToRemote(String instanceId, IProgressMonitor monitor)
 	{
 		Logger.debug("Converting local model to remote" + instanceId, Level.PROC, this);
 		IProcedure proc = getProcedure(instanceId);
@@ -304,14 +306,14 @@ class ProcedureModelManager
 
 		Logger.debug("Converting remote procedure model to local: " + instanceId, Level.PROC, this);
 
-		if (!m_remoteModels.containsKey(instanceId)) 
-		{ 
-			throw new LoadFailed( "Could not find remote procedure: '" + instanceId + "'"); 
+		if (!m_remoteModels.containsKey(instanceId))
+		{
+			throw new LoadFailed("Could not find remote procedure: '" + instanceId + "'");
 		}
-		
+
 		String[] elements = instanceId.split("#");
 
-		Logger.debug("Retrieving procedure properties" , Level.PROC, this);
+		Logger.debug("Retrieving procedure properties", Level.PROC, this);
 		TreeMap<ProcProperties, String> props = m_proxy.getProcedureProperties(elements[0]);
 
 		Logger.debug("Instantiate model", Level.PROC, this);
@@ -319,14 +321,13 @@ class ProcedureModelManager
 
 		// Provoke the first source code acquisition
 		Logger.debug("Acquire source code for the first time", Level.PROC, this);
-		proc.getExecutionManager().initialize( new NullProgressMonitor() );
+		proc.getExecutionManager().initialize(new NullProgressMonitor());
 
-		Logger.debug("Store local model: " + instanceId , Level.PROC, this);
+		Logger.debug("Store local model: " + instanceId, Level.PROC, this);
 		m_localModels.put(instanceId, proc);
 
 		return proc;
 	}
-
 
 	/***************************************************************************
 	 * Update a remote procedure model
@@ -338,7 +339,7 @@ class ProcedureModelManager
 	{
 		if (m_remoteModels.containsKey(instanceId))
 		{
-			Logger.debug("Updating remote procedure model: " + instanceId , Level.PROC, this);
+			Logger.debug("Updating remote procedure model: " + instanceId, Level.PROC, this);
 			IProcedure proc = m_remoteModels.get(instanceId);
 			IExecutorInfo info = new ExecutorInfo(instanceId);
 			m_proxy.updateExecutorInfo(instanceId, info);
@@ -392,7 +393,10 @@ class ProcedureModelManager
 	 *************************************************************************/
 	String getProcedureName(String procId)
 	{
-		if (!m_availableProcedures.containsKey(procId)) { return null; }
+		if (!m_availableProcedures.containsKey(procId))
+		{
+			return null;
+		}
 		return m_availableProcedures.get(procId);
 	}
 
@@ -414,7 +418,6 @@ class ProcedureModelManager
 		}
 		return map;
 	}
-
 
 	/***************************************************************************
 	 * Check if a model is local
@@ -446,17 +449,18 @@ class ProcedureModelManager
 	 * @param instanceId
 	 *            Procedure instance identifier
 	 **************************************************************************/
-	void updateLocalProcedureModel(String instanceId, String asRunFilePath, ClientMode mode, boolean replay, IProgressMonitor monitor) throws Exception
+	void updateLocalProcedureModel(String instanceId, String asRunFilePath, ClientMode mode, AsRunReplayResult result, IProgressMonitor monitor)
+	        throws Exception
 	{
 		if (m_localModels.containsKey(instanceId))
 		{
-			Logger.debug("Updating local procedure model: " + instanceId , Level.PROC, this);
+			Logger.debug("Updating local procedure model: " + instanceId, Level.PROC, this);
 			IProcedure proc = m_localModels.get(instanceId);
 			// Reset the executor info for replaying execution
 			AsRunFile asRun = null;
 			boolean replaySuccess = true;
 
-			if (replay)
+			if (result != null)
 			{
 				monitor.subTask("Retrieving AS-RUN file");
 				if (asRunFilePath != null)
@@ -473,11 +477,11 @@ class ProcedureModelManager
 				monitor.worked(1);
 
 				// Check cancellation
-				if (monitor.isCanceled()) return;
+				if (monitor.isCanceled())
+					return;
 
-				monitor.subTask("Restoring AsRun information");
-
-				replaySuccess = replayExecution(proc, asRun);
+				replayExecution(proc, asRun, result, monitor);
+				replaySuccess = !result.status.equals(AsRunProcessing.FAILED);
 			}
 
 			if (!replaySuccess)
@@ -488,16 +492,18 @@ class ProcedureModelManager
 			}
 
 			// Check cancellation
-			if (monitor.isCanceled()) return;
+			if (monitor.isCanceled())
+				return;
 
 			monitor.subTask("Retrieving executor information");
 			monitor.worked(1);
 
 			// Check cancellation
-			if (monitor.isCanceled()) return;
+			if (monitor.isCanceled())
+				return;
 
 			// Refresh the proc status
-			Logger.debug("Refresh controller status (update local model)" , Level.PROC, this);
+			Logger.debug("Refresh controller status (update local model)", Level.PROC, this);
 			proc.getController().refresh();
 
 			monitor.worked(1);
@@ -509,7 +515,7 @@ class ProcedureModelManager
 	 * 
 	 * @return The procedure list
 	 **************************************************************************/
-	Map<String, String> getAvailableProcedures( boolean refresh )
+	Map<String, String> getAvailableProcedures(boolean refresh)
 	{
 		if (refresh)
 		{
@@ -557,13 +563,13 @@ class ProcedureModelManager
 	 * should result on disabling procedure model views as well, but this is up
 	 * to the view provider plugin.
 	 **************************************************************************/
-	void disableProcedures( String reason )
+	void disableProcedures(String reason)
 	{
 		// Notify the consumers of the local procedures that they cannot be
 		// used any more
 		for (IProcedure proc : m_localModels.values())
 		{
-			disableProcedure( reason, proc );
+			disableProcedure(reason, proc);
 		}
 	}
 
@@ -572,17 +578,17 @@ class ProcedureModelManager
 	 * should result on disabling procedure model views as well, but this is up
 	 * to the view provider plugin.
 	 **************************************************************************/
-	void disableProcedure( String reason, IProcedure procedure )
+	void disableProcedure(String reason, IProcedure procedure)
 	{
 		String procId = procedure.getProcId();
-		ErrorData data = new ErrorData(procId,reason, "", true);
+		ErrorData data = new ErrorData(procId, reason, "", true);
 		IExecutionInformationHandler handler = (IExecutionInformationHandler) procedure.getRuntimeInformation();
 		handler.setExecutorLost();
 		procedure.getRuntimeProcessor().notifyProcedureError(data);
 		ProcExtensions.get().fireProcedureError(procedure, data);
 		ProcExtensions.get().fireModelDisabled(procedure);
 	}
-	
+
 	/***************************************************************************
 	 * When the context connection is recovered, all models can be reenabled.
 	 * This should result on enabling procedure model views as well, but this is
@@ -601,13 +607,12 @@ class ProcedureModelManager
 				// Then notify consumers
 				ProcExtensions.get().fireModelEnabled(proc);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				ex.printStackTrace();
 			}
 		}
 	}
-
 
 	/***************************************************************************
 	 * Replay the AsRun data on a procedure model
@@ -615,18 +620,22 @@ class ProcedureModelManager
 	 * @param instanceId
 	 *            Procedure instance identifier
 	 **************************************************************************/
-	private boolean replayExecution(IProcedure model, AsRunFile data)
+	private void replayExecution(IProcedure model, AsRunFile data, AsRunReplayResult result, IProgressMonitor monitor)
 	{
-		Logger.info("Start execution replay on " + model.getProcId(),
-		        Level.PROC, this);
-		int count = 1;
+		monitor.beginTask("Restoring AsRun information", data.getLines().size());
+
+		result.totalLines = data.getLines().size();
+		result.processedLines = 0;
+
+		Logger.info("Start execution replay on " + model.getProcId(), Level.PROC, this);
 
 		if (!model.isInReplayMode())
 		{
-			Logger.error("Cannot replay, model is not in the correct mode", Level.PROC, this );
-			return false; 
+			Logger.error("Cannot replay, model is not in the correct mode", Level.PROC, this);
+			result.message = "procedure model is not in the correct mode";
+			result.status = AsRunProcessing.FAILED;
 		}
-		
+
 		ErrorData retrievedError = null;
 		StatusNotification retrievedStatus = null;
 
@@ -638,15 +647,53 @@ class ProcedureModelManager
 		Scope promptScope = Scope.OTHER;
 
 		boolean retrievedLine = false;
-		boolean result = true;
+		result.status = AsRunProcessing.COMPLETE;
+		result.message = "";
 
 		ArrayList<IServerFileLine> lines = data.getLines();
 		Logger.debug("AsRun lines: " + lines.size(), Level.PROC, this);
 
 		long seq = 0;
+
+		double totalMemory = Runtime.getRuntime().totalMemory()*1.0;
 		
 		for (IServerFileLine tabbedLine : lines)
 		{
+			if (monitor.isCanceled()) break;
+			
+			// Display progress
+			result.processedLines++;
+			monitor.worked(1);
+			
+			Double percent = (result.processedLines*1.0) / (result.totalLines*1.0) * 100;
+			String pc = percent.toString();
+			int idx = pc.indexOf(".");
+			int tl = idx + 3;
+			if (tl<pc.length())
+			{
+				pc = pc.substring(0, tl );
+			}
+			
+			Double pcm = (Runtime.getRuntime().freeMemory() / totalMemory) * 100.0;
+			String mem = pcm.toString();
+			idx = mem.indexOf(".");
+			int tlm = idx + 3;
+			if (tlm<mem.length())
+			{
+				mem = mem.substring(0, tlm );
+			}
+			
+			if (pcm<10.0)
+			{
+				result.status = AsRunProcessing.PARTIAL;
+				result.message = "oldest ASRUN data discarded due to memory usage";
+				model.getRuntimeProcessor().clearNotifications();
+				Logger.warning("NOTIFICATIONS DISCARDED!! (" + result.processedLines + ")", Level.PROC, this);
+				System.err.println("NOTIFICATIONS DISCARDED!! (" + result.processedLines + ")");
+			}
+			
+			monitor.subTask( "" + result.processedLines + " lines processed of a total of " + result.totalLines + " (" + pc + " %), available memory " + mem + "%");
+			
 			Date currentTime = Calendar.getInstance().getTime();
 			String currentTimeStr = s_df.format(currentTime);
 			seq++;
@@ -667,7 +714,11 @@ class ProcedureModelManager
 					{
 						model.getRuntimeProcessor().notifyProcedureStack(ndata);
 					}
-					catch(Exception ex) { ex.printStackTrace(); };
+					catch (Exception ex)
+					{
+						ex.printStackTrace();
+					}
+					;
 					break;
 				case ITEM:
 					ItemNotification idata = (ItemNotification) arLine.getNotificationData();
@@ -676,8 +727,12 @@ class ProcedureModelManager
 					try
 					{
 						model.getRuntimeProcessor().notifyProcedureItem(idata);
-					}					
-					catch(Exception ex) { ex.printStackTrace(); };
+					}
+					catch (Exception ex)
+					{
+						ex.printStackTrace();
+					}
+					;
 					break;
 				case DISPLAY: // Fall through
 				case ANSWER:
@@ -688,7 +743,11 @@ class ProcedureModelManager
 					{
 						model.getRuntimeProcessor().notifyProcedureDisplay(ddata);
 					}
-					catch(Exception ex) { ex.printStackTrace(); };
+					catch (Exception ex)
+					{
+						ex.printStackTrace();
+					}
+					;
 					break;
 				case STATUS:
 					// Update only if the procedure is not in error
@@ -699,9 +758,10 @@ class ProcedureModelManager
 					break;
 				case INIT:
 					break;
-				case PROMPT: 
+				case PROMPT:
 					promptMessage = arLine.getDataA();
-					// Clear other prompt data, this may be not the first prompt in the asrun
+					// Clear other prompt data, this may be not the first prompt
+					// in the asrun
 					numericPrompt = false;
 					promptOptions = null;
 					promptExpected = null;
@@ -716,67 +776,62 @@ class ProcedureModelManager
 					String opts = arLine.getSubType();
 					String[] options = opts.split(",,");
 					promptOptions = new Vector<String>();
-					promptOptions.addAll( Arrays.asList(options) );
+					promptOptions.addAll(Arrays.asList(options));
 					break;
 				case PROMPT_EXPECTED:
 					String expt = arLine.getSubType();
 					String[] expected = expt.split(",,");
 					promptExpected = new Vector<String>();
-					promptExpected.addAll( Arrays.asList(expected) );
+					promptExpected.addAll(Arrays.asList(expected));
 					break;
 				default:
-					Logger.error("Unknown AsRun data in line " + count,
-					        Level.PROC, this);
+					Logger.error("Unknown AsRun data in line " + result.processedLines, Level.PROC, this);
 				}
 			}
 			catch (Exception ex)
 			{
 				ex.printStackTrace();
-				Logger.error("Failed to process ASRUN line " + count + ":"
-				        + tabbedLine.toString().replace("\t", "<T>"), Level.PROC, this);
+				Logger.error("Failed to process ASRUN line " + result.processedLines + ":" + tabbedLine.toString().replace("\t", "<T>"), Level.PROC, this);
 				Logger.error("   " + ex.getLocalizedMessage(), Level.PROC, this);
-				result = false;
+				result.message = "failed to process some lines";
+				result.status = AsRunProcessing.PARTIAL;
 			}
-			count++;
 		}
-		
+
 		Logger.debug("Finished replay with status " + retrievedStatus.getStatus(), Level.PROC, this);
-		
-		if (retrievedStatus != null)
+
+		if (retrievedStatus.getStatus().equals(ExecutorStatus.PROMPT))
 		{
-			if (retrievedStatus.getStatus().equals(ExecutorStatus.PROMPT))
+			Logger.debug("Recreating prompt", Level.PROC, this);
+			InputData inputData = null;
+			if (promptOptions != null)
 			{
-				Logger.debug("Recreating prompt", Level.PROC, this);
-				InputData inputData = null;
-				if (promptOptions != null)
-				{
-					inputData = new InputData(null, model.getProcId(), promptMessage, promptScope, promptOptions, promptExpected, false, PromptDisplayType.RADIO );
-				}
-				else
-				{
-					inputData = new InputData(null, model.getProcId(), promptMessage, promptScope, numericPrompt, false );
-				}
-				model.getController().notifyProcedurePrompt(inputData);
+				inputData = new InputData(null, model.getProcId(), promptMessage, promptScope, promptOptions, promptExpected, false,
+				        PromptDisplayType.RADIO);
 			}
-			// Send the status notification to the model
-			model.getRuntimeProcessor().notifyProcedureStatus(retrievedStatus);
+			else
+			{
+				inputData = new InputData(null, model.getProcId(), promptMessage, promptScope, numericPrompt, false);
+			}
+			model.getController().notifyProcedurePrompt(inputData);
 		}
+		
+		// Send the status notification to the model
+		model.getRuntimeProcessor().notifyProcedureStatus(retrievedStatus);
+		
 		if (retrievedError != null)
 		{
 			model.getController().setError(retrievedError);
 		}
-		
+
 		if (retrievedLine == false)
 		{
 			Logger.error("Unable to retrieve current line information", Level.PROC, this);
-			result = false;
+			result.message = "could not gather line information from ASRUN";
+			result.status = AsRunProcessing.FAILED;
 		}
-		else
-		{
-			Logger.info("Finished execution replay on " + model.getProcId() + ", processed " + count + " lines", Level.PROC, this);
-		}
-
-		return result;
+		
+		Logger.info("Finished execution replay on " + model.getProcId() + ", processed " + result.processedLines + " lines, result " + result.status, Level.PROC, this);
 	}
 
 	/***************************************************************************
@@ -809,8 +864,8 @@ class ProcedureModelManager
 	 **************************************************************************/
 	private void checkConnectivity() throws NotConnected
 	{
-		if (!m_proxy.isConnected()) 
-		{ 
+		if (!m_proxy.isConnected())
+		{
 			throw new NotConnected("Cannot operate: not conected to context");
 		}
 	}

@@ -51,6 +51,8 @@ package com.astra.ses.spell.gui.model.jobs;
 import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.ui.PlatformUI;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.types.Level;
@@ -59,6 +61,8 @@ import com.astra.ses.spell.gui.model.commands.CommandResult;
 import com.astra.ses.spell.gui.procs.exceptions.LoadFailed;
 import com.astra.ses.spell.gui.procs.exceptions.NotConnected;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunProcessing;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 
 public class ControlRemoteProcedureJob extends AbstractProcedureJob
 {
@@ -77,16 +81,41 @@ public class ControlRemoteProcedureJob extends AbstractProcedureJob
 		{
 			Logger.debug("Controlling procedure task for " + m_instanceId, Level.PROC, this);
 			monitor.setTaskName("Control procedure " + m_instanceId);
-			Logger.debug("CONTROL PROC FROM GUI " + m_instanceId, Level.PROC, this);
-			mgr.controlProcedure(m_instanceId, monitor);
-			if (monitor.isCanceled())
+			
+			AsRunReplayResult ar = new AsRunReplayResult();
+			
+			mgr.controlProcedure(m_instanceId, ar, monitor);
+			
+			Logger.info("Monitoring process finished: " + ar.status, Level.GUI, this);
+			Logger.info("Cancel flag                : " + monitor.isCanceled(), Level.GUI, this);
+			Logger.info("Monitoring process message : " + ar.message, Level.GUI, this);
+			
+			if (ar.status.equals(AsRunProcessing.PARTIAL))
 			{
-				result = CommandResult.CANCELLED;
+				if (monitor.isCanceled())
+				{
+					String message = "Retrieval of ASRUN information was not complete: canceled by user";
+					MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Control Procedure", message);
+					result = CommandResult.CANCELLED;
+				}
+				else
+				{
+					String message = "Retrieval of ASRUN information was not complete: " + ar.message;
+					MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Control Procedure", message);
+					result = CommandResult.SUCCESS;
+				}
+			}
+			else if (ar.status.equals(AsRunProcessing.FAILED))
+			{
+				String message = "Retrieval of ASRUN information failed: " + ar.message;
+				MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Control Procedure", message);
+				result = CommandResult.FAILED;
 			}
 			else
 			{
 				result = CommandResult.SUCCESS;
 			}
+			
 			Logger.debug("Controlling procedure task for " + m_instanceId + " success", Level.PROC, this);
 		}
 		catch (LoadFailed ex)

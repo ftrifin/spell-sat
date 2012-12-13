@@ -55,32 +55,13 @@ import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.shell.services.ShellManager;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
+import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 
 /*******************************************************************************
  * Command to monitor a procedure
  ******************************************************************************/
 public class MonitorProcedure extends ShellCommand
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
-
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
@@ -110,7 +91,7 @@ public class MonitorProcedure extends ShellCommand
 			        "No such procedure: " + procId); }
 
 			display("Monitoring procedure " + procId, Severity.INFO);
-			pmgr.monitorProcedure(procId, new ShellProgressMonitor());
+			pmgr.monitorProcedure(procId, new AsRunReplayResult(), new ShellProgressMonitor());
 			display("Procedure loaded.");
 		}
 		catch (CommandFailed ex)

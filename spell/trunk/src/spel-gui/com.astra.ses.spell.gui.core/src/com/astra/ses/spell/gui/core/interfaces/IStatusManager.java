@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.core.shell.commands
+// PACKAGE   : com.astra.ses.spell.gui.core.interfaces
 // 
-// FILE      : ControlProcedure.java
+// FILE      : IStatusManager.java
 //
-// DATE      : 2008-11-21 08:58
+// DATE      : Dec 5, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,91 +43,39 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.core.shell.commands;
+package com.astra.ses.spell.gui.core.interfaces;
 
-import java.util.Vector;
+import com.astra.ses.spell.gui.core.model.notification.ClientStatus;
 
-import com.astra.ses.spell.gui.core.exceptions.CommandFailed;
-import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.types.Severity;
-import com.astra.ses.spell.gui.core.shell.services.ShellManager;
-import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
-import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 
 /*******************************************************************************
- * Command to control a procedure
+ * 
  ******************************************************************************/
-public class ControlProcedure extends ShellCommand
+public interface IStatusManager extends IService
 {
-	/***************************************************************************
-	 * Constructor
-	 **************************************************************************/
-	ControlProcedure(ShellManager mgr)
-	{
-		super(mgr);
-	}
+	/** Service id */
+	public static final String	ID	= "com.astra.ses.spell.gui.StatusManager";
 
 	/***************************************************************************
-	 * Execute the command
+	 * 
 	 **************************************************************************/
-	@Override
-	public void execute(Vector<String> args) throws CommandFailed
-	{
-		if (args == null || args.size() != 1) { throw new CommandFailed(
-		        "Expected arguments: procedure identifier"); }
-		try
-		{
-			m_args = args;
-			IProcedureManager pmgr = (IProcedureManager) ServiceManager
-			        .get(IProcedureManager.class);
-			if (!pmgr.canOperate()) { throw new CommandFailed(
-			        "Cannot control procedures, check connection with server"); }
-			String procId = args.get(0);
-
-			if (!pmgr.getOpenRemoteProcedures(false).contains(procId)) { throw new CommandFailed(
-			        "No such procedure: " + procId); }
-
-			display("Controlling procedure " + procId, Severity.INFO);
-			pmgr.controlProcedure(procId, new AsRunReplayResult(), new ShellProgressMonitor());
-			display("Procedure loaded.");
-		}
-		catch (CommandFailed ex)
-		{
-			throw ex;
-		}
-		catch (Exception ex)
-		{
-			throw new CommandFailed(ex.getLocalizedMessage());
-		}
-	}
+	public ClientStatus getClientStatus();
 
 	/***************************************************************************
-	 * Get command string
+	 * Add a status listener
+	 * 
+	 * @param lst
+	 *            The listener
 	 **************************************************************************/
-	@Override
-	public String getCmdString()
-	{
-		return "control";
-	}
+	public void addListener(ICoreStatusListener lst);
 
 	/***************************************************************************
-	 * Get command help
+	 * Remove a listener
+	 * 
+	 * @param lst
+	 *            The listener
 	 **************************************************************************/
-	@Override
-	public String getHelp()
-	{
-		return "control the given procedure";
-	}
-
-	/***************************************************************************
-	 * Get command syntax
-	 **************************************************************************/
-	@Override
-	public String getSyntax()
-	{
-		return "control <procedure identifier>";
-	}
+	public void removeListener(ICoreStatusListener lst);
 }
+

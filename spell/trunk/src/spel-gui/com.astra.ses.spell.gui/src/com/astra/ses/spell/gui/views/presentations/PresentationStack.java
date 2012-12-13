@@ -64,21 +64,9 @@ import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
  ******************************************************************************/
 public class PresentationStack
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Holds the view identifier */
 	public static final String	ID	= "com.astra.ses.spell.gui.views.models.PresentationStack";
 
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Stacked composite for holding the pages */
 	private Composite	       m_stack;
 	/** Layout for the stack */

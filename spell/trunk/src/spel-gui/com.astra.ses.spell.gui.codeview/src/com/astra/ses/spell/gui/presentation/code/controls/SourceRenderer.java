@@ -255,7 +255,7 @@ public class SourceRenderer extends DefaultCellRenderer
 
 		String text = item.getText(getColumn());
 		text = text.replace("\t", "    ");
-		text = getShortString(gc, text, width);
+		text = getShortString(gc, text, width, false);
 
 		x += setupAlignment( gc, text, width );
 		
@@ -336,7 +336,7 @@ public class SourceRenderer extends DefaultCellRenderer
 	/**
 	 * Copied from DefaultCellRenderer in Nebula Grid widget implementation
 	 */
-	protected static String getShortString(GC gc, String t, int width)
+	protected static String getShortString(GC gc, String t, int width, boolean center)
 	{
 
 		if (t == null)
@@ -355,6 +355,21 @@ public class SourceRenderer extends DefaultCellRenderer
 		}
 
 		int w = gc.stringExtent("...").x;
+		
+		if (!center)
+		{
+			String text = t + "...";
+			int textW = gc.stringExtent(text).x;
+			int toRemove = 0;
+			while(textW > width)
+			{
+				toRemove++;
+				text = t.substring(0,t.length()-toRemove) + "...";
+				textW = gc.stringExtent(text).x;
+			}
+			return text;
+		}
+
 		String text = t;
 		int l = text.length();
 		int pivot = l / 2;
@@ -386,6 +401,11 @@ public class SourceRenderer extends DefaultCellRenderer
 	protected IProcedure getModel()
 	{
 		return m_model;
+	}
+	
+	protected ExecutorStatus getStatus()
+	{
+		return m_status;
 	}
 	
 	protected Color getBackground( ICodeLine line )

@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PACKAGE   : com.astra.ses.spell.gui.core.extensionpoints
+// PACKAGE   : com.astra.ses.spell.gui.core.services
 // 
-// FILE      : IProcedureRuntimeExtension.java
+// FILE      : StatusManager.java
 //
-// DATE      : 2008-11-21 08:58
+// DATE      : Dec 5, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -43,89 +43,156 @@
 //
 // PROJECT   : SPELL
 //
-// SUBPROJECT: SPELL GUI Client
-//
 ///////////////////////////////////////////////////////////////////////////////
-package com.astra.ses.spell.gui.core.extensionpoints;
+package com.astra.ses.spell.gui.core.services;
 
-import com.astra.ses.spell.gui.core.interfaces.IBaseInterface;
-import com.astra.ses.spell.gui.core.model.notification.ControlNotification;
-import com.astra.ses.spell.gui.core.model.notification.DisplayData;
-import com.astra.ses.spell.gui.core.model.notification.ErrorData;
-import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
-import com.astra.ses.spell.gui.core.model.notification.StackNotification;
-import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
-import com.astra.ses.spell.gui.core.model.notification.UserActionNotification;
-import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
-public interface IProcedureRuntimeExtension extends IBaseInterface
+import com.astra.ses.spell.gui.core.interfaces.BaseService;
+import com.astra.ses.spell.gui.core.interfaces.ICoreStatusListener;
+import com.astra.ses.spell.gui.core.interfaces.IStatusManager;
+import com.astra.ses.spell.gui.core.model.notification.ClientStatus;
+import com.astra.ses.spell.gui.core.model.types.Level;
+import com.astra.ses.spell.gui.core.utils.Logger;
+
+/*******************************************************************************
+ * @brief Provides access to several SPELL framework status data
+ * @date 20/05/08
+ ******************************************************************************/
+public class StatusManager extends BaseService implements IStatusManager
 {
+	/** Service identifier */
+	public static final String	ID	         = "com.astra.ses.spell.gui.StatusManager";
+
+	private ClientStatus currentClientStatus;
+	private ReentrantLock clientStatusLock;
+	private Thread memoryMonitorThread;
+	private Set<ICoreStatusListener> listeners;
+	
 	/***************************************************************************
-	 * Callback for procedure messages notification
-	 * 
-	 * @param data
-	 *            Event information
+	 * Constructor
 	 **************************************************************************/
-	public void notifyProcedureDisplay(DisplayData data);
+	public StatusManager()
+	{
+		super(ID);
+		Logger.debug("Created", Level.INIT, this);
+		clientStatusLock = new ReentrantLock();
+		currentClientStatus = new ClientStatus();
+		listeners = new HashSet<ICoreStatusListener>();
+		memoryMonitorThread = new Thread()
+		{
+			public void run()
+			{
+				while(true)
+				{
+					try
+					{
+						double maxMemory = Runtime.getRuntime().maxMemory();
+						double freeMemory = Runtime.getRuntime().freeMemory();
+						setMemory( 100.0 - freeMemory * 100.0 / maxMemory );
+						notifyNewClientStatus();
+						Thread.sleep(5000);
+					}
+					catch(Exception ex){};
+				}
+			}
+		};
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void setup()
+	{
+		super.setup();
+		memoryMonitorThread.start();
+	}
 
 	/***************************************************************************
-	 * Callback for procedure status changes notificiation
 	 * 
-	 * @param data
-	 *            Event information
 	 **************************************************************************/
-	public void notifyProcedureStatus(StatusNotification data);
+	@Override
+	public void cleanup()
+	{
+		try
+		{
+			memoryMonitorThread.interrupt();
+		}
+		catch(Exception ex)
+		{
+			// Nothing to do
+		}
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private void setMemory( double freePC )
+	{
+	    clientStatusLock.lock();
+	    try
+	    {
+	    	currentClientStatus.freeMemoryPC = freePC;
+	    }
+	    finally
+	    {
+	    	clientStatusLock.unlock();
+	    }
+	}
 
 	/***************************************************************************
-	 * Callback for procedure control status changes
 	 * 
-	 * @param data
-	 *            Event information
 	 **************************************************************************/
-	public void notifyProcedureControl( ControlNotification data );
+	private void notifyNewClientStatus()
+	{
+		for(ICoreStatusListener lst : listeners)
+		{
+			lst.onClientStatus(currentClientStatus);
+		}
+	}
 
 	/***************************************************************************
-	 * Callback for procedure error notifications
 	 * 
-	 * @param data
-	 *            Event information
 	 **************************************************************************/
-	public void notifyProcedureError(ErrorData data);
+	@Override
+    public ClientStatus getClientStatus()
+    {
+	    clientStatusLock.lock();
+	    try
+	    {
+	    	return currentClientStatus;
+	    }
+	    finally
+	    {
+	    	clientStatusLock.unlock();
+	    }
+    }
 
 	/***************************************************************************
-	 * Callback for item information notification
 	 * 
-	 * @param data
-	 *            Event information
 	 **************************************************************************/
-	public void notifyProcedureItem(ItemNotification data);
+	@Override
+    public void addListener(ICoreStatusListener lst)
+    {
+	    if (!listeners.contains(lst))
+	    {
+	    	listeners.add(lst);
+	    }
+    }
 
 	/***************************************************************************
-	 * Callback for procedure stack position changes notification
 	 * 
-	 * @param data
-	 *            Event information
 	 **************************************************************************/
-	public void notifyProcedureStack(StackNotification data);
-
-	/***************************************************************************
-	 * Callback for user action events notification
-	 * 
-	 * @param data
-	 *            Event information
-	 **************************************************************************/
-	public void notifyProcedureUserAction(UserActionNotification data);
-
-	/***************************************************************************
-	 * Callback for configuration events notification
-	 * 
-	 * @param data
-	 *            Event information
-	 **************************************************************************/
-	public void notifyProcedureConfiguration(ExecutorConfig data);
-
-	/***************************************************************************
-	 * Clear all item notifications
-	 **************************************************************************/
-	public void clearNotifications();
+	@Override
+    public void removeListener(ICoreStatusListener lst)
+    {
+	    if (listeners.contains(lst))
+	    {
+	    	listeners.remove(lst);
+	    }
+    }
+	
 }

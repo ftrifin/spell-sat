@@ -76,23 +76,11 @@ import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformation
  ******************************************************************************/
 public class ProcedureController implements IProcedureController
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Context proxy */
 	private static IContextProxy s_proxy = null;
 	/** Listener id */
 	private static final String LISTENER_ID = "com.astra.ses.spell.gui.procs.model.Procedure";
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the procedure model */
 	private IProcedure m_model;
 	private InputData m_promptData;
@@ -528,6 +516,7 @@ public class ProcedureController implements IProcedureController
 	public void reload()
 	{
 		releaseExecutorCommand(ExecutorCommand.RELOAD);
+		m_so.reset();
 	}
 
 	/*

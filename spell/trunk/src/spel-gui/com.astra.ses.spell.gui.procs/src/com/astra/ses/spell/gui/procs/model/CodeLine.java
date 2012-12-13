@@ -270,13 +270,28 @@ public class CodeLine implements ICodeLine
     {
 	    m_breakpoint = null;
 	    m_numExecuted = 0;
+	    clearNotifications();
+    }
+	
+	@Override
+	public void clearNotifications()
+	{
 	    m_summaryName = "";
 	    m_summaryStatus = "";
 	    m_summaryValue = "";
 		m_biggestNotificationExecution = 0;
 	    m_notifications.clear();
 	    m_status = ItemStatus.UNKNOWN;
-    }
+	}
+
+	@Override
+	public void clearFullHistory()
+	{
+	    for(NotificationsPerLine n : m_notifications.values())
+	    {
+	    	n.all.clear();
+	    }
+	}
 
 	public String toString()
 	{
