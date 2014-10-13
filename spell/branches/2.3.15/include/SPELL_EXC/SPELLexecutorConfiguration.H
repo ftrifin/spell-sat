@@ -1,0 +1,363 @@
+// ################################################################################
+// FILE       : SPELLexecutorConfiguration.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Executor configuration parameters
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_EXEC_CONFIG_H__
+#define __SPELL_EXEC_CONFIG_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+// Project includes --------------------------------------------------------
+#include "SPELL_WS/SPELLwsWorkingMode.H"
+#include "SPELL_WRP/SPELLconstants.H"
+
+/** \addtogroup SPELL_EXC */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Executor configuration parameters.
+ **
+ ** \par Description and usage:
+ **
+ ** 	Holds the set of configuration parameters for the executor process.
+ **
+ **	 	Used by executor to get configuration values. Created by
+ **  	the CIF when processing the login response and the config change
+ ** 	requests.
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLexecutorConfig
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLexecutorConfig();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor.
+		**////////////////////////////////////////////////////////////////////
+		~SPELLexecutorConfig();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Reset values to defaults.
+		**////////////////////////////////////////////////////////////////////
+		void reset();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the run-into flag.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool getRunInto() const {
+			return m_runInto;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the by-step flag.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool getByStep() const {
+			return m_byStep;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the browsable lib flag.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool getBrowsableLib() const {
+			return m_browsableLib;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the execution delay value.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const int getExecDelay() const {
+			return m_execDelay;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the automatic flag value.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool getAutomatic() const {
+			return m_automatic;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the visible flag value.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool getVisible() const {
+			return m_visible;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the blocking flag value.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool getBlocking() const {
+			return m_blocking;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the executor arguments.
+		 *
+		 * \returns The executor arguments.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getArguments() const {
+			return m_arguments;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the force TC confirmation flag
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		bool getForceTcConfirm() const {
+			return m_forceTcConfirm;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the executor condition.
+		 *
+		 * \returns The executor condition.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getCondition() const {
+			return m_condition;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the save mode.
+		 *
+		 * \returns The save mode.
+		**////////////////////////////////////////////////////////////////////
+		const SPELLwsWorkingMode getSaveStateMode() const {
+			return m_saveStateMode;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if watch variables is enabled or not.
+		 *
+		 * \returns The status.
+		**////////////////////////////////////////////////////////////////////
+		void setWatchEnabled( bool enabled ) {
+			m_watchVariables = enabled;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Chekc if watch variables is enabled or not.
+		 *
+		 * \returns The status.
+		**////////////////////////////////////////////////////////////////////
+		const bool getWatchEnabled() const {
+			return m_watchVariables;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the run-into flag.
+		 *
+		 * \param enabled IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setRunInto( const bool enabled ) {
+			m_runInto = enabled;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the by-step flag.
+		 *
+		 * \param enabled IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setByStep( const bool enabled ) {
+			m_byStep = enabled;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the browsable lib flag.
+		 *
+		 * \param enabled IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setBrowsableLib( const bool enabled ) {
+			m_browsableLib = enabled;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the execution delay.
+		 *
+		 * \param delay IN: the delay to be used.
+		**////////////////////////////////////////////////////////////////////
+		void setExecDelay( const int delay ) {
+			m_execDelay = delay;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the automatic flag value.
+		 *
+		 * \param automatic IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setAutomatic( const bool automatic ) {
+			m_automatic = automatic;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the visible flag value.
+		 *
+		 * \param visible IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setVisible( const bool visible ) {
+			m_visible = visible;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the blocking flag value.
+		 *
+		 * \param blocking IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setBlocking( const bool blocking ) {
+			m_blocking = blocking;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the executor arguments.
+		 *
+		 * \param arguments IN: the arguments.
+		**////////////////////////////////////////////////////////////////////
+		void setArguments( const std::string& arguments ) {
+			m_arguments = arguments;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the force TC confirmation flag
+		 *
+		 * \param force IN: the flag
+		**////////////////////////////////////////////////////////////////////
+		void setForceTcConfirm( bool force ) {
+			m_forceTcConfirm = force;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the executor condition.
+		 *
+		 * \param condition IN: the condition.
+		**////////////////////////////////////////////////////////////////////
+		void setCondition( const std::string& condition ) {
+			m_condition = condition;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the save mode.
+		 *
+		 * \param saveModeStr IN: the mode as string.
+		**////////////////////////////////////////////////////////////////////
+		void setSaveStateMode( const std::string& saveModeStr )
+		{
+			if (saveModeStr == ExecutorConstants::SAVE_ON_LINE)
+			{
+				m_saveStateMode = MODE_ON_LINE;
+			}
+			else if (saveModeStr == ExecutorConstants::SAVE_ON_STEP)
+			{
+				m_saveStateMode = MODE_ON_STEP;
+			}
+			else if (saveModeStr == ExecutorConstants::SAVE_ON_DEMAND)
+			{
+				m_saveStateMode = MODE_ON_HOLD;
+			}
+			else
+			{
+				m_saveStateMode = MODE_UNINIT;
+			}
+		}
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** True if By-Step feature is enabled */
+		bool                         m_byStep;
+		/** Holds the execution time delay */
+		int                          m_execDelay;
+		/** True if the Run-Into feature is enabled */
+		bool                         m_runInto;
+		/** True if the user library is browsable */
+		bool                         m_browsableLib;
+		/** Holds the procedure arguments if any */
+		std::string                  m_arguments;
+		/** Holds the execution condition if any */
+		std::string                  m_condition;
+		/** True if the procedure is visible for the controlling client */
+		bool                         m_visible;
+		/** True if the execution shall go to running state automatically on startup */
+		bool                         m_automatic;
+		/** True if this procedure will block the execution of child procedures */
+		bool                         m_blocking;
+		/** Holds the interpreter state save mode */
+		SPELLwsWorkingMode			 m_saveStateMode;
+		/** True if watch variables is enabled */
+		bool                         m_watchVariables;
+		/** True if all TCs should be confirmed */
+		bool                         m_forceTcConfirm;
+};
+
+/*@}*/
+#endif
