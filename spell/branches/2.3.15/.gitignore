@@ -1,0 +1,12 @@
+*.pyc
+*.swp
+Makefile
+Makefile.in
+*.o
+*.pyo
+*.lo
+*.la
+.deps
+.libs
+*.m4
+*.log
