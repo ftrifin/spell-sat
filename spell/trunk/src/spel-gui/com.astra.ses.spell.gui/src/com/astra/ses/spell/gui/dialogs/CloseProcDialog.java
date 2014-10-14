@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -63,8 +63,8 @@ import org.eclipse.swt.widgets.Shell;
 
 import com.astra.ses.spell.gui.Activator;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * @brief Dialog for closing procedures
@@ -72,33 +72,16 @@ import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
  ******************************************************************************/
 public class CloseProcDialog extends TitleAreaDialog
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	public static final int DETACH = 97;
 	public static final int KILL = 98;
 	public static final int CLOSE = 99;
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
+	public static final int BACKGROUND = 96;
 
 	// PRIVATE -----------------------------------------------------------------
 	/** Holds the dialog image icon */
 	private Image m_image;
 	/** Holds the procedure model */
 	private IProcedure m_model;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -157,25 +140,36 @@ public class CloseProcDialog extends TitleAreaDialog
 	protected Control createDialogArea(Composite parent)
 	{
 		String longMessage = "";
-		if (!m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
+		if (!m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL))
 		{
 			longMessage = "You can only release the procedure, since you are";
 			longMessage += " not in control of the procedure\n";
 		}
 		else if (m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.PROMPT))
 		{
-			longMessage = "You can kill or release the procedure only, since some input";
+			longMessage = "You can kill or release control of the procedure only, since some input";
 			longMessage += " is required by it (a prompt is active)\n";
 		}
 		else if (m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.RUNNING) ||
 				 m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.WAITING))
 		{
-			longMessage = "You can kill or release the procedure only, since it is running\n";
+			longMessage = "You can kill or release control of the procedure only, since it is running\n";
+		}
+		else if (m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.PAUSED))
+		{
+			longMessage = "Possible operations:\n\n";
+			longMessage += " - Release the control of the procedure and leave it paused on the server\n";
+			longMessage += " - Put the procedure in background and leave it running on the server, without controlling GUI\n";
+			longMessage += " - Close the procedure\n";
+			longMessage += " - Kill the procedure\n";
+			longMessage += "\nWhat do you want to do?";
 		}
 		else
 		{
-			longMessage = "You can kill the execution, stop it and cleanup orderly ";
-			longMessage += "or release the procedure and leave it working.\n";
+			longMessage = "Possible operations:\n\n";
+			longMessage += " - Put the procedure in background and leave it running on the server, without controlling GUI\n";
+			longMessage += " - Close the procedure\n";
+			longMessage += " - Kill the procedure\n";
 			longMessage += "\nWhat do you want to do?";
 		}
 
@@ -196,13 +190,14 @@ public class CloseProcDialog extends TitleAreaDialog
 	 **************************************************************************/
 	protected void createButtonsForButtonBar(Composite parent)
 	{
-		if (!m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
+		if (!m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL))
 		{
 			createButton(parent, DETACH, "Stop monitor", false);
 		}
 		else
 		{
 			createButton(parent, DETACH, "Release control", false);
+			createButton(parent, BACKGROUND, "Put in background", false);
 			if (!m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.PROMPT)
 			 && !m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.RUNNING)
 			 && !m_model.getRuntimeInformation().getStatus().equals(ExecutorStatus.WAITING))

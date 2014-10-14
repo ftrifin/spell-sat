@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the callstack model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -72,7 +72,9 @@ SPELLcallstack::~SPELLcallstack()
 void SPELLcallstack::reset()
 {
 	m_stack = "";
+	m_recoveryMode = false;
 	m_fullStack.clear();
+	m_fullStackString = "";
     m_stageId = "";
     m_stageTitle = "";
     m_codeName = "";
@@ -100,15 +102,7 @@ const std::string& SPELLcallstack::getStack()
 const std::string SPELLcallstack::getFullStack()
 {
 	SPELLmonitor mon(m_lock);
-	std::string stack = "";
-	std::vector<std::string>::iterator it;
-	std::vector<std::string>::iterator end = m_fullStack.end();
-	for(it = m_fullStack.begin(); it != end; it++)
-	{
-		if (stack != "") stack += ":";
-		stack += *it;
-	}
-	return stack;
+	return m_fullStackString;
 }
 
 //=============================================================================
@@ -205,15 +199,23 @@ void SPELLcallstack::callbackEventLine( PyFrameObject* frame, const std::string&
     // Update the stack string
     m_stack = std::string(file + ":" + ISTR(line));
     m_fullStack[m_fullStack.size()-1] = m_stack;
+    rebuildFullStack();
 
     // Update the code name string
     m_codeName = name;
 
     if (m_notify)
 	{
-    	DEBUG("[CSTACK] Event line notify: " + getStack() + ", mode=" + ISTR(m_soMode) + ", so=" + BSTR(isSteppingOver()));
+    	DEBUG("[CSTACK] Event line notify: " + getFullStack() + ", mode=" + ISTR(m_soMode) + ", so=" + BSTR(isSteppingOver()));
     	SPELLexecutor::instance().getCIF().notifyLine();
 	}
+
+    if (m_errorState)
+    {
+        DEBUG("[CSTACK] Reset error mode");
+        m_errorState = false;
+    }
+
 }
 
 //=============================================================================
@@ -238,7 +240,8 @@ void SPELLcallstack::callbackEventCall( PyFrameObject* frame, const std::string&
 	    // Visit the line
 		SPELLexecutor::instance().getFrameManager().getTraceModel(file).setCurrentLine(line);
 	}
-	else // If we are in this case, there is a subprocedure being called
+	// If we are in this case, there is a function being called
+	else if (!m_recoveryMode)
 	{
 		assert(m_currentNode != NULL);
 
@@ -259,17 +262,29 @@ void SPELLcallstack::callbackEventCall( PyFrameObject* frame, const std::string&
 			m_viewNode = m_currentNode;
 		}
 	}
-    // Update the stack string
-    m_stack = std::string(file + ":" + ISTR(line));
-    m_fullStack.push_back(m_stack);
-    // Update the code name string
-    m_codeName = name;
 
-    if (m_notify)
-    {
-    	DEBUG("[CSTACK] Event call notify: " + getStack() + ", mode=" + ISTR(m_soMode) + ", so=" + BSTR(isSteppingOver()));
-    	SPELLexecutor::instance().getCIF().notifyCall();
-    }
+	if (!m_recoveryMode)
+	{
+	    // Update the stack string
+	    m_stack = std::string(file + ":" + ISTR(line));
+		m_fullStack.push_back(m_stack);
+		rebuildFullStack();
+
+	    // Update the code name string
+	    m_codeName = name;
+
+	    if (m_notify)
+	    {
+	    	DEBUG("[CSTACK] Event call notify: " + getFullStack() + ", mode=" + ISTR(m_soMode) + ", so=" + BSTR(isSteppingOver()));
+	    	SPELLexecutor::instance().getCIF().notifyCall();
+	    }
+	}
+	else
+	{
+		// Reset the recovery mode after the call event
+	    m_recoveryMode = false;
+	    DEBUG("[CSTACK] Reset recovery mode");
+	}
 }
 
 //=============================================================================
@@ -286,9 +301,19 @@ void SPELLcallstack::callbackEventError( PyFrameObject* frame, const std::string
 void SPELLcallstack::callbackEventReturn( PyFrameObject* frame, const std::string& file, const int line, const std::string& name )
 {
     // We are finishing execution, ignore it
-    if ((name == "<module>") && (file == m_rootNode->getCodeIdentifier())) return;
+    if (name == "<module>")
+	{
+        DEBUG("[CSTACK] Ignore return event at end of code");
+    	return;
+	}
 
     DEBUG("[CSTACK] Event return: " + file + ":" + ISTR(line) + ", mode=" + ISTR(m_soMode) + ", so=" + BSTR(isSteppingOver()));
+
+    if (m_errorState)
+    {
+        DEBUG("[CSTACK] Ignore return event meanwhile in error mode");
+        return;
+    }
 
     // Move the view node up if it currently matches with the leaf, otherwise leave it.
     // When moving the view node, we shall notify the client.
@@ -323,14 +348,21 @@ void SPELLcallstack::callbackEventReturn( PyFrameObject* frame, const std::strin
     // to the callstack model values. We may need the information...
     if (m_notify && !m_errorState)
     {
-    	DEBUG("[CSTACK] Event return notify");
+    	DEBUG("[CSTACK] Event return notify: " + getFullStack());
     	SPELLexecutor::instance().getCIF().notifyReturn();
     }
 
     // Update the stack string
-    m_stack = std::string(file + ":" + ISTR(line));
+    if (m_fullStack.size()>=2)
+    {
+    	m_stack = m_fullStack[m_fullStack.size()-2];
+    }
+    else
+    {
+    	m_stack = std::string(file + ":" + ISTR(line));
+    }
     m_fullStack.pop_back();
-    m_fullStack[m_fullStack.size()-1] = m_stack;
+    rebuildFullStack();
 
     // Update the code name string
     m_codeName = name;
@@ -349,8 +381,25 @@ void SPELLcallstack::clearStack()
 		delete m_rootNode;
 		m_stack = "";
 		m_fullStack.clear();
+		m_fullStackString = "";
 	}
 	m_rootNode = NULL;
 	m_currentNode = NULL;
 	m_viewNode = NULL;
+}
+
+//=============================================================================
+// METHOD    : SPELLcallstack::rebuildFullStack
+//=============================================================================
+void SPELLcallstack::rebuildFullStack()
+{
+	SPELLmonitor mon(m_lock);
+	m_fullStackString = "";
+	std::vector<std::string>::iterator it;
+	std::vector<std::string>::iterator end = m_fullStack.end();
+	for(it = m_fullStack.begin(); it != end; it++)
+	{
+		if (m_fullStackString != "") m_fullStackString += ":";
+		m_fullStackString += *it;
+	}
 }

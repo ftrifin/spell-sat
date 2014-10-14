@@ -5,7 +5,7 @@
 // DESCRIPTION: Operations in relation with the current Python frame (runtime)
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -184,6 +184,11 @@ public: //--------------------------------------------------------------------
 		void callbackEventReturn( PyFrameObject* frame, const std::string& file, const int line, const std::string& name);
 
 		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLdispatchListener
+		**////////////////////////////////////////////////////////////////////
+		void callbackEventError( PyFrameObject* frame, const std::string& file, const int line, const std::string& name );
+
+		//////////////////////////////////////////////////////////////////////
 		/** Notify about a stage event
 		**////////////////////////////////////////////////////////////////////
 		void eventStage();
@@ -303,6 +308,13 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		SPELLexecutionTrace& getCurrentTraceModel();
 
+		//////////////////////////////////////////////////////////////////////
+		/** Check if we are at the initial frame
+		 *
+		 * \return True if the execution is at the initial frame
+		**////////////////////////////////////////////////////////////////////
+		bool isAtInitialFrame() { return (m_initialFrame == m_currentFrame); };
+
 protected: //-------------------------------------------------------------------
 
     // EXCEPTIONS ////////////////////////////////////////////////////////////
@@ -399,6 +411,8 @@ private: //-------------------------------------------------------------------
 		SPELLwarmStart*       m_warmStart;
 		/** Terminated flag */
 		bool                  m_terminated;
+		/** Error flag */
+		bool                  m_inError;
 		/** Execution result */
 		SPELLexecutionResult  m_status;
 		/** Script file being executed */

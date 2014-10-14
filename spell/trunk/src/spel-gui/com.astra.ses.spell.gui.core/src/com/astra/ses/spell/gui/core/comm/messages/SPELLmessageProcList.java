@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,11 +58,15 @@ import com.astra.ses.spell.gui.core.interfaces.IMessageValue;
 
 public class SPELLmessageProcList extends SPELLmessageRequest
 {
-	public SPELLmessageProcList()
+	public SPELLmessageProcList( boolean refresh )
 	{
 		super(IMessageId.REQ_PROC_LIST);
 		setSender(IMessageValue.CLIENT_SENDER);
 		setReceiver(IMessageValue.CONTEXT_RECEIVER);
+		if (refresh)
+		{
+			set(IMessageField.FIELD_REFRESH, IMessageValue.DATA_TRUE);
+		}
 	}
 
 	public static Map<String,String> getProcListFrom(SPELLmessage resp)

@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 22, 2010
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -60,6 +60,7 @@ import com.astra.ses.spell.gui.model.outline.nodes.OutlineRootNode;
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineStepNode;
 import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
 import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeModel;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.language.ParseException;
 import com.astra.ses.spell.language.Parser;
@@ -157,8 +158,9 @@ public class OutlineProcedureModel extends Visitor
 		String codeId = null;
 		try
 		{
-			codeId = m_model.getExecutionManager().getCodeId();
-			List<ICodeLine> lines = m_model.getExecutionManager().getLines();
+			codeId = m_model.getExecutionManager().getCurrentCode();
+			ICodeModel codeModel = m_model.getExecutionManager().getCodeModel(codeId);
+			List<ICodeLine> lines = codeModel.getLines();
 			String code = "";
 			for (ICodeLine line : lines)
 			{
@@ -222,7 +224,8 @@ public class OutlineProcedureModel extends Visitor
 	public Object visitFunctionDef(FunctionDef node) throws Exception
 	{
 		NameTok name = (NameTok) node.name;
-		m_categoryFunctionDefs.addChild(new OutlineDefNode(name.id + "()", m_model.getExecutionManager().getCodeId(), node.beginLine));
+		String codeId = m_model.getExecutionManager().getCurrentCode();
+		m_categoryFunctionDefs.addChild(new OutlineDefNode(name.id + "()", codeId, node.beginLine));
 		return super.visitFunctionDef(node);
 	}
 
@@ -265,14 +268,16 @@ public class OutlineProcedureModel extends Visitor
 		{
 			m_inToken = NextTokenType.None;
 			m_nextLabel = token.s + " (" + m_nextLabel + ")";
-			m_categorySteps.addChild(new OutlineStepNode(m_nextLabel, m_model.getExecutionManager().getCodeId(), m_nextLine));
+			String codeId = m_model.getExecutionManager().getCurrentCode();
+			m_categorySteps.addChild(new OutlineStepNode(m_nextLabel, codeId, m_nextLine));
 			m_nextLabel = "";
 		}
 		else if (m_inToken.equals(NextTokenType.GotoCall))
 		{
 			m_inToken = NextTokenType.None;
 			m_nextLabel += token.s;
-			m_categoryGotos.addChild(new OutlineGotoNode(m_nextLabel, m_model.getExecutionManager().getCodeId(), m_nextLine));
+			String codeId = m_model.getExecutionManager().getCurrentCode();
+			m_categoryGotos.addChild(new OutlineGotoNode(m_nextLabel, codeId, m_nextLine));
 			m_nextLabel = "";
 		}
 		return super.visitStr(token);

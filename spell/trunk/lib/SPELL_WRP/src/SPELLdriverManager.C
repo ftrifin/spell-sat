@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the driver manager wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -83,11 +83,18 @@ PyObject* SPELLdriverManager::getDriverManagerObject()
 //=============================================================================
 // METHOD    : SPELLdriverManager::setup
 //=============================================================================
-void SPELLdriverManager::setup( std::string ctxName )
+void SPELLdriverManager::setup( const std::string& ctxName, const std::string& interfaces )
 {
 	SPELLsafePythonOperations ops("SPELLdriverManager::setup()");
     PyObject* pmgr = getDriverManagerObject();
-    SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), NULL);
+    if (interfaces.empty())
+    {
+        SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), NULL);
+    }
+    else
+    {
+        SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), SSTRPY(interfaces), NULL);
+    }
     SPELLpythonHelper::instance().checkError();
 }
 
@@ -107,4 +114,23 @@ void SPELLdriverManager::cleanup( bool shutdown )
         SPELLpythonHelper::instance().callMethod( pmgr, "cleanup", NULL);
     }
     SPELLpythonHelper::instance().checkError();
+}
+
+//=============================================================================
+// METHOD    : SPELLdriverManager::onCommand
+//=============================================================================
+void SPELLdriverManager::onCommand( const std::string& commandId )
+{
+    PyObject* pmgr = getDriverManagerObject();
+    PyObject* cmd = SSTRPY(commandId);
+    Py_INCREF(cmd);
+    try
+    {
+		SPELLpythonHelper::instance().callMethod( pmgr, "onCommand", cmd, NULL );
+		SPELLpythonHelper::instance().checkError();
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("OnCommand failed: " + ex.what());
+    }
 }

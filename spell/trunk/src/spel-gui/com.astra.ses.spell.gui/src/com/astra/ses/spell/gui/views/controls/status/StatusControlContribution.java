@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -55,30 +55,32 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
-import com.astra.ses.spell.gui.core.interfaces.ICoreContextOperationListener;
-import com.astra.ses.spell.gui.core.interfaces.ICoreServerOperationListener;
-import com.astra.ses.spell.gui.core.interfaces.ICoreStatusListener;
-import com.astra.ses.spell.gui.core.interfaces.IStatusManager;
+import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.notification.ClientStatus;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreApplicationStatusListener;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreContextOperationListener;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreServerOperationListener;
+import com.astra.ses.spell.gui.core.model.notification.ApplicationStatus;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.server.ContextInfo;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
 import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
-import com.astra.ses.spell.gui.extensions.ServerBridge;
+import com.astra.ses.spell.gui.extensions.GuiNotifications;
 import com.astra.ses.spell.gui.model.ConnectionStatusConstants;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 
-public class StatusControlContribution extends WorkbenchWindowControlContribution implements ICoreServerOperationListener, ICoreContextOperationListener, ICoreStatusListener
+public class StatusControlContribution extends WorkbenchWindowControlContribution implements ICoreServerOperationListener, 
+																							 ICoreContextOperationListener, 
+																							 ICoreApplicationStatusListener
 {
-	IConfigurationManager s_cfg = null;
+	private static IConfigurationManager  s_cfg = null;
+	private static IContextProxy          s_proxy = null;
 
 	private static Color s_okColor = null;
 	private static Color s_warnColor = null;
@@ -86,7 +88,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 	private static Font s_boldFont = null;
 	private static ServerInfo s_serverInfo = null;
 	private static ContextInfo s_contextInfo = null;
-
+	
 	public static final String ID = "com.astra.ses.spell.gui.controls.StatusControlContribution";
 
 	private Label m_connection;
@@ -96,6 +98,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 	private Label m_driver;
 	private Label m_family;
 	private Label m_memory;
+	private Label m_key;
 
 	private Composite m_base;
 
@@ -108,6 +111,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		if (s_okColor == null)
 		{
 			s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
+			s_proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 			s_okColor = s_cfg.getStatusColor(ItemStatus.SUCCESS);
 			s_warnColor = s_cfg.getStatusColor(ItemStatus.WARNING);
 			s_errorColor = s_cfg.getStatusColor(ItemStatus.ERROR);
@@ -127,7 +131,10 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		GridLayout layout = new GridLayout();
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
-		layout.numColumns = 14;
+		layout.horizontalSpacing = 5;
+		layout.marginLeft = 0;
+		layout.marginRight = 0;
+		layout.numColumns = 16;
 		m_base.setLayout(layout);
 
 		// LABEL
@@ -219,29 +226,40 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		GridData memoryLabelData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
 		Label label7 = new Label(m_base, SWT.NONE);
 		label7.setFont(s_boldFont);
-		label7.setText("Memory: ");
+		label7.setText("Memory left: ");
 		label7.setLayoutData(memoryLabelData);
 		
 		// WIDGET
 		GridData memoryWidgetData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
-		memoryWidgetData.widthHint = 60;
+		memoryWidgetData.widthHint = 50;
 		m_memory = new Label(m_base, SWT.BORDER);
 		m_memory.setText("0%");
 		m_memory.setBackground(s_warnColor);
 		m_memory.setAlignment(SWT.CENTER);
 		m_memory.setLayoutData(memoryWidgetData);
 
+		// LABEL
+		GridData keyLabelData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
+		Label label8 = new Label(m_base, SWT.NONE);
+		label8.setFont(s_boldFont);
+		label8.setText("Key: ");
+		label8.setLayoutData(keyLabelData);
+		
+		// WIDGET
+		GridData keyWidgetData = new GridData(SWT.CENTER, SWT.CENTER, false, true);
+		keyWidgetData.widthHint = 20;
+		m_key = new Label(m_base, SWT.BORDER);
+		m_key.setText("?");
+		m_key.setBackground(s_warnColor);
+		m_key.setAlignment(SWT.CENTER);
+		m_key.setLayoutData(keyWidgetData);
+
 		m_base.pack();
 
-		ServerBridge.get().addContextListener(this);
-		ServerBridge.get().addServerListener(this);
-		IStatusManager st = (IStatusManager) ServiceManager.get(IStatusManager.class);
-		st.addListener(this);
+		GuiNotifications.get().addListener(this,ICoreServerOperationListener.class);
+		GuiNotifications.get().addListener(this,ICoreContextOperationListener.class);
+		GuiNotifications.get().addListener(this,ICoreApplicationStatusListener.class);
 
-		updateServer(false);
-		updateContext(false);
-
-		parent.pack();
 		return m_base;
 	}
 
@@ -251,10 +269,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 	@Override
 	public void dispose()
 	{
-		IStatusManager st = (IStatusManager) ServiceManager.get(IStatusManager.class);
-		st.removeListener(this);
-		ServerBridge.get().removeContextListener(this);
-		ServerBridge.get().removeServerListener(this);
+		GuiNotifications.get().removeListener(this);
 		super.dispose();
 	}
 
@@ -364,7 +379,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		{
 			String name = s_serverInfo.getName();
 			String role = s_serverInfo.getRole().name();
-			m_connection.setText("  " + name + "  ");
+			m_connection.setText(" " + name + " ");
 			m_mode.setText(role);
 			m_mode.setBackground(s_okColor);
 			m_connection.setBackground(s_okColor);
@@ -384,7 +399,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 				m_mode.setBackground(s_warnColor);
 			}
 		}
-		m_base.pack();
+		m_base.getParent().pack();
 	}
 
 	/***************************************************************************
@@ -396,21 +411,27 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 		{
 			String ctxName = s_contextInfo.getName();
 			String domain = s_contextInfo.getSC();
-			m_context.setText("  " + ctxName + "  ");
+			m_context.setText(" " + ctxName + " ");
 			m_context.setBackground(s_okColor);
 
-			m_domain.setText("  " + domain + "  ");
+			m_domain.setText(" " + domain + " ");
 			m_domain.setBackground(s_okColor);
 
-			m_driver.setText("  " + s_contextInfo.getDriver() + "  ");
+			m_driver.setText(" " + s_contextInfo.getDriver() + " ");
 			m_driver.setBackground(s_okColor);
 
-			m_family.setText("  " + s_contextInfo.getFamily() + "  ");
+			m_family.setText(" " + s_contextInfo.getFamily() + " ");
 			m_family.setBackground(s_okColor);
 
-			String role = s_serverInfo.getRole().name();
-			m_mode.setText(role);
-			m_mode.setBackground(s_okColor);
+			m_key.setText(s_proxy.getClientKey());
+			m_key.setBackground(s_okColor);
+
+			if (s_serverInfo != null)
+			{
+				ServerInfo.ServerRole role = s_serverInfo.getRole();
+				m_mode.setText(role.equals(ServerInfo.ServerRole.COMMANDING) ? "CMD" : "MON");
+				m_mode.setBackground(s_okColor);
+			}
 		}
 		else
 		{
@@ -418,6 +439,7 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 			m_domain.setText(ConnectionStatusConstants.UNKNOWN);
 			m_driver.setText(ConnectionStatusConstants.UNKNOWN);
 			m_family.setText(ConnectionStatusConstants.UNKNOWN);
+			m_key.setText("?");
 			if (connectionLost)
 			{
 				m_context.setText(ConnectionStatusConstants.FAILURE);
@@ -432,36 +454,31 @@ public class StatusControlContribution extends WorkbenchWindowControlContributio
 			m_domain.setBackground(s_warnColor);
 			m_driver.setBackground(s_warnColor);
 			m_family.setBackground(s_warnColor);
+			m_key.setBackground(s_warnColor);
 		}
-		m_base.pack();
+		m_base.getParent().pack();
 	}
 
 	@Override
-    public void onClientStatus( final ClientStatus status )
+    public void onApplicationStatus( ApplicationStatus status )
     {
-	    Display.getDefault().asyncExec( new Runnable()
-	    {
-	    	public void run()
-	    	{
-	    		Double pc = status.freeMemoryPC;
-	    		String pcs = pc.toString();
-	    		int idx = pcs.indexOf(".");
-	    		pcs = pcs.substring(0,idx+3);
-	    		m_memory.setText(pcs + " %");
-	    		if (pc<10.0)
-	    		{
-	    			m_memory.setBackground(s_errorColor);
-	    		}
-	    		else if (pc < 50.0)
-	    		{
-	    			m_memory.setBackground(s_warnColor);
-	    		}
-	    		else
-	    		{
-	    			m_memory.setBackground(s_okColor);
-	    		}
-	    	}
-	    });
-	    
+		if (m_memory.isDisposed()) return;
+		Double pc = status.freeMemoryPC;
+		String pcs = pc.toString();
+		int idx = pcs.indexOf(".");
+		pcs = pcs.substring(0,idx+3);
+		m_memory.setText(pcs + " %");
+		if (pc<10.0)
+		{
+			m_memory.setBackground(s_errorColor);
+		}
+		else if (pc < 50.0)
+		{
+			m_memory.setBackground(s_warnColor);
+		}
+		else
+		{
+			m_memory.setBackground(s_okColor);
+		}
     }
 }

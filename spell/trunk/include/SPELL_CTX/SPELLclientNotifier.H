@@ -5,7 +5,7 @@
 // DESCRIPTION: Client notifier for monitoring mode
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -120,6 +120,8 @@ private: //-------------------------------------------------------------------
 	// METHODS ///////////////////////////////////////////////////////////////
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 
+	    /** Holds the string identifier */
+	    std::string m_id;
 	    /** Holds the notified client */
 	    SPELLclient* m_client;
 	    /** Holds the notifier executor */

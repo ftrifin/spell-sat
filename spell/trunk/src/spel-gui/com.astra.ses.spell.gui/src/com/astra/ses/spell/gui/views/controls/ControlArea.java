@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,18 +61,19 @@ import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.InputData;
 import com.astra.ses.spell.gui.core.model.notification.UserActionNotification.UserActionStatus;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.interfaces.IControlArea;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
-import com.astra.ses.spell.gui.views.ProcedureView;
-import com.astra.ses.spell.gui.views.controls.actions.GuiExecutorCommand;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
+import com.astra.ses.spell.gui.types.GuiExecutorCommand;
 import com.astra.ses.spell.gui.views.controls.input.InputArea;
 
-public class ControlArea extends Composite implements ISashListener
+public class ControlArea extends Composite implements IControlArea
 {
 	/** Handle to the console manager */
 	private static IProcedureManager	s_pmgr	= null;
@@ -93,7 +94,7 @@ public class ControlArea extends Composite implements ISashListener
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	public ControlArea(ProcedureView view, IProcedure model, Composite top, String procId)
+	public ControlArea(IProcedureView view, IProcedure model, Composite top, String procId)
 	{
 		super(top, SWT.NONE);
 		m_top = top;
@@ -118,13 +119,13 @@ public class ControlArea extends Composite implements ISashListener
 
 		// Create the procedure control panel
 		Logger.debug("Creating control panel", Level.INIT, this);
-		m_controlPanel = new ProcedureControlPanel(view, model, this, SWT.NONE);
+		m_controlPanel = createControlPanel(view,model);
 		// Construct the composite contents
 		m_controlPanel.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
 		// Create the input area
 		Logger.debug("Creating input area", Level.INIT, this);
-		m_input = new InputArea(this);
+		m_input = new InputArea(this, model);
 
 		GridData ldata = new GridData(GridData.FILL_HORIZONTAL);
 		m_input.setLayoutData(ldata);
@@ -133,6 +134,15 @@ public class ControlArea extends Composite implements ISashListener
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
+	protected ProcedureControlPanel createControlPanel( IProcedureView view, IProcedure model )
+	{
+		return new ProcedureControlPanel(view, model, this, SWT.NONE);
+	}
+	
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#setEnabled(boolean)
+     */
+	@Override
 	public void setEnabled(boolean enabled)
 	{
 		m_controlPanel.setEnabled(enabled);
@@ -140,26 +150,29 @@ public class ControlArea extends Composite implements ISashListener
 		super.setEnabled(enabled);
 	}
 
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#setFocus()
+     */
+	@Override
 	public boolean setFocus()
 	{
 		return m_input.setFocus();
 	}
 
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	public void zoom(boolean increase)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#zoom(boolean)
+     */
+	@Override
+    public void zoom(boolean increase)
 	{
 		m_input.zoom(increase);
 	}
 
-	/***************************************************************************
-	 * Set the procedure status
-	 **************************************************************************/
-	public void setProcedureStatus(ExecutorStatus status, boolean fatalError)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#setProcedureStatus(com.astra.ses.spell.gui.core.model.types.ExecutorStatus, boolean)
+     */
+	@Override
+    public void setProcedureStatus(ExecutorStatus status, boolean fatalError)
 	{
 		m_controlPanel.notifyProcStatus(status, fatalError);
 		if (status == ExecutorStatus.UNINIT || status == ExecutorStatus.UNKNOWN || status == ExecutorStatus.ERROR
@@ -183,11 +196,11 @@ public class ControlArea extends Composite implements ISashListener
 		}
 	}
 
-	/***************************************************************************
-	 * Set the client mode (will enable or disable the control panel and input
-	 * area)
-	 **************************************************************************/
-	public void setClientMode(ClientMode mode)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#setClientMode(com.astra.ses.spell.gui.core.model.types.ClientMode)
+     */
+	@Override
+    public void setClientMode(ClientMode mode)
 	{
 		m_controlPanel.setClientMode(mode);
 		m_input.setClientMode(mode);
@@ -200,9 +213,6 @@ public class ControlArea extends Composite implements ISashListener
 	{
 		// Store the prompt data, used later for cancel or reset
 		m_promptData = promptData;
-
-		// Prompt panel buttons to be updated accordingly
-		m_controlPanel.onPrompt(true);
 
 		// Update the prompt input field and re-layout the area
 		m_input.prompt(promptData);
@@ -223,7 +233,6 @@ public class ControlArea extends Composite implements ISashListener
 			// buttons must be kept grayed out since this is a monitoring GUI.
 			if (!m_promptData.isNotification())
 			{
-				m_controlPanel.onPrompt(false);
 				m_controlPanel.setFocus();
 			}
 			// Clear the prompt data
@@ -237,20 +246,19 @@ public class ControlArea extends Composite implements ISashListener
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	public boolean cancelPrompt()
+	public boolean cancelPrompt( boolean uponNotification )
 	{
-		Logger.debug("Cancel prompt", Level.PROC, this);
+		Logger.debug("Cancel prompt (notified:" + uponNotification + ")", Level.PROC, this);
 		if (m_promptData != null)
 		{
 			// If it is not a notification but a controlling prompt, tell
 			// the prompt data object to assume 'cancel' value. If this
 			// is a notification this is a monitoring GUI and no return value
 			// is expected.
-			if (!m_promptData.isNotification())
+			if (!uponNotification)
 			{
-				m_controlPanel.onPrompt(false);
+				m_input.cancelPrompt();
 			}
-			m_input.cancelPrompt();
 			m_promptData = null;
 			m_top.layout();
 			return true;
@@ -258,20 +266,20 @@ public class ControlArea extends Composite implements ISashListener
 		return false;
 	}
 
-	/***************************************************************************
-	 * Determine if we are inside a prompt
-	 * 
-	 * @return
-	 **************************************************************************/
-	public boolean isPrompt()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#isPrompt()
+     */
+	@Override
+    public boolean isPrompt()
 	{
 		return ((m_promptData != null) && (!m_promptData.isReady()));
 	}
 
-	/***************************************************************************
-	 * Parse and issue a command
-	 **************************************************************************/
-	public void issueCommand(String cmdString)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#issueCommand(java.lang.String)
+     */
+	@Override
+    public void issueCommand(String cmdString)
 	{
 		String[] elements = cmdString.split(" ");
 		for (GuiExecutorCommand action : GuiExecutorCommand.values())
@@ -297,13 +305,11 @@ public class ControlArea extends Composite implements ISashListener
 		MessageDialog.openError(getShell(), "Command error", "Unrecognised command: " + cmdString);
 	}
 
-	/***************************************************************************
-	 * Update user action related controls
-	 * 
-	 * @param st
-	 * @param action
-	 **************************************************************************/
-	public void updateUserAction(UserActionStatus st, String action, Severity sev)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IControlArea#updateUserAction(com.astra.ses.spell.gui.core.model.notification.UserActionNotification.UserActionStatus, java.lang.String, com.astra.ses.spell.gui.core.model.types.Severity)
+     */
+	@Override
+    public void updateUserAction(UserActionStatus st, String action, Severity sev)
 	{
 		m_controlPanel.updateUserAction(st, action, sev);
 	}
@@ -316,6 +322,12 @@ public class ControlArea extends Composite implements ISashListener
 		int height = getClientArea().height-toSubstract;
 		m_input.setSize( getClientArea().width-10, height ); // Take into account the height of the internal controls
 	    m_input.onSashMoved( height );
+    }
+
+	@Override
+    public Composite getControl()
+    {
+	    return this;
     }
 
 }

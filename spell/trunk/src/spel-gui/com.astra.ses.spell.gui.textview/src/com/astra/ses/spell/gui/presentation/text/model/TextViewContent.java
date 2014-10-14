@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -86,16 +86,16 @@ public class TextViewContent implements StyledTextContent, TextBufferListener
 	/**************************************************************************
 	 * Constructor
 	 *************************************************************************/
-	public TextViewContent()
+	public TextViewContent( int capacity )
 	{
 		m_listeners = new ArrayList<TextChangeListener>();
 		m_text = new TextViewLine[1];
 		m_showTimestamp = false;
-		m_text[0] = new TextViewLine("", Scope.OTHER, ParagraphType.NORMAL, 0, m_showTimestamp);
+		m_text[0] = new TextViewLine("", null, Scope.OTHER, ParagraphType.NORMAL, 0, m_showTimestamp);
 		m_ranges = null;
 		m_viewWindowLength = 0;
 		m_viewWindowStart = 0;
-		m_buffer = new TextBuffer();
+		m_buffer = new TextBuffer(capacity);
 		m_buffer.addBufferListener(this);
 		makeLineIndex();
 	}
@@ -129,6 +129,15 @@ public class TextViewContent implements StyledTextContent, TextBufferListener
 			line.setShowTimestamp(show);
 		}
 		m_buffer.setShowTimestamp(show);
+		updateContents();
+	}
+
+	/**************************************************************************
+	 * Set buffer capacity
+	 *************************************************************************/
+	public void setCapacity( int lines )
+	{
+		m_buffer.setCapacity(lines);
 		updateContents();
 	}
 
@@ -187,7 +196,7 @@ public class TextViewContent implements StyledTextContent, TextBufferListener
 		if (m_text.length == 0)
 		{
 			m_text = new TextViewLine[1];
-			m_text[0] = new TextViewLine("", Scope.OTHER, ParagraphType.NORMAL, 0, m_showTimestamp);
+			m_text[0] = new TextViewLine("", null, Scope.OTHER, ParagraphType.NORMAL, 0, m_showTimestamp);
 		}
 	}
 
@@ -234,6 +243,10 @@ public class TextViewContent implements StyledTextContent, TextBufferListener
 		{
 			count += r.length;
 		}
+		if (m_showTimestamp)
+		{
+			count += (13*m_text.length);
+		}
 		return count;
 	}
 
@@ -271,7 +284,10 @@ public class TextViewContent implements StyledTextContent, TextBufferListener
 	public int getLineAtOffset(int offset)
 	{
 		if ((offset > getCharCount()) || (offset < 0))
+		{
+			System.err.println("getLineAtOffset " + offset + ": data size " + m_buffer.getDataSize() + " cc " + getCharCount());
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
 
 		int theIndex = m_ranges.length - 1;
 		int idxLowBox = 0;

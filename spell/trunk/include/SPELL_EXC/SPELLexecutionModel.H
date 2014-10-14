@@ -5,7 +5,7 @@
 // DESCRIPTION: Composite of all models and analyzers associated to a given frame.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -72,7 +72,6 @@ public: //--------------------------------------------------------------------
 		SPELLexecutionModel( const std::string& modelId,
 				             const std::string& filename,
 				             PyFrameObject* frame,
-							 bool monitorVars,
 							 std::set<std::string>& initialVariables);
 
 		//////////////////////////////////////////////////////////////////////
@@ -93,7 +92,9 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLvariableChangeListener.
 		**////////////////////////////////////////////////////////////////////
-		void variableChanged( const std::vector<SPELLvarInfo>& changed );
+		void variableChanged( const std::vector<SPELLvarInfo>& added,
+				              const std::vector<SPELLvarInfo>& changed,
+				              const std::vector<SPELLvarInfo>& deleted );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get the model identifier
@@ -106,9 +107,9 @@ public: //--------------------------------------------------------------------
 		void update();
 
 		//////////////////////////////////////////////////////////////////////
-		/** Model is activated.
+		/** Notify change of data scope
 		**////////////////////////////////////////////////////////////////////
-		void inScope();
+		void scopeChanged();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get the associated frame
@@ -139,8 +140,6 @@ private: //-------------------------------------------------------------------
 		PyFrameObject* m_frame;
 		/** Monitor of variables */
 		SPELLvariableMonitor m_varMonitor;
-		/** If true, use the variable monitor */
-		bool m_monitorVars;
 };
 
 /*@}*/

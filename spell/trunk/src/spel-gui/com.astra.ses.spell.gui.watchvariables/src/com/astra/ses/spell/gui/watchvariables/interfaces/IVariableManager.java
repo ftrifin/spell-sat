@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-13
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,10 +48,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.watchvariables.interfaces;
 
+import java.util.Map;
+
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
-import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 
 /*******************************************************************************
  * 
@@ -61,11 +62,21 @@ import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 public interface IVariableManager
 {
 	/***************************************************************************
+	 * Check if analysis is active
+	 **************************************************************************/
+	public boolean isEnabled();
+
+	/***************************************************************************
+	 * Enable or disable the analysis
+	 **************************************************************************/
+	public void setEnabled( boolean enable );
+
+	/***************************************************************************
 	 * Obtain all available variables
 	 * 
 	 * @return List of variable data
 	 **************************************************************************/
-	public VariableData[] getVariables();
+	public Map<String,VariableData> getVariables();
 
 	/***************************************************************************
 	 * Obtain all available variables from server
@@ -73,35 +84,6 @@ public interface IVariableManager
 	 * @return List of variable data
 	 **************************************************************************/
 	public void updateModel( IProgressMonitor monitor );
-
-	/***************************************************************************
-	 * Obtain all available variables from server
-	 * 
-	 * @return List of variable data
-	 **************************************************************************/
-	public void setMode( WhichVariables mode );
-
-	/***************************************************************************
-	 * Register a variable watch
-	 * 
-	 * @param varName
-	 *            Name of the variable
-	 * @param global
-	 *            True if the variable is global
-	 * 
-	 * @return Current data of the watched variable
-	 **************************************************************************/
-	public VariableData registerVariableWatch(String varName, boolean global);
-
-	/***************************************************************************
-	 * Obtain the data for a given variable
-	 * 
-	 * @param varName
-	 *            Name of the variable
-	 * 
-	 * @return The variable data
-	 **************************************************************************/
-	public VariableData getVariable(String varName);
 
 	/***************************************************************************
 	 * Change the value of a given variable
@@ -119,27 +101,12 @@ public interface IVariableManager
 	        boolean global);
 
 	/***************************************************************************
-	 * Unregister a variable watch
-	 * 
-	 * @param varName
-	 *            Name of the variable
-	 * @param global
-	 *            True if the variable is global
-	 **************************************************************************/
-	public void unregisterVariableWatch(String varName, boolean global);
-
-	/***************************************************************************
-	 * Clear all variable watches
-	 **************************************************************************/
-	public void clearAllWatches();
-
-	/***************************************************************************
 	 * Add a listener for variable changes
 	 * 
 	 * @param listener
 	 *            The listener
 	 **************************************************************************/
-	public void addWatchListener(IVariableWatchListener listener);
+	public void addListener(IVariableView listener);
 
 	/***************************************************************************
 	 * Remove a listener for variable changes
@@ -147,5 +114,5 @@ public interface IVariableManager
 	 * @param listener
 	 *            The listener
 	 **************************************************************************/
-	public void removeWatchListener(IVariableWatchListener listener);
+	public void removeListener(IVariableView listener);
 }

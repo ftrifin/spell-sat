@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -54,7 +54,7 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.SWT;
 
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 
 /*******************************************************************************
  * @brief
@@ -114,8 +114,8 @@ public class DictVariablesColumnComparator extends ViewerComparator
 	@Override
 	public int compare( Viewer viewer, Object e1, Object e2 )
 	{
-		TypedVariable v1 = (TypedVariable) e1;
-		TypedVariable v2 = (TypedVariable) e2;
+		DataVariable v1 = (DataVariable) e1;
+		DataVariable v2 = (DataVariable) e2;
 		int rc = 0;
 		
 		if (m_simple)

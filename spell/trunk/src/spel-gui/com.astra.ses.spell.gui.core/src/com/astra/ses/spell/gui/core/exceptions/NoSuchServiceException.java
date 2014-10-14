@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,8 +48,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.exceptions;
 
-import com.astra.ses.spell.gui.core.model.types.Level;
-import com.astra.ses.spell.gui.core.utils.Logger;
 
 /*******************************************************************************
  * @brief Exception raised by the ServiceManager when a non-existent service is
@@ -58,20 +56,7 @@ import com.astra.ses.spell.gui.core.utils.Logger;
  ******************************************************************************/
 public class NoSuchServiceException extends RuntimeException
 {
-
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private final static long	serialVersionUID	= 0;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Basic constructor
@@ -82,7 +67,5 @@ public class NoSuchServiceException extends RuntimeException
 	public NoSuchServiceException(String arg0)
 	{
 		super(arg0);
-		Logger.error("No such service: " + getLocalizedMessage(), Level.CONFIG,
-		        this);
 	}
 }

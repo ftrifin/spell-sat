@@ -6,7 +6,7 @@
 //
 // DATE      : Feb 1, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -47,7 +47,9 @@
 package com.astra.ses.spell.gui.dialogs;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -76,15 +78,17 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 import com.astra.ses.spell.gui.Activator;
+import com.astra.ses.spell.gui.core.exceptions.ContextError;
 import com.astra.ses.spell.gui.core.model.server.DirectoryFile;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.DataContainer;
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 import com.astra.ses.spell.gui.dialogs.controls.DictVariablesTable;
 import com.astra.ses.spell.gui.model.commands.CommandResult;
+import com.astra.ses.spell.gui.model.commands.SaveDictionary;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.model.jobs.BuildDirectoryTreeJob;
-import com.astra.ses.spell.gui.model.jobs.GetDataContainerJob;
+import com.astra.ses.spell.gui.model.jobs.GetDictionaryJob;
 import com.astra.ses.spell.gui.model.jobs.GetInputFileJob;
 import com.astra.ses.spell.gui.model.jobs.UpdateDataContainerJob;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
@@ -94,32 +98,20 @@ import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
  ******************************************************************************/
 public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectionChangedListener, DictVariablesTable.IValueEditListener
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	public static final String ID = "com.astra.ses.spell.gui.dialogs.DictionaryEditorDialog";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
 
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the dialog image icon */
 	private Image m_image;
 	/** Holds the bold font */
 	private Font m_font;
 	/** Holds the procedure identifier */
 	private String m_procId;
-	/** Holds the container name */
-	private String m_containerName;
-	/** Holds the container model */
-	private DataContainer m_container;
-	/** Holds the container model */
+	/** Holds the dictionary name */
+	private String m_dictionaryName;
+	/** Holds the dictionary model */
+	private DataContainer m_dictionary;
+	/** Holds the dictionary model */
 	private DataContainer m_fileContainer;
 	/** Holds the variable viewer */
 	private DictVariablesTable m_varTable;
@@ -146,20 +138,13 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 	/** Image for refresh button */
 	private Image m_imgRefresh;
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
-
 	/***************************************************************************
 	 * Constructor
 	 * 
 	 * @param shell
 	 *            The parent shell
 	 **************************************************************************/
-	public DictionaryEditorDialog(Shell shell, IProcedure model, String containerName, boolean canMergeFiles )
+	public DictionaryEditorDialog(Shell shell, IProcedure model, String containerName, boolean canMergeFiles ) throws ContextError
 	{
 		super(shell);
 		// Obtain the image for the dialog icon
@@ -167,13 +152,13 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 		m_image = descr.createImage();
 		m_font = JFaceResources.getBannerFont();
 		m_procId = model.getProcId();
-		m_containerName = containerName;
+		m_dictionaryName = containerName;
 		m_canMergeFiles = canMergeFiles;
 		
 		m_varTable = null;
 		m_fileTable = null;
 		
-		m_readOnly = (!model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING));
+		m_readOnly = (!model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL));
 		
 		if (m_readOnly) m_canMergeFiles = false;
 
@@ -185,17 +170,25 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 	/***************************************************************************
 	 * Defines the shell characteristics
 	 **************************************************************************/
-	protected void loadData( boolean updateViewer )
+	protected void loadData( boolean updateViewer ) throws ContextError
 	{
-		GetDataContainerJob job = new GetDataContainerJob( m_procId, m_containerName);
+		GetDictionaryJob job = new GetDictionaryJob( m_procId, m_dictionaryName );
 		CommandHelper.executeInProgress(job, true, true);
 		
-		m_container = job.container;
-		if (m_container == null)
+		//Checking dictionary recovery result and sending except in case of fail
+		if ( job.result.equals(CommandResult.FAILED) )
 		{
-			m_container = new DataContainer(m_procId, m_containerName);
+			throw new ContextError(m_dictionaryName + " dictionary or data dictionary in " + m_procId + " is not available."); 
 		}
-		if (updateViewer) m_varTable.setInput(m_container);
+
+		m_dictionary = job.dictionary;
+		
+		if (m_dictionary == null)
+		{
+			m_dictionary = new DataContainer(m_procId, m_dictionaryName);
+		}
+		
+		if (updateViewer) m_varTable.setInput(m_dictionary);
 	}
 	
 	/***************************************************************************
@@ -219,10 +212,6 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 		return super.close();
 	}
 
-	// =========================================================================
-	// # NON-ACCESSIBLE METHODS
-	// =========================================================================
-
 	/***************************************************************************
 	 * Creates the dialog contents.
 	 * 
@@ -233,8 +222,8 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 	protected Control createContents(Composite parent)
 	{
 		Control contents = super.createContents(parent);
-		setMessage("Editing dictionary " + m_container.getName() + " ( " + m_container.getVariables().size() + " variables )");
-		setTitle("Dictionary Editor in procedure '" + m_procId + "'");
+		setMessage("Editing dictionary " + m_dictionary.getName() + " ( " + m_dictionary.getVariables().size() + " keys )");
+		setTitle("Dictionary in procedure '" + m_procId + "'");
 		setTitleImage(m_image);
 		getShell().setText("Dictionary Editor");
 		return contents;
@@ -307,7 +296,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 		
-		if (m_canMergeFiles)
+		if (!m_dictionary.isTyped() || m_canMergeFiles)
 		{
 			Composite buttons = new Composite(top, SWT.BORDER);
 			buttons.setLayout( new RowLayout( SWT.HORIZONTAL ));
@@ -323,7 +312,18 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 					}
 				}
 				);
-		
+
+				Button btnSave = new Button(buttons, SWT.PUSH);
+				btnSave.setText("Save to file...");
+				btnSave.addSelectionListener( new SelectionAdapter()
+				{
+					public void widgetSelected( SelectionEvent ev )
+					{
+						doSaveFile();
+					}
+				}
+				);
+
 				m_mergeAllButton = new Button(buttons, SWT.PUSH);
 				m_mergeAllButton.setText("Merge all");
 				m_mergeAllButton.setEnabled(false);
@@ -433,7 +433,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 			
 		m_varTable.addSelectionChangedListener(this);
 		m_varTable.addValueEditListener(this);
-		m_varTable.initialize(m_container);
+		m_varTable.initialize(m_dictionary);
 			
 		return parent;
 	}
@@ -475,20 +475,48 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 			}
 		}
 	}
-	
+
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	private void mergeVariables( List<TypedVariable> fileVars )
+	private void doSaveFile()
+	{
+		BuildDirectoryTreeJob job = new BuildDirectoryTreeJob();
+		CommandHelper.executeInProgress(job, true, true);
+		if (job.result.equals(CommandResult.SUCCESS))
+		{
+			ServerFileSaveDialog dialog = new ServerFileSaveDialog(getShell(), job.tree);
+			dialog.open();
+			
+			String path = dialog.getPath();
+			if (path != null)
+			{
+				Map<String,String> arguments = new HashMap<String,String>();
+				arguments.put(SaveDictionary.ARG_PROCID,m_procId);
+				arguments.put(SaveDictionary.ARG_DICTNAME,m_dictionaryName);
+				arguments.put(SaveDictionary.ARG_PATH,path);
+				CommandResult result = (CommandResult) CommandHelper.execute(SaveDictionary.ID, arguments);
+				if (result != null && result.equals(CommandResult.SUCCESS))
+				{
+					MessageDialog.openInformation(getShell(), "File saved", "File '" + path + "' saved");
+				}
+			}
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private void mergeVariables( List<DataVariable> fileVars )
 	{
 		if (m_chkOverwrite.getSelection())
 		{
 			String overwrite = "";
-			for(TypedVariable fileVar : fileVars )
+			for(DataVariable fileVar : fileVars )
 			{
-				if (m_container.hasVariable( fileVar.getName() ))
+				if (m_dictionary.hasVariable( fileVar.getName() ))
 				{
-					TypedVariable var = m_container.getVariable(fileVar.getName());
+					DataVariable var = m_dictionary.getVariable(fileVar.getName());
 					String origValue = var.getValue();
 					String newValue  = fileVar.getValue();
 					if (!origValue.equals(newValue))
@@ -517,15 +545,15 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 		
 		boolean mergeNew = m_chkMergeNew.getSelection();
 		
-		for(TypedVariable fileVar : fileVars)
+		for(DataVariable fileVar : fileVars)
 		{
-			boolean varExists = m_container.hasVariable( fileVar.getName() );
+			boolean varExists = m_dictionary.hasVariable( fileVar.getName() );
 
 			if ( !mergeNew && !varExists ) continue;
 			
 			if (varExists)
 			{
-				TypedVariable var = m_container.getVariable(fileVar.getName());
+				DataVariable var = m_dictionary.getVariable(fileVar.getName());
 				String newValue  = fileVar.getValue();
 				try
 				{
@@ -540,9 +568,9 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 			}
 			else
 			{
-				TypedVariable copy = fileVar.copy();
+				DataVariable copy = fileVar.copy();
 				copy.markNew();
-				m_container.addVariable( fileVar.getName(), copy );
+				m_dictionary.addVariable( fileVar.getName(), copy );
 				numMerged++;
 			}
 		}
@@ -558,7 +586,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 		if (numMerged==0)
 		{
 			MessageDialog.openWarning(getShell(), "No changes made", 
-					"No value has been changed in the data container");
+					"No value has been changed in the data dictionary");
 			return;
 		}
 		
@@ -582,7 +610,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 	@SuppressWarnings("unchecked")
     private void doMergeSelected()
 	{
-		List<TypedVariable> selected = new ArrayList<TypedVariable>();
+		List<DataVariable> selected = new ArrayList<DataVariable>();
 		IStructuredSelection sel = (IStructuredSelection) m_fileTable.getSelection();
 		if (!sel.isEmpty())
 		{
@@ -599,7 +627,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 		if (MessageDialog.openConfirm(getShell(), "Revert changes", "Revert all changes made to variables?"))
 		{
 			m_varTable.setSelection(null);
-			m_container.revert();
+			m_dictionary.revert();
 			m_varTable.refresh();
 			if (m_fileTable != null)
 			{
@@ -621,8 +649,8 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 			m_chkOverwrite.setEnabled(!m_fileContainer.getVariables().isEmpty());
 			m_chkMergeNew.setEnabled(!m_fileContainer.getVariables().isEmpty());
 		}
-		getButton(IDialogConstants.OK_ID).setEnabled(m_container.hasChanges());
-		getButton(IDialogConstants.BACK_ID).setEnabled(m_container.hasChanges());
+		getButton(IDialogConstants.OK_ID).setEnabled(m_dictionary.hasChanges());
+		getButton(IDialogConstants.BACK_ID).setEnabled(m_dictionary.hasChanges());
 	}
 	
 	/***************************************************************************
@@ -655,7 +683,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 	{
 		if (buttonId == IDialogConstants.OK_ID)
 		{
-			if (m_container.hasChanges())
+			if (m_dictionary.hasChanges())
 			{
 				boolean mergeNew = false;
 				// The button can be null for dialogs without file import
@@ -663,7 +691,7 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 				{
 					m_chkMergeNew.getSelection();
 				}
-				UpdateDataContainerJob job = new UpdateDataContainerJob( m_procId, m_container, mergeNew );
+				UpdateDataContainerJob job = new UpdateDataContainerJob( m_procId, m_dictionary, mergeNew );
 				CommandHelper.executeInProgress(job, true, true);
 				m_varTable.refresh();
 				if (job.result == CommandResult.FAILED )
@@ -681,15 +709,15 @@ public class DictionaryEditorDialog extends TitleAreaDialog implements ISelectio
 		}
 		else if (buttonId == IDialogConstants.CANCEL_ID)
 		{
-			if (m_container.hasChanges())
+			if (m_dictionary.hasChanges())
 			{
-				if (!MessageDialog.openConfirm(getShell(), "Changes made", "There are changes made to the data container variables.\n\n" +
+				if (!MessageDialog.openConfirm(getShell(), "Changes made", "There are changes made to the data dictionary variables.\n\n" +
 			        "If you close the dialog, these changes will be lost. "))
 				return;
 			}
 			if (!m_fileContainer.getVariables().isEmpty())
 			{
-				if (!MessageDialog.openConfirm(getShell(), "File loaded", "There are NO changes made to the data container variables, but an input file was loaded.\n\n" +
+				if (!MessageDialog.openConfirm(getShell(), "File loaded", "There are NO changes made to the data dictionary variables, but an input file was loaded.\n\n" +
 				        "If you close the dialog, no changes will be applied. Are you sure to close?"))
 					return;
 			}

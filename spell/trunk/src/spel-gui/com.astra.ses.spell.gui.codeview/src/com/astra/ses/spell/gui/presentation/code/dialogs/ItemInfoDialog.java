@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -76,17 +76,6 @@ import com.astra.ses.spell.gui.procs.interfaces.model.SummaryMode;
  ******************************************************************************/
 public class ItemInfoDialog extends TitleAreaDialog //implements ItemNotificationListener
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the dialog image icon */
 	private Image m_image;
 	/** Holds the table of items */
@@ -95,13 +84,6 @@ public class ItemInfoDialog extends TitleAreaDialog //implements ItemNotificatio
 	private IProcedure m_model;
 	/** Line model */
 	private ICodeLine m_line;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -137,6 +119,14 @@ public class ItemInfoDialog extends TitleAreaDialog //implements ItemNotificatio
 	public void onNotification()
 	{
 		m_items.refresh();
+	}
+
+	/***************************************************************************
+	 * Get the corresponding line
+	 **************************************************************************/
+	public ICodeLine getLine()
+	{
+		return m_line;
 	}
 
 	// =========================================================================

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -66,6 +66,7 @@ public class GetLogFileJob implements IRunnableWithProgress
 	public CommandResult result;
 	public LogFile	     logFile;
 	protected String	 m_instanceId;
+	public Exception     error = null;
 
 	public GetLogFileJob(String instanceId)
 	{
@@ -85,13 +86,15 @@ public class GetLogFileJob implements IRunnableWithProgress
 			String path = fileMgr.getServerFilePath(m_instanceId, ServerFileType.EXECUTOR_LOG, monitor);
 			Logger.debug("LOG file path: '" + path + "'", Level.PROC, this);
 
-			logFile = (LogFile) fileMgr.getServerFile(path, ServerFileType.EXECUTOR_LOG, monitor);
+			logFile = (LogFile) fileMgr.getServerFile(path, ServerFileType.EXECUTOR_LOG, null, monitor);
 			
 			result = CommandResult.SUCCESS;
 		}
 		catch (Exception e)
 		{
-			Logger.error("Could retrieve LOG:" + e.getLocalizedMessage(),Level.PROC, this);
+			Logger.error("Could not retrieve LOG:" + e.getLocalizedMessage(),Level.PROC, this);
+			error = e;
+			result = CommandResult.FAILED;
 		}
 		monitor.done();
 	}

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -66,26 +66,6 @@ import com.astra.ses.spell.gui.core.shell.services.ShellManager;
  ******************************************************************************/
 public class Show extends ShellCommand
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
-
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
@@ -192,7 +172,7 @@ public class Show extends ShellCommand
 	protected void showProcedures()
 	{
 		IContextProxy cproxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
-		Map<String, String> procs = cproxy.getAvailableProcedures();
+		Map<String, String> procs = cproxy.getAvailableProcedures(true);
 		if (procs.size() == 0)
 		{
 			display("No procedures available");

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the context main class
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,10 +33,12 @@
 // Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLmonitor.H"
 #include "SPELL_WRP/SPELLconstants.H"
+#include "SPELL_WRP/SPELLdriverManager.H"
 #include "SPELL_UTIL/SPELLlog.H"
 #include "SPELL_UTIL/SPELLutils.H"
 #include "SPELL_UTIL/SPELLerror.H"
 #include "SPELL_UTIL/SPELLpythonHelper.H"
+#include "SPELL_UTIL/SPELLpythonMonitors.H"
 #include "SPELL_CFG/SPELLconfiguration.H"
 #include "SPELL_PRD/SPELLprocedureManager.H"
 #include "SPELL_IPC/SPELLipcHelper.H"
@@ -49,17 +51,21 @@
 
 // DEFINES /////////////////////////////////////////////////////////////////
 #define NAME std::string("[CTX] ")
-#define LIST_SEPARATOR "\3"
 
 SPELLcontext* SPELLcontext::s_instance = NULL;
+
+const std::string USE_DRIVER_TIME = "UseDriverTime";
 
 
 //=============================================================================
 // CONSTRUCTOR: SPELLcontext::SPELLcontext()
 //=============================================================================
 SPELLcontext::SPELLcontext()
-: m_clientIPC(),
-  m_listenerIPC()
+: m_maxProcs(10),
+  m_clientIPC(),
+  m_listenerIPC(),
+  m_executorDefaults(),
+  m_sharedData()
 {
 
 }
@@ -88,13 +94,64 @@ SPELLcontext& SPELLcontext::instance()
 //=============================================================================
 void SPELLcontext::start( const SPELLcontextConfiguration& config )
 {
-	LOG_INFO("Starting context " + getContextName() );
-
 	// Store the configuration
 	m_config = config;
 
 	// Setup the configuration
 	SPELLconfiguration::instance().loadConfig(m_config.configFile);
+
+    // Configure the time format if defined in configuration
+    std::string format = SPELLconfiguration::instance().getCommonParameter("TdsTimeFormat");
+    if (format.length()!=0)
+    {
+    	if (format.compare ("1") == 0)
+    	{
+    		SPELLutils::setTimeFormat(TIME_FORMAT_SLASH);
+    	}
+    	else if (format.compare("0")==0)
+    	{
+    		SPELLutils::setTimeFormat(TIME_FORMAT_DOT);
+    	}
+    }
+
+	LOG_INFO("Starting context " + getContextName() );
+
+	// Setting Context Executor Defaults
+	LOG_INFO(" Setting Context Executor Defaults ");
+	SPELLconfiguration& srvConfig = SPELLconfiguration::instance();
+
+	//Set Server defaults
+	m_executorDefaults.setRunInto( srvConfig.getExecutorParameter(ExecutorConstants::RunInto) == ExecutorConstants::TRUE_VALUE );
+	m_executorDefaults.setExecDelay( STRI(srvConfig.getExecutorParameter(ExecutorConstants::ExecDelay)) );
+	m_executorDefaults.setPromptWarningDelay( STRI(srvConfig.getExecutorParameter(ExecutorConstants::PromptDelay)) );
+	m_executorDefaults.setByStep( srvConfig.getExecutorParameter(ExecutorConstants::ByStep) == ExecutorConstants::TRUE_VALUE );
+	m_executorDefaults.setForceTcConfirm( srvConfig.getExecutorParameter(ExecutorConstants::ForceTcConfirm) == ExecutorConstants::TRUE_VALUE );
+	m_executorDefaults.setSaveStateMode( srvConfig.getExecutorParameter(ExecutorConstants::SaveStateMode) );
+	m_executorDefaults.setWatchVariables( srvConfig.getExecutorParameter(ExecutorConstants::WatchVariables) == ExecutorConstants::ENABLED );
+	m_executorDefaults.setMaxVerbosity( STRI(srvConfig.getExecutorParameter(ExecutorConstants::MaxVerbosity)) );
+	m_executorDefaults.setBrowsableLib( srvConfig.getExecutorParameter(ExecutorConstants::BrowsableLib) == ExecutorConstants::TRUE_VALUE );
+
+	//Override executor defaults with context parameters
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::RunInto) != "" )
+		m_executorDefaults.setRunInto( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::RunInto) == ExecutorConstants::TRUE_VALUE );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ExecDelay) != "" )
+		m_executorDefaults.setExecDelay( STRI(srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ExecDelay)) );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::PromptDelay) != "" )
+		m_executorDefaults.setPromptWarningDelay( STRI(srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::PromptDelay)) );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ByStep) != "" )
+		m_executorDefaults.setByStep( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ByStep) == ExecutorConstants::TRUE_VALUE );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForceTcConfirm) != "" )
+		m_executorDefaults.setForceTcConfirm( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForceTcConfirm) == ExecutorConstants::TRUE_VALUE );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::SaveStateMode) != "" )
+		m_executorDefaults.setSaveStateMode( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::SaveStateMode) );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::SaveStateMode) != "" )
+		m_executorDefaults.setWatchVariables( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::WatchVariables) == ExecutorConstants::ENABLED );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::MaxVerbosity) != "" )
+		m_executorDefaults.setMaxVerbosity( STRI(srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::MaxVerbosity)) );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::BrowsableLib) != "" )
+		m_executorDefaults.setBrowsableLib( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::BrowsableLib) == ExecutorConstants::TRUE_VALUE );
+
+	LOG_INFO( "Execution Defaults: " + m_executorDefaults.toString() );
 
 	// Preload the max. amount of active procedures
 	std::string drvName = SPELLconfiguration::instance().getContext(m_config.contextName).getDriverName();
@@ -111,11 +168,22 @@ void SPELLcontext::start( const SPELLcontextConfiguration& config )
 	// there are executors to reconnect to. The listener login message will be sent after this stage.
 	SPELLexecutorManager::instance().setup( getContextName() );
 
+	if (SPELLconfiguration::instance().getContextParameter(USE_DRIVER_TIME) == "true")
+	{
+		// Setup the TIME driver for getCurrentTime (need to load Python config first)
+		SPELLconfiguration::instance().loadPythonConfig(m_config.configFile);
+		SPELLdriverManager::instance().setup(getContextName(), "TIME");
+	}
+
 	// Setup the IPC interfaces to clients and listener. The listener one logs in.
 	m_clientIPC.setup();
 	m_listenerIPC.setup();
 
 	LOG_INFO("Context " + getContextName() + " ready" );
+
+	// SPELLpythonHelper::initialize has acquired the GIL. Release it so
+	// that operations in other threads (messages) can use it too.
+	PyEval_ReleaseLock();
 }
 
 //=============================================================================
@@ -125,6 +193,10 @@ void SPELLcontext::stop()
 {
 	LOG_INFO("Stopping context " + getContextName() );
 	SPELLclientManager::instance().removeAllClients();
+	if (SPELLconfiguration::instance().getContextParameter(USE_DRIVER_TIME) == "true")
+	{
+		SPELLdriverManager::instance().cleanup(true);
+	}
 	SPELLexecutorManager::instance().cleanup();
 	m_clientIPC.cleanup();
 	SPELLexecutorManager::instance().killAll();
@@ -167,10 +239,10 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 {
 	SPELLipcMessage resp = VOID_MESSAGE;
 
-	DEBUG( NAME + "Requested opening new executor");
+	LOG_INFO( "Requested opening new executor" );
 
 	// Check maximum amount of procs per context (driver specific)
-	if (m_maxProcs == getNumActiveProcedures())
+	if (m_maxProcs != 0 && m_maxProcs == getNumActiveProcedures())
 	{
 		LOG_ERROR(NAME + "Cannot open: maximum number of procedures reached");
 	    resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_OPEN_EXEC, msg );
@@ -179,8 +251,19 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 		return resp;
 	}
 
+	// Get the information about procedure instance identifiers. Note that if the procedure
+	// has been started by another one, there will be a parent instance identifier in the request message.
+	//
+	//   - The identifier of the child (subprocedure) will be in SPROC_ID in this case,
+	//   - The identifier of the parent will be in the PROC_ID.
 	std::string theInstanceId = "";
 	std::string theParentInstanceId = "";
+	// Note that the group id matches the instance id for standalone procedures, but it is
+	// the id of the original main procedure for all the children down a dependency tree.
+	std::string theGroupId = "";
+	
+	// The following condition is for the case when we have a subprocedure being started.
+	int callingLine = 0;
 	if (msg.hasField( MessageField::FIELD_SPROC_ID ))
 	{
 		theInstanceId = msg.get( MessageField::FIELD_SPROC_ID );
@@ -191,7 +274,26 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 		theInstanceId = msg.get( MessageField::FIELD_PROC_ID );
 	}
 
-	SPELLexecutorConfiguration config(theInstanceId, SPELLutils::fileTimestamp() );
+	// The group id will be copied from the request if exists
+	if (msg.hasField( MessageField::FIELD_GROUP_ID ))
+	{
+		theGroupId = msg.get( MessageField::FIELD_GROUP_ID );
+	}
+
+	// For subprocedures, there will be a calling procedure line number.
+	if (msg.hasField( MessageField::FIELD_PARENT_PROC_LINE ))
+	{
+		callingLine = STRI( msg.get(MessageField::FIELD_PARENT_PROC_LINE ));
+	}
+
+	// Origin ID is just informative for SPELL and it is optional
+	std::string theOriginId = "GUI";
+	if (msg.hasField( MessageField::FIELD_ORIGIN_ID ))
+	{
+		theOriginId = msg.get( MessageField::FIELD_ORIGIN_ID );
+	}
+
+	SPELLexecutorStartupParams config(theInstanceId, SPELLutils::fileTimestamp() );
 
 	config.setArguments(msg.get( MessageField::FIELD_ARGS ));
 	config.setCondition(msg.get( MessageField::FIELD_CONDITION ));
@@ -200,16 +302,22 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 	std::string oMode = msg.get( MessageField::FIELD_OPEN_MODE );
 	config.setOpenMode(SPELLdataHelper::openModeFromString(oMode));
 	config.setParentInstanceId(theParentInstanceId);
+	config.setParentCallingLine(callingLine);
+	config.setGroupId( theGroupId );
+	config.setOriginId( theOriginId );
 
-	DEBUG("		- Instance Id : " + config.getInstanceId());
-	DEBUG("		- Time Id     : " + config.getTimeId());
-	DEBUG("		- Proc Id     : " + config.getProcId());
-	DEBUG("		- Instance num: " + ISTR(config.getInstanceNum()));
-	DEBUG("		- Arguments   : " + config.getArguments());
-	DEBUG("		- Condition   : " + config.getCondition());
-	DEBUG("		- Client mode : " + cMode);
-	DEBUG("		- Open mode   : " + oMode);
-	DEBUG("		- Parent      : " + config.getParentInstanceId());
+	LOG_INFO("		- Instance Id : " + config.getInstanceId());
+	LOG_INFO("		- Client mode : " + cMode);
+	LOG_INFO("		- Group Id    : " + config.getGroupId());
+	LOG_INFO("		- Origin Id   : " + config.getOriginId());
+	LOG_INFO("		- Calling line: " + ISTR(config.getParentCallingLine()) );
+	LOG_INFO("		- Time Id     : " + config.getTimeId());
+	LOG_INFO("		- Proc Id     : " + config.getProcId());
+	LOG_INFO("		- Instance num: " + ISTR(config.getInstanceNum()));
+	LOG_INFO("		- Arguments   : " + config.getArguments());
+	LOG_INFO("		- Condition   : " + config.getCondition());
+	LOG_INFO("		- Open mode   : " + oMode);
+	LOG_INFO("		- Parent      : " + config.getParentInstanceId());
 
 	try
 	{
@@ -220,23 +328,33 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 		SPELLexecutorStatus initialStatus = exec->getStatus();
 
 		int clientKey = -1;
-		if (controllingClient)
+		if (controllingClient && ( config.getClientMode() != CLIENT_MODE_BACKGROUND ))
 		{
+			DEBUG("Set executor controller: " + ISTR(controllingClient->getClientKey()));
 			SPELLclientManager::instance().setExecutorController( controllingClient, exec );
 			clientKey = controllingClient->getClientKey();
 		}
-		else
+		else if ( config.getClientMode() != CLIENT_MODE_BACKGROUND )
 		{
+			DEBUG("Set unknown client mode");
 			config.setClientMode(CLIENT_MODE_UNKNOWN);
 		}
+		else
+		{
+			DEBUG("Set background client mode");
+		}
 		// Notify other clients
-		notifyExecutorOperation( config.getInstanceId(),
-								 theParentInstanceId,
-								 clientKey,
-								 config.getClientMode(),
-								 initialStatus,
-								 EXEC_OP_OPEN,
-								 config.getCondition() );
+		SPELLexecutorOperation op;
+		op.instanceId = config.getInstanceId();
+		op.parentId = theParentInstanceId;
+		op.groupId = config.getGroupId();
+		op.originId = config.getOriginId();
+		op.clientKey = clientKey;
+		op.clientMode = config.getClientMode();
+		op.status = initialStatus;
+		op.condition = config.getCondition();
+		op.type = SPELLexecutorOperation::EXEC_OP_OPEN;
+		notifyExecutorOperation( op );
 
 	}
 	catch( SPELLcoreException& err )
@@ -261,6 +379,8 @@ SPELLipcMessage SPELLcontext::closeExecutor( const SPELLipcMessage& msg )
 		// Check if there is a parent to notify
 		SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor( instanceId );
 		std::string parentInstanceId = exec->getParentInstanceId();
+		std::string groupId = exec->getModel().getGroupId();
+		std::string originId = exec->getModel().getOriginId();
 
 		DEBUG( NAME + "Removing monitoring clients");
 		// Unsubscribe any monitoring client
@@ -276,7 +396,7 @@ SPELLipcMessage SPELLcontext::closeExecutor( const SPELLipcMessage& msg )
 		SPELLclient* client = exec->getControllingClient();
 		if (client)
 		{
-			SPELLclientManager::instance().removeExecutorController( client, exec, true );
+			SPELLclientManager::instance().removeExecutorController( client, exec, true, false );
 		}
 
 		DEBUG( NAME + "Closing executor");
@@ -286,11 +406,14 @@ SPELLipcMessage SPELLcontext::closeExecutor( const SPELLipcMessage& msg )
 
 		DEBUG( NAME + "Notifying operation");
 		// Notify other clients
-		notifyExecutorOperation( instanceId, parentInstanceId,
-				                 msg.getKey(),
-				                 CLIENT_MODE_UNKNOWN,
-				                 STATUS_UNINIT,
-				                 EXEC_OP_CLOSE, "");
+		SPELLexecutorOperation op;
+		op.instanceId = instanceId;
+		op.parentId = parentInstanceId;
+		op.groupId = groupId;
+		op.originId = originId;
+		op.clientKey = msg.getKey();
+		op.type = SPELLexecutorOperation::EXEC_OP_CLOSE;
+		notifyExecutorOperation( op );
 	}
 	catch( SPELLcoreException& err )
 	{
@@ -315,6 +438,8 @@ SPELLipcMessage SPELLcontext::killExecutor( const SPELLipcMessage& msg )
 		// Check if there is a parent to notify first
 		SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor( instanceId );
 		std::string parentInstanceId = exec->getParentInstanceId();
+		std::string groupId = exec->getModel().getGroupId();
+		std::string originId = exec->getModel().getOriginId();
 
 		// Unsubscribe any monitoring client
 		std::list<int> mclients = SPELLclientManager::instance().getMonitoringClientsKeys( instanceId );
@@ -328,7 +453,7 @@ SPELLipcMessage SPELLcontext::killExecutor( const SPELLipcMessage& msg )
 		SPELLclient* client = exec->getControllingClient();
 		if (client)
 		{
-			SPELLclientManager::instance().removeExecutorController( client, exec, false );
+			SPELLclientManager::instance().removeExecutorController( client, exec, false, false );
 		}
 
 		SPELLexecutorManager::instance().killExecutor( instanceId );
@@ -336,15 +461,18 @@ SPELLipcMessage SPELLcontext::killExecutor( const SPELLipcMessage& msg )
 		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_KILL_EXEC, msg );
 
 		// Notify other clients
-		notifyExecutorOperation( instanceId, parentInstanceId,
-				                 msg.getKey(),
-				                 CLIENT_MODE_UNKNOWN,
-				                 STATUS_UNINIT,
-				                 EXEC_OP_KILL, "");
+		SPELLexecutorOperation op;
+		op.instanceId = instanceId;
+		op.parentId = parentInstanceId;
+		op.groupId = groupId;
+		op.originId = originId;
+		op.clientKey = msg.getKey();
+		op.type = SPELLexecutorOperation::EXEC_OP_KILL;
+		notifyExecutorOperation(op);
 	}
 	catch( SPELLcoreException& err )
 	{
-	  	resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_ATTACH_EXEC, msg );
+	  	resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_KILL_EXEC, msg );
 		resp.set( MessageField::FIELD_ERROR, "Cannot kill to executor");
 		resp.set( MessageField::FIELD_REASON, "Cannot find executor " + instanceId );
 	}
@@ -361,7 +489,7 @@ SPELLipcMessage SPELLcontext::recoverExecutor( const SPELLipcMessage& msg, SPELL
 	DEBUG( NAME + "Requested recovering executor");
 
 	// Check maximum amount of procs per context (driver specific)
-	if (m_maxProcs == getNumActiveProcedures())
+	if (m_maxProcs != 0 && m_maxProcs == getNumActiveProcedures())
 	{
 	    resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_RECOVER_EXEC, msg );
 		resp.set( MessageField::FIELD_ERROR, "Cannot recover executor");
@@ -369,7 +497,7 @@ SPELLipcMessage SPELLcontext::recoverExecutor( const SPELLipcMessage& msg, SPELL
 		return resp;
 	}
 
-	SPELLexecutorConfiguration config(msg.get( MessageField::FIELD_PROC_ID ), SPELLutils::fileTimestamp());
+	SPELLexecutorStartupParams config(msg.get( MessageField::FIELD_PROC_ID ), SPELLutils::fileTimestamp());
 
 	config.setClientMode(CLIENT_MODE_CONTROL);
 	config.setOpenMode((SPELLopenMode)(OPEN_MODE_VISIBLE | OPEN_MODE_BLOCKING));
@@ -401,14 +529,17 @@ SPELLipcMessage SPELLcontext::recoverExecutor( const SPELLipcMessage& msg, SPELL
 		SPELLclientManager::instance().setExecutorController( controllingClient, exec );
 
 		// Notify other clients
-		notifyExecutorOperation( config.getInstanceId(),
-				                 config.getParentInstanceId(),
-								 clientKey,
-								 config.getClientMode(),
-								 initialStatus,
-								 EXEC_OP_OPEN,
-								 config.getCondition() );
-
+		SPELLexecutorOperation op;
+		op.instanceId = config.getInstanceId();
+		op.parentId = config.getParentInstanceId();
+		op.groupId = config.getGroupId();
+		op.originId = config.getOriginId();
+		op.clientKey = clientKey;
+		op.clientMode = config.getClientMode();
+		op.status = initialStatus;
+		op.condition = config.getCondition();
+		op.type = SPELLexecutorOperation::EXEC_OP_OPEN;
+		notifyExecutorOperation( op );
 	}
 	catch( SPELLcoreException& err )
 	{
@@ -501,7 +632,16 @@ SPELLipcMessage SPELLcontext::getProcedureList( const SPELLipcMessage& msg )
 	DEBUG( NAME + "Requested list of procedures");
 	SPELLipcMessage resp = VOID_MESSAGE;
 
-	SPELLprocedureManager::instance().refresh();
+	SPELLsafePythonOperations ops("getProcedureList");
+
+	if (msg.hasField(MessageField::FIELD_REFRESH))
+	{
+		std::string refresh = msg.get(MessageField::FIELD_REFRESH);
+		if (refresh == MessageValue::DATA_TRUE)
+		{
+			SPELLprocedureManager::instance().refresh();
+		}
+	}
 	SPELLprocedureManager::ProcList list = SPELLprocedureManager::instance().getProcList();
 
 	std::string listStr = "";
@@ -545,6 +685,39 @@ SPELLipcMessage SPELLcontext::getProcedureRecoveryList( const SPELLipcMessage& m
 		listStr += *it;
 	}
 	resp = SPELLipcHelper::createResponse( ContextMessages::RSP_RECOVERY_LIST, msg );
+	resp.set( MessageField::FIELD_FILE_LIST, listStr );
+	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::getProcedureAsRunList( const SPELLipcMessage& msg )
+{
+	DEBUG( NAME + "Requested list of procedure ASRUN files");
+	SPELLipcMessage resp = VOID_MESSAGE;
+
+	SPELLcontextConfig& ctxConfig = SPELLconfiguration::instance().getContext(m_config.contextName);
+	std::string dataDir = SPELLutils::getSPELL_DATA() + PATH_SEPARATOR + ctxConfig.getLocationPath("ar");
+
+	std::list<std::string> files = SPELLutils::getFilesInDir(dataDir);
+	std::list<std::string> wsfiles;
+	for(std::list<std::string>::const_iterator it = files.begin(); it != files.end(); it++)
+	{
+		std::string filename = *it;
+		if (filename.find(".ASRUN") != std::string::npos )
+		{
+			wsfiles.push_back(filename);
+		}
+	}
+
+	std::string listStr = "";
+	for(std::list<std::string>::const_iterator it = wsfiles.begin(); it != wsfiles.end(); it++)
+	{
+		if (listStr != "") listStr += LIST_SEPARATOR;
+		listStr += *it;
+	}
+	resp = SPELLipcHelper::createResponse( ContextMessages::RSP_ASRUN_LIST, msg );
 	resp.set( MessageField::FIELD_FILE_LIST, listStr );
 	return resp;
 }
@@ -725,6 +898,79 @@ SPELLipcMessage SPELLcontext::getExecutorInfo( const SPELLipcMessage& msg )
 	return resp;
 }
 
+
+//=============================================================================
+// METHOD: SPELLcontext::getExecutorDefaults
+//=============================================================================
+SPELLipcMessage SPELLcontext::getExecutorDefaults( const SPELLipcMessage& msg )
+{
+	SPELLipcMessage resp = SPELLipcHelper::createResponse( ContextMessages::RSP_GET_CTX_EXEC_DFLT, msg);
+	DEBUG( NAME + "Requested executor defaults ");
+
+	fillExecutorDefaults(resp);
+
+	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::setExecutorDefaults
+//=============================================================================
+SPELLipcMessage SPELLcontext::setExecutorDefaults( const SPELLipcMessage& msg )
+{
+	//std::string instanceId = msg.get( MessageField::FIELD_PROC_ID );
+	SPELLipcMessage resp = SPELLipcHelper::createResponse( ContextMessages::RSP_SET_CTX_EXEC_DFLT, msg);
+	DEBUG( NAME + "Updating context executor defaults from GUI");
+
+	//Set only set fields that come within the message
+	if( msg.hasField(MessageField::FIELD_RUN_INTO) )
+		m_executorDefaults.setRunInto( msg.get(MessageField::FIELD_RUN_INTO) == ExecutorConstants::TRUE_VALUE );
+
+	if( msg.hasField(MessageField::FIELD_EXEC_DELAY) )
+		m_executorDefaults.setExecDelay( STRI(msg.get(MessageField::FIELD_EXEC_DELAY)) );
+
+	if( msg.hasField(MessageField::FIELD_PROMPT_DELAY) )
+		m_executorDefaults.setPromptWarningDelay( STRI(msg.get(MessageField::FIELD_PROMPT_DELAY)) );
+
+	if( msg.hasField(MessageField::FIELD_BY_STEP) )
+		m_executorDefaults.setByStep( msg.get(MessageField::FIELD_BY_STEP) == ExecutorConstants::TRUE_VALUE );
+
+	if( msg.hasField(MessageField::FIELD_FORCE_TC_CONFIRM) )
+		m_executorDefaults.setForceTcConfirm( msg.get(MessageField::FIELD_FORCE_TC_CONFIRM) == ExecutorConstants::TRUE_VALUE );
+
+	if( msg.hasField(MessageField::FIELD_SAVE_STATE_MODE) )
+		m_executorDefaults.setSaveStateMode( msg.get(MessageField::FIELD_SAVE_STATE_MODE) );
+
+	if( msg.hasField(MessageField::FIELD_WATCH_VARIABLES) )
+		m_executorDefaults.setWatchVariables( msg.get(MessageField::FIELD_WATCH_VARIABLES) == ExecutorConstants::TRUE_VALUE );
+
+	if( msg.hasField(MessageField::FIELD_MAX_VERBOSITY) )
+		m_executorDefaults.setMaxVerbosity( STRI(msg.get(MessageField::FIELD_MAX_VERBOSITY)) );
+
+	if( msg.hasField(MessageField::FIELD_BROWSABLE_LIB) )
+		m_executorDefaults.setBrowsableLib( msg.get(MessageField::FIELD_BROWSABLE_LIB) == ExecutorConstants::TRUE_VALUE );
+
+	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+void SPELLcontext::fillExecutorDefaults( SPELLipcMessage& msg )
+{
+	DEBUG( NAME + "Filling SPELLipcMessage with executor Defaults ");
+
+	msg.set( MessageField::FIELD_RUN_INTO, (m_executorDefaults.isRunInto() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_EXEC_DELAY, ISTR( m_executorDefaults.getExecDelay() ) );
+	msg.set( MessageField::FIELD_PROMPT_DELAY, ISTR(m_executorDefaults.getPromptWarningDelay()) );
+	msg.set( MessageField::FIELD_BY_STEP, (m_executorDefaults.isByStep() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_FORCE_TC_CONFIRM, (m_executorDefaults.isForceTcConfirm() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_SAVE_STATE_MODE, m_executorDefaults.getSaveStateMode() );
+	msg.set( MessageField::FIELD_WATCH_VARIABLES, (m_executorDefaults.isWatchVariables() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_MAX_VERBOSITY, ISTR(m_executorDefaults.getMaxVerbosity()) );
+	msg.set( MessageField::FIELD_BROWSABLE_LIB, (m_executorDefaults.isBrowsableLib() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+
+} //fillExecutorDefaults
+
 //=============================================================================
 // METHOD: SPELLcontext::
 //=============================================================================
@@ -741,6 +987,8 @@ SPELLipcMessage SPELLcontext::attachExecutor( const SPELLipcMessage& msg, SPELLc
 	try
 	{
 		SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor(instanceId);
+		std::string groupId = exec->getModel().getGroupId();
+		std::string originId = exec->getModel().getOriginId();
 
 		if (mode == CLIENT_MODE_CONTROL)
 		{
@@ -765,19 +1013,22 @@ SPELLipcMessage SPELLcontext::attachExecutor( const SPELLipcMessage& msg, SPELLc
 				// Add the GUI list
 				SPELLclientManager::instance().completeMonitoringInfo( instanceId, resp );
 				// Notify other clients
-				notifyExecutorOperation( instanceId, exec->getParentInstanceId(),
-						                 msg.getKey(),
-						                 CLIENT_MODE_CONTROL,
-						                 exec->getStatus(),
-						                 EXEC_OP_ATTACH, "");
+				SPELLexecutorOperation op;
+				op.instanceId = instanceId;
+				op.parentId = exec->getParentInstanceId();
+				op.groupId = groupId;
+				op.originId = originId;
+				op.clientKey = msg.getKey();
+				op.clientMode = CLIENT_MODE_CONTROL;
+				op.status = exec->getStatus();
+				op.type = SPELLexecutorOperation::EXEC_OP_ATTACH;
+				notifyExecutorOperation( op );
 			}
 		}
 		else
 		{
 			// Set the procedure controlling client on the client model
 			client->addProcedure(instanceId, CLIENT_MODE_MONITOR);
-
-			SPELLexecutorStatus st = exec->getStatus();
 
 			LOG_INFO("Client " + ISTR(client->getClientKey()) + " monitoring executor " + instanceId);
 
@@ -789,10 +1040,16 @@ SPELLipcMessage SPELLcontext::attachExecutor( const SPELLipcMessage& msg, SPELLc
 			// Monitor the executor
 			SPELLclientManager::instance().startMonitorExecutor( client, exec );
 			// Notify other clients
-			notifyExecutorOperation( instanceId, exec->getParentInstanceId(),
-									 msg.getKey(),
-									 CLIENT_MODE_MONITOR,
-									 st, EXEC_OP_ATTACH, "");
+			SPELLexecutorOperation op;
+			op.instanceId = instanceId;
+			op.parentId = exec->getParentInstanceId();
+			op.groupId = groupId;
+			op.originId = originId;
+			op.clientKey = msg.getKey();
+			op.clientMode = CLIENT_MODE_MONITOR;
+			op.status = exec->getStatus();
+			op.type = SPELLexecutorOperation::EXEC_OP_ATTACH;
+			notifyExecutorOperation( op );
 		}
 	}
 	catch( SPELLcoreException& ex )
@@ -825,7 +1082,7 @@ void SPELLcontext::clientLost( int clientKey )
 				SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor( it->first );
 				if (it->second == CLIENT_MODE_CONTROL )
 				{
-					SPELLclientManager::instance().removeExecutorController(client, exec, true);
+					SPELLclientManager::instance().removeExecutorController(client, exec, true, true);
 					LOG_WARN("Client " + ISTR(clientKey) + " stop controlling executor " + exec->getModel().getInstanceId());
 				}
 				else
@@ -854,12 +1111,14 @@ void SPELLcontext::executorLost( const std::string& instanceId )
 	try
 	{
 		SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor( instanceId );
+		std::string groupId = exec->getModel().getGroupId();
+		std::string originId = exec->getModel().getOriginId();
 
 		// Remove the controlling client about the loss
 		SPELLclient* client = exec->getControllingClient();
 		if (client)
 		{
-			SPELLclientManager::instance().removeExecutorController( client, exec, false );
+			SPELLclientManager::instance().removeExecutorController( client, exec, false, false );
 		}
 
 		// Remove all monitoring clients
@@ -872,9 +1131,13 @@ void SPELLcontext::executorLost( const std::string& instanceId )
 		}
 
 		// Notify all GUIs in the system
-		notifyExecutorOperation( instanceId, exec->getParentInstanceId(),
-		     			         -1, CLIENT_MODE_UNKNOWN, STATUS_ERROR,
-								 EXEC_OP_CRASH, "" );
+		SPELLexecutorOperation op;
+		op.instanceId = instanceId;
+		op.status = STATUS_ERROR;
+		op.groupId = groupId;
+		op.originId = originId;
+		op.type = SPELLexecutorOperation::EXEC_OP_CRASH;
+		notifyExecutorOperation( op );
 
 		// Mark the model to be removed (cannot delete now, since this operation is
 		// triggered from the process model itself
@@ -894,26 +1157,37 @@ SPELLipcMessage SPELLcontext::detachExecutor( const SPELLipcMessage& msg, SPELLc
 	DEBUG( NAME + "Requested detaching from executor: " + instanceId );
 
 	SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor(instanceId);
+	std::string groupId = exec->getModel().getGroupId();
+	std::string originId = exec->getModel().getOriginId();
 
 	try
 	{
 		LOG_INFO("Client " + ISTR(client->getClientKey()) + " detached from executor " + instanceId);
+
+		// To notify to other clients
+		SPELLexecutorOperation op;
+		op.instanceId = instanceId;
+		op.clientKey = msg.getKey();
+		op.groupId = groupId;
+		op.originId = originId;
+		op.status = exec->getStatus();
+		op.type = SPELLexecutorOperation::EXEC_OP_DETACH;
+
 		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_DETACH_EXEC, msg);
 
 		if (exec->getControllingClient() == client)
 		{
-			SPELLclientManager::instance().removeExecutorController( client, exec, true );
+			SPELLclientManager::instance().removeExecutorController( client, exec, true, false );
+			op.clientMode = CLIENT_MODE_CONTROL;
 		}
 		else
 		{
 			SPELLclientManager::instance().stopMonitorExecutor( client, exec );
+			op.clientMode = CLIENT_MODE_MONITOR;
 		}
 
-		// Notify other clients
-		notifyExecutorOperation( instanceId, exec->getParentInstanceId(), msg.getKey(),
-				                 CLIENT_MODE_UNKNOWN,
-				                 exec->getStatus(),
-				                 EXEC_OP_DETACH, "");
+
+		notifyExecutorOperation( op );
 	}
 	catch( SPELLcoreException& ex )
 	{
@@ -937,6 +1211,8 @@ SPELLipcMessage SPELLcontext::removeControl( const SPELLipcMessage& msg )
 	DEBUG( NAME + "Requested remove control from executor: " + instanceId );
 
 	SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor(instanceId);
+	std::string groupId = exec->getModel().getGroupId();
+	std::string originId = exec->getModel().getOriginId();
 
 	try
 	{
@@ -946,12 +1222,17 @@ SPELLipcMessage SPELLcontext::removeControl( const SPELLipcMessage& msg )
 		if (client)
 		{
 			LOG_INFO("Client " + ISTR(client->getClientKey()) + " removed from executor " + instanceId);
-			SPELLclientManager::instance().removeExecutorController( client, exec, true );
+			SPELLclientManager::instance().removeExecutorController( client, exec, true, false );
 			// Notify other clients
-			notifyExecutorOperation( instanceId, exec->getParentInstanceId(), msg.getKey(),
-					                 CLIENT_MODE_UNKNOWN,
-					                 exec->getStatus(),
-					                 EXEC_OP_DETACH, "");
+			SPELLexecutorOperation op;
+			op.instanceId = instanceId;
+			op.clientKey = msg.getKey();
+			op.groupId = groupId;
+			op.originId = originId;
+			op.clientMode = CLIENT_MODE_CONTROL;
+			op.status = exec->getStatus();
+			op.type = SPELLexecutorOperation::EXEC_OP_DETACH;
+			notifyExecutorOperation( op );
 		}
 
 	}
@@ -960,6 +1241,53 @@ SPELLipcMessage SPELLcontext::removeControl( const SPELLipcMessage& msg )
 		LOG_ERROR("Cannot remove control: " + std::string(ex.what()) );
 		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_REMOVE_CONTROL, msg );
 		resp.set( MessageField::FIELD_ERROR, "Cannot remove control");
+		resp.set( MessageField::FIELD_REASON, ex.what() );
+		resp.set( MessageField::FIELD_FATAL, PythonConstants::True );
+	}
+	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::setExecutorInBackground( const SPELLipcMessage& msg )
+{
+	SPELLipcMessage resp = VOID_MESSAGE;
+
+	std::string instanceId = msg.get( MessageField::FIELD_PROC_ID );
+	DEBUG( NAME + "Requested put executor " + instanceId + " in background");
+
+	SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor(instanceId);
+	std::string groupId = exec->getModel().getGroupId();
+	std::string originId = exec->getModel().getOriginId();
+
+	try
+	{
+		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_SET_BACKGROUND, msg);
+		SPELLclient* client = exec->getControllingClient();
+
+		if (client)
+		{
+			LOG_INFO("Client " + ISTR(client->getClientKey()) + " removed from executor " + instanceId);
+			SPELLclientManager::instance().setExecutorInBackground( client, exec );
+			// Notify other clients
+			SPELLexecutorOperation op;
+			op.instanceId = instanceId;
+			op.clientKey = msg.getKey();
+			op.groupId = groupId;
+			op.originId = originId;
+			op.clientMode = CLIENT_MODE_CONTROL;
+			op.status = exec->getStatus();
+			op.type = SPELLexecutorOperation::EXEC_OP_DETACH;
+			notifyExecutorOperation( op );
+		}
+
+	}
+	catch( SPELLcoreException& ex )
+	{
+		LOG_ERROR("Cannot set to background: " + std::string(ex.what()) );
+		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_REMOVE_CONTROL, msg );
+		resp.set( MessageField::FIELD_ERROR, "Cannot set to background");
 		resp.set( MessageField::FIELD_REASON, ex.what() );
 		resp.set( MessageField::FIELD_FATAL, PythonConstants::True );
 	}
@@ -1031,6 +1359,21 @@ SPELLipcMessage SPELLcontext::getInstanceId( const SPELLipcMessage& msg )
 		resp.set(MessageField::FIELD_REASON, "Procedure does not exist: '" + procId + "'");
 		resp.set(MessageField::FIELD_FATAL, "true");
 	}
+	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::getCurrentTime
+//=============================================================================
+SPELLipcMessage SPELLcontext::getCurrentTime(const SPELLipcMessage& msg)
+{
+	SPELLipcMessage resp = VOID_MESSAGE;
+
+	SPELLsafePythonOperations ops("getCurrentTime");
+
+	std::string time = SPELLpythonHelper::instance().evalTime("NOW").toString();
+	resp = SPELLipcHelper::createResponse(ContextMessages::RSP_CURRENT_TIME, msg);
+	resp.set(MessageField::FIELD_DRIVER_TIME, time);
 	return resp;
 }
 
@@ -1119,50 +1462,38 @@ SPELLipcMessage SPELLcontext::getServerFilePath( const SPELLipcMessage& msg )
 		}
 		else
 		{
-			LOG_ERROR("Cannot provide file path: missing procedure identifier");
+			LOG_ERROR("Cannot provide file path: missing server file type identifier");
 			resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_SERVER_FILE_PATH, msg );
 			resp.set( MessageField::FIELD_ERROR, "Cannot provide file path");
 			resp.set( MessageField::FIELD_REASON, "Missing file type");
 		}
 	}
+	else if (msg.hasField( MessageField::FIELD_SERVER_FILE_ID))
+	{
+		std::string fileTypeStr = msg.get( MessageField::FIELD_SERVER_FILE_ID );
+		std::string path = "";
+		SPELLserverFile file = SPELLdataHelper::serverFileFromString( fileTypeStr );
+		SPELLcontextConfig& ctxConfig = SPELLconfiguration::instance().getContext(m_config.contextName);
+
+		if (file == FILE_ASRUN)
+		{
+			path = SPELLutils::getSPELL_DATA() + PATH_SEPARATOR + ctxConfig.getLocationPath("ar");
+		}
+		else if (file == FILE_LOG)
+		{
+			path = SPELLutils::getSPELL_LOG();
+		}
+
+		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_SERVER_FILE_PATH, msg );
+		resp.set( MessageField::FIELD_FILE_PATH, path );
+	}
 	else
 	{
-		LOG_ERROR("Cannot provide file path: missing procedure identifier");
+		LOG_ERROR("Cannot provide file path: missing procedure identifier and no file type given");
 		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_SERVER_FILE_PATH, msg );
 		resp.set( MessageField::FIELD_ERROR, "Cannot provide file path");
 		resp.set( MessageField::FIELD_REASON, "Missing procedure identifier");
 	}
-	return resp;
-}
-
-//=============================================================================
-// METHOD: SPELLcontext::
-//=============================================================================
-SPELLipcMessage SPELLcontext::dumpInterpreterInfo( const SPELLipcMessage& msg )
-{
-	SPELLipcMessage resp = VOID_MESSAGE;
-	std::string instanceId = "";
-
-	instanceId = msg.get( MessageField::FIELD_PROC_ID );
-	DEBUG( NAME + "Requested dump interpreter info for " + instanceId );
-
-	SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor(instanceId);
-
-	if (exec)
-	{
-		SPELLipcMessage copy(msg);
-		copy.setType( MSG_TYPE_ONEWAY );
-		copy.setId( ExecutorMessages::MSG_DUMP_INTERPRETER );
-		exec->sendMessageToExecutor( &copy );
-		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_DUMP_INTERPRETER, msg);
-	}
-	else
-	{
-		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_DUMP_INTERPRETER, msg );
-		resp.set( MessageField::FIELD_ERROR, "Cannot dump interpreter information");
-		resp.set( MessageField::FIELD_REASON, "Executor not found" );
-	}
-
 	return resp;
 }
 
@@ -1251,6 +1582,8 @@ void SPELLcontext::clearChunker( const SPELLipcMessage& msg )
 //=============================================================================
 SPELLipcMessage SPELLcontext::getInputFile( const SPELLipcMessage& msg )
 {
+	SPELLsafePythonOperations ops("getInputFile");
+
 	SPELLipcMessage response = SPELLipcHelper::createResponse( ContextMessages::RSP_INPUT_FILE, msg );
 
 	std::string filename = msg.get(MessageField::FIELD_FILE_PATH);
@@ -1360,55 +1693,27 @@ SPELLipcMessage SPELLcontext::getInputFile( const SPELLipcMessage& msg )
 //=============================================================================
 // METHOD: SPELLcontext::
 //=============================================================================
-void SPELLcontext::notifyExecutorOperation(
-							  const std::string& instanceId,
-							  const std::string& parentInstanceId,
-							  int clientKey,
-		                      const SPELLclientMode& clientMode,
-		                      const SPELLexecutorStatus& status,
-		                      const SPELLexecutorOperation& operation,
-		                      const std::string& condition,
-		                      const std::string& errorMessage,
-		                      const std::string& errorReason )
+void SPELLcontext::notifyExecutorOperation( const SPELLexecutorOperation& op )
 {
-	DEBUG( NAME + "Notify executor operation " + SPELLdataHelper::executorOperationToString(operation));
+	DEBUG( NAME + "Notify executor operation " + op.toString() );
 	SPELLipcMessage notification( ContextMessages::MSG_EXEC_OP );
 	notification.setSender("CTX");
 	notification.setReceiver("CLT");
 	notification.setType(MSG_TYPE_ONEWAY);
-	notification.set( MessageField::FIELD_PROC_ID, instanceId );
-	notification.set( MessageField::FIELD_PARENT_PROC, parentInstanceId );
-	notification.set( MessageField::FIELD_EXOP, SPELLdataHelper::executorOperationToString(operation) );
-	notification.set( MessageField::FIELD_GUI_KEY, ISTR(clientKey) );
-	notification.set( MessageField::FIELD_GUI_MODE, SPELLdataHelper::clientModeToString(clientMode) );
-	notification.set( MessageField::FIELD_EXEC_STATUS, SPELLdataHelper::executorStatusToString(status) );
-	notification.set( MessageField::FIELD_CONDITION, condition );
-	if (errorMessage != "")
-	{
-		DEBUG( NAME + "Append error information: " + errorMessage + ":" + errorReason);
-		notification.set( MessageField::FIELD_ERROR, errorMessage );
-		notification.set( MessageField::FIELD_REASON, errorReason );
-	}
+
+	op.completeMessage(notification);
 
 	// Notify to clients
 	SPELLclientManager::instance().notifyClients( notification );
 
 	// Notify to parent proc if needed
-	if (parentInstanceId != "")
+	if (op.parentId != "")
 	{
-		DEBUG( NAME + "Notify to parent executor: " + parentInstanceId );
+		DEBUG( NAME + "Notify to parent executor if present");
 		try
 		{
-			SPELLexecutor* parentExec = SPELLexecutorManager::instance().getExecutor( parentInstanceId );
-
-			// Status notifications for executors need to be requests, not oneway
-			if ( operation == EXEC_OP_STATUS)
-			{
-				notification.setType( MSG_TYPE_REQUEST );
-				notification.set( MessageField::FIELD_DATA_TYPE, MessageValue::DATA_TYPE_STATUS );
-				parentExec->sendRequestToExecutor( notification );
-			}
-			else
+			SPELLexecutor* parentExec = SPELLexecutorManager::instance().getExecutor( op.parentId );
+			if (parentExec)
 			{
 				parentExec->sendMessageToExecutor( notification );
 			}
@@ -1419,4 +1724,524 @@ void SPELLcontext::notifyExecutorOperation(
 		}
 	}
 	DEBUG( NAME + "Notify executor operation done");
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+void SPELLcontext::notifySharedDataOperation( const std::string& procId,
+											  const SPELLsharedDataOperation& operation,
+											  const std::string& variables, const std::string& values,
+											  const std::string& scope )
+{
+	DEBUG( NAME + "Notify context shared data operation by procedure");
+	SPELLipcMessage notification( MessageId::MSG_ID_SHARED_DATA_OP );
+	notification.setSender("CTX");
+	notification.setReceiver("CLT");
+	notification.setType(MSG_TYPE_ONEWAY);
+	notification.set( MessageField::FIELD_PROC_ID, procId );
+	notification.set( MessageField::FIELD_SHARED_OP, SPELLdataHelper::sharedDataOperationToString(operation) );
+	notification.set( MessageField::FIELD_SHARED_SCOPE, scope );
+	notification.set( MessageField::FIELD_SHARED_VARIABLE, variables );
+	notification.set( MessageField::FIELD_SHARED_VALUE, values );
+
+	// Notify to clients
+	SPELLclientManager::instance().notifyClients( notification );
+
+	DEBUG( NAME + "Notify context operation done");
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+void SPELLcontext::notifySharedDataOperation( const SPELLipcMessage& msg,
+											  const SPELLsharedDataOperation& operation,
+											  const std::string& variables, const std::string& values,
+											  const std::string& scope )
+{
+	// Determine the originator
+	std::string procId = msg.get( MessageField::FIELD_PROC_ID );
+	std::string client = msg.get( MessageField::FIELD_GUI_KEY );
+	if (procId != "")
+	{
+		notifySharedDataOperation( procId, operation, variables, values , scope );
+	}
+	else if (client != "")
+	{
+		notifySharedDataOperation( STRI(client), operation, variables, values , scope );
+	}
+	else
+	{
+		LOG_ERROR("Cannot notify context operation: unknown originator: " + msg.dataStr());
+	}
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+void SPELLcontext::notifySharedDataOperation( int clientKey,
+											  const SPELLsharedDataOperation& operation,
+											  const std::string& variables, const std::string& values,
+											  const std::string& scope )
+{
+	DEBUG( NAME + "Notify context shared data operation by client");
+	SPELLipcMessage notification( MessageId::MSG_ID_SHARED_DATA_OP );
+	notification.setSender("CTX");
+	notification.setReceiver("CLT");
+	notification.setType(MSG_TYPE_ONEWAY);
+	notification.set( MessageField::FIELD_GUI_KEY, ISTR(clientKey) );
+	notification.set( MessageField::FIELD_SHARED_OP, SPELLdataHelper::sharedDataOperationToString(operation) );
+	notification.set( MessageField::FIELD_SHARED_SCOPE, scope );
+	notification.set( MessageField::FIELD_SHARED_VARIABLE, variables );
+	notification.set( MessageField::FIELD_SHARED_VALUE, values );
+
+	// Notify to clients
+	SPELLclientManager::instance().notifyClients( notification );
+
+	DEBUG( NAME + "Notify context operation done");
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::setSharedData( const SPELLipcMessage& msg )
+{
+	std::string varName = msg.get(MessageField::FIELD_SHARED_VARIABLE);
+	std::string varValue = msg.get(MessageField::FIELD_SHARED_VALUE);
+	std::string varExpected = msg.get(MessageField::FIELD_SHARED_EXPECTED);
+	std::string scope = msg.get(MessageField::FIELD_SHARED_SCOPE);
+
+	std::string result = "";
+	std::string errors = "";
+
+	// If a set of variables is given
+	if (varName.find(LIST_SEPARATOR) != std::string::npos)
+	{
+		std::vector<std::string> varNames = SPELLutils::tokenize(varName, LIST_SEPARATOR_STR);
+		std::vector<std::string> varValues = SPELLutils::tokenize(varValue, LIST_SEPARATOR_STR);
+		std::vector<std::string> varExpecteds = SPELLutils::tokenize(varExpected, LIST_SEPARATOR_STR);
+		std::vector<std::string>::iterator it;
+		int idx = 0;
+		for( it = varNames.begin(); it != varNames.end(); it++ )
+		{
+			std::string itemName = varNames[idx];
+			std::string itemValue = varValues[idx];
+			std::string itemExpected = varExpecteds[idx];
+			if (result != "") result += LIST_SEPARATOR;
+			try
+			{
+				if (m_sharedData.set(itemName,itemValue,itemExpected,scope))
+				{
+					result += "True";
+				}
+				else
+				{
+					result += "False";
+				}
+			}
+			catch(SPELLcoreException& ex)
+			{
+				LOG_ERROR("Failed to set shared variable data: " + ex.what());
+				result += "False";
+				errors += "Item " + itemName + ": " + ex.what() + "\n";
+			}
+			idx++;
+		}
+	}
+	else
+	{
+		try
+		{
+			if (m_sharedData.set(varName,varValue,varExpected,scope))
+			{
+				result = "True";
+			}
+			else
+			{
+				result = "False";
+			}
+		}
+		catch(SPELLcoreException& ex)
+		{
+			result = "False";
+			errors += "Variable " + varName + ": " + ex.what() + "\n";
+			LOG_ERROR("Failed to set shared variable data: " + ex.what());
+		}
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_SET_SHARED_DATA, msg );
+		response.set(MessageField::FIELD_ERROR, "Failed to set shared variable data");
+		response.set(MessageField::FIELD_REASON, errors);
+		response.set(MessageField::FIELD_SHARED_SUCCESS, result);
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_SET_SHARED_DATA, msg );
+		response.set(MessageField::FIELD_SHARED_SUCCESS, result);
+		notifySharedDataOperation(msg, SET_SHARED_DATA, varName, varValue, scope);
+	}
+
+	return response;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::getSharedData( const SPELLipcMessage& msg )
+{
+	std::string varName = msg.get(MessageField::FIELD_SHARED_VARIABLE);
+	std::string scope = msg.get(MessageField::FIELD_SHARED_SCOPE);
+
+	std::string result = "";
+	std::string errors = "";
+
+	// If a set of variables is given
+	if (varName.find(LIST_SEPARATOR) != std::string::npos)
+	{
+		std::vector<std::string> varNames = SPELLutils::tokenize(varName, LIST_SEPARATOR_STR);
+		std::vector<std::string>::iterator it;
+		int idx = 0;
+		for( it = varNames.begin(); it != varNames.end(); it++ )
+		{
+			std::string itemName = varNames[idx];
+			std::string itemValue;
+			if (result != "") result += LIST_SEPARATOR;
+			try
+			{
+				result += m_sharedData.get(itemName,scope);
+			}
+			catch(SPELLcoreException& ex)
+			{
+				LOG_ERROR("Failed to get shared variable data: " + ex.what());
+				result += "None";
+				errors += "Item " + itemName + ": " + ex.what() + "\n";
+			}
+			idx++;
+		}
+	}
+	else
+	{
+		try
+		{
+			result = m_sharedData.get(varName,scope);
+		}
+		catch(SPELLcoreException& ex)
+		{
+			errors = ex.what() + "\n";
+		}
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_GET_SHARED_DATA, msg );
+		response.set(MessageField::FIELD_ERROR, "Failed to get shared variable data");
+		response.set(MessageField::FIELD_REASON, errors);
+		response.set(MessageField::FIELD_SHARED_VARIABLE, varName);
+		response.set(MessageField::FIELD_SHARED_VALUE, result);
+		response.set(MessageField::FIELD_SHARED_SCOPE, scope);
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_GET_SHARED_DATA, msg );
+		response.set(MessageField::FIELD_SHARED_VARIABLE, varName);
+		response.set(MessageField::FIELD_SHARED_VALUE, result);
+		response.set(MessageField::FIELD_SHARED_SCOPE, scope);
+	}
+
+	return response;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::clearSharedData( const SPELLipcMessage& msg )
+{
+	std::string varName = msg.get(MessageField::FIELD_SHARED_VARIABLE);
+	std::string scope = msg.get(MessageField::FIELD_SHARED_SCOPE);
+
+	std::string errors = "";
+
+	std::string result = "";
+
+	// If no variable given
+	if (varName == "")
+	{
+		m_sharedData.clearScope(scope);
+		result = "True";
+		notifySharedDataOperation( msg, CLEAR_SHARED_SCOPE, "", "", scope );
+	}
+	// If a set of variables is given
+	else if (varName.find(LIST_SEPARATOR) != std::string::npos)
+	{
+		std::vector<std::string> varNames = SPELLutils::tokenize(varName, LIST_SEPARATOR_STR);
+		std::vector<std::string>::iterator it;
+		int idx = 0;
+		for( it = varNames.begin(); it != varNames.end(); it++ )
+		{
+			std::string itemName = varNames[idx];
+			try
+			{
+				if (result != "") result += LIST_SEPARATOR;
+				if (m_sharedData.clear(itemName,scope))
+				{
+					result += "True";
+				}
+				else
+				{
+					result += "False";
+				}
+			}
+			catch(SPELLcoreException& ex)
+			{
+				LOG_ERROR("Failed to clear shared variable data: " + ex.what());
+				errors += "Item " + itemName + ": " + ex.what() + "\n";
+				result += "False";
+			}
+			idx++;
+		}
+		notifySharedDataOperation( msg, DEL_SHARED_DATA, varName, "", scope );
+	}
+	else
+	{
+		try
+		{
+			if (m_sharedData.clear(varName,scope))
+			{
+				result = "True";
+			}
+			else
+			{
+				result = "False";
+			}
+		}
+		catch(SPELLcoreException& ex)
+		{
+			errors = ex.what() + "\n";
+			result = "False";
+		}
+		notifySharedDataOperation( msg, DEL_SHARED_DATA, varName, "", scope );
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_DEL_SHARED_DATA, msg );
+		response.set(MessageField::FIELD_ERROR, "Failed to clear shared variable data");
+		response.set(MessageField::FIELD_REASON, errors);
+		response.set(MessageField::FIELD_SHARED_VARIABLE, varName);
+		response.set(MessageField::FIELD_SHARED_SUCCESS, result);
+		response.set(MessageField::FIELD_SHARED_SCOPE, scope);
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_DEL_SHARED_DATA, msg );
+		response.set(MessageField::FIELD_SHARED_VARIABLE, varName);
+		response.set(MessageField::FIELD_SHARED_SUCCESS, result);
+		response.set(MessageField::FIELD_SHARED_SCOPE, scope);
+	}
+
+	return response;
+
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::getSharedDataKeys( const SPELLipcMessage& msg )
+{
+	std::string scope = msg.get(MessageField::FIELD_SHARED_SCOPE);
+
+	std::string keysStr = "";
+	std::string errors = "";
+
+	try
+	{
+		SPELLdataTable::KeyList keys = m_sharedData.getVariables(scope);
+		SPELLdataTable::KeyList::iterator it;
+		for( it = keys.begin(); it != keys.end(); it++ )
+		{
+			if (keysStr != "") keysStr += LIST_SEPARATOR;
+			keysStr += *it;
+		}
+	}
+	catch(SPELLcoreException& ex)
+	{
+		errors = ex.what() + "\n";
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_GET_SHARED_DATA_KEYS, msg );
+		response.set(MessageField::FIELD_ERROR, "Failed to get shared variable names");
+		response.set(MessageField::FIELD_REASON, errors);
+		response.set(MessageField::FIELD_SHARED_SCOPE, scope);
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_GET_SHARED_DATA_KEYS, msg );
+		response.set(MessageField::FIELD_SHARED_VARIABLE, keysStr);
+		response.set(MessageField::FIELD_SHARED_SCOPE, scope);
+	}
+
+	return response;
+
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::getSharedDataScopes( const SPELLipcMessage& msg )
+{
+	std::string scopeStr = "";
+	std::string errors = "";
+
+	try
+	{
+		SPELLdataTable::KeyList scopes = m_sharedData.getScopes();
+		SPELLdataTable::KeyList::iterator it;
+		for( it = scopes.begin(); it != scopes.end(); it++ )
+		{
+			std::string scope = *it;
+			if (scope == GLOBAL_SCOPE) continue;
+			if (scopeStr != "") scopeStr += LIST_SEPARATOR;
+			scopeStr += scope;
+		}
+	}
+	catch(SPELLcoreException& ex)
+	{
+		errors = ex.what() + "\n";
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_GET_SHARED_DATA_SCOPES, msg );
+		response.set(MessageField::FIELD_ERROR, "Failed to get shared variable scopes");
+		response.set(MessageField::FIELD_REASON, errors);
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_GET_SHARED_DATA_SCOPES, msg );
+		response.set(MessageField::FIELD_SHARED_SCOPE, scopeStr);
+	}
+
+	return response;
+
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::addSharedDataScope( const SPELLipcMessage& msg )
+{
+	std::string scope = msg.get(MessageField::FIELD_SHARED_SCOPE);
+	std::string errors = "";
+
+	try
+	{
+		m_sharedData.addScope(scope);
+	}
+	catch(SPELLcoreException& ex)
+	{
+		errors = ex.what() + "\n";
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_ADD_SHARED_DATA_SCOPE, msg );
+		response.set(MessageField::FIELD_ERROR, "Failed to add shared variable scope");
+		response.set(MessageField::FIELD_REASON, errors);
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_ADD_SHARED_DATA_SCOPE, msg );
+		response.set(MessageField::FIELD_SHARED_SUCCESS, "True");
+		notifySharedDataOperation( msg, ADD_SHARED_SCOPE, "", "", scope );
+	}
+
+	return response;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::removeSharedDataScope( const SPELLipcMessage& msg )
+{
+	std::string scope = msg.get(MessageField::FIELD_SHARED_SCOPE);
+	std::string errors = "";
+	// Used to determine the originator
+	std::string procId = msg.get( MessageField::FIELD_PROC_ID );
+	std::string client = msg.get( MessageField::FIELD_GUI_KEY );
+
+
+	SPELLdataTable::KeyList allScopes;
+
+	try
+	{
+		if (scope == "")
+		{
+			// Remove all
+			allScopes = m_sharedData.getScopes();
+			for(SPELLdataTable::KeyList::iterator it = allScopes.begin(); it != allScopes.end(); it++)
+			{
+				if (*it == GLOBAL_SCOPE) continue;
+				m_sharedData.removeScope(*it);
+			}
+		}
+		else
+		{
+			m_sharedData.removeScope(scope);
+		}
+	}
+	catch(SPELLcoreException& ex)
+	{
+		errors = ex.what() + "\n";
+	}
+
+	SPELLipcMessage response = VOID_MESSAGE;
+
+	if (errors != "")
+	{
+		response = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_DEL_SHARED_DATA_SCOPE, msg );
+		if (scope == "")
+		{
+			response.set(MessageField::FIELD_ERROR, "Failed to remove ALL shared variable scopes");
+			response.set(MessageField::FIELD_REASON, errors);
+		}
+		else
+		{
+			response.set(MessageField::FIELD_ERROR, "Failed to remove shared variable scope");
+			response.set(MessageField::FIELD_REASON, errors);
+		}
+	}
+	else
+	{
+		response = SPELLipcHelper::createResponse( ContextMessages::RSP_DEL_SHARED_DATA_SCOPE, msg );
+		response.set(MessageField::FIELD_SHARED_SUCCESS, "True");
+		if (scope != "")
+		{
+			notifySharedDataOperation( msg, DEL_SHARED_SCOPE, "", "", scope );
+		}
+		else
+		{
+			for(SPELLdataTable::KeyList::iterator it = allScopes.begin(); it != allScopes.end(); it++)
+			{
+				notifySharedDataOperation( msg, DEL_SHARED_SCOPE, "", "", *it );
+			}
+		}
+	}
+
+	return response;
 }

@@ -5,7 +5,7 @@
 // DESCRIPTION: Utilities for CIF
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -75,10 +75,21 @@ public: //--------------------------------------------------------------------
 		static std::string getResult( const std::string& result, const SPELLpromptDefinition& def );
 
 		//////////////////////////////////////////////////////////////////////
+		/** Display prompt output. To be shared between all the CIF executors/shell ...
+		**////////////////////////////////////////////////////////////////////
+		static void displayPrompt( const SPELLpromptDefinition& def );
+
+		//////////////////////////////////////////////////////////////////////
 		/** Issue a prompt through command line. Used by the command line
 		 * interface and the shell.
 		**////////////////////////////////////////////////////////////////////
-		static std::string commandLinePrompt( const SPELLpromptDefinition& def );
+		static std::string commandLinePrompt( const SPELLpromptDefinition& def, bool useRaw );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Return the index of the expected value when there are options.
+		 *  If not, returns the text, number or date value introduced.
+		**////////////////////////////////////////////////////////////////////
+		static std::string getRawAnswer( std::string answer, const SPELLpromptDefinition& def );
 
     // METHODS ///////////////////////////////////////////////////////////////
     // DATA MEMBERS //////////////////////////////////////////////////////////

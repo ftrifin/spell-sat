@@ -5,7 +5,7 @@
 // DESCRIPTION: Defines a scheduler condition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -91,7 +91,7 @@ public: //--------------------------------------------------------------------
 			timeout.set(0,0,false);
 			period.set(0,0,false);
 			message = "";
-			m_tmVerificationList = NULL;
+			m_tmVerificationExpression = NULL;
 		}
 
 		//////////////////////////////////////////////////////////////////////
@@ -109,7 +109,8 @@ public: //--------------------------------------------------------------------
 				message = other.message;
 				interval = other.interval;
 				m_scheduleConfig = other.m_scheduleConfig;
-				setVerification(other.m_tmVerificationList);
+				m_tmVerificationExpression = other.m_tmVerificationExpression;
+				Py_XINCREF(m_tmVerificationExpression);
 			}
 			return *this;
 		}
@@ -128,25 +129,26 @@ public: //--------------------------------------------------------------------
 			period.set(0,0,false);
 			message = "";
 			interval.clear();
+			if (m_tmVerificationExpression)
+			{
+				Py_DECREF(m_tmVerificationExpression);
+				m_tmVerificationExpression = NULL;
+			}
 		}
 
 		//////////////////////////////////////////////////////////////////////
 		/** Assign the tm verification list
 		**////////////////////////////////////////////////////////////////////
-		void setVerification( PyObject* pyList )
+		void setVerification( PyObject* condition )
 		{
-                        if (pyList == NULL) return;
-			if ( pyList == m_tmVerificationList ) return;
+			if (condition == NULL) return;
 			SPELLsafePythonOperations ops("SPELLscheduleCondition::setVerification()");
-			unsigned int items = PyList_Size( pyList );
-			m_tmVerificationList = PyList_New( items );
-			for(unsigned idx = 0; idx<items; idx++)
+			if ( m_tmVerificationExpression)
 			{
-				PyObject* element = PyList_GetItem( pyList,idx);
-				// SetItem from lists does not incref the values
-				Py_INCREF(element);
-				PyList_SetItem(m_tmVerificationList,idx,element);
+				Py_DECREF(m_tmVerificationExpression);
 			}
+			m_tmVerificationExpression = condition;
+			Py_XINCREF(m_tmVerificationExpression);
 		}
 
 		//////////////////////////////////////////////////////////////////////
@@ -154,7 +156,7 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setConfig( PyObject* pyConf )
 		{
-                        if (pyConf == NULL) return;
+			if (pyConf == NULL) return;
 			m_scheduleConfig.reset(pyConf);
 		}
 
@@ -171,7 +173,7 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		PyObject* getVerification()
 		{
-			return m_tmVerificationList;
+			return m_tmVerificationExpression;
 		}
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
@@ -193,8 +195,8 @@ public: //--------------------------------------------------------------------
 		bool                        promptUser;
 
 private:
-		/** TM list */
-		PyObject*					m_tmVerificationList;
+		/** TM expression */
+		PyObject*					m_tmVerificationExpression;
 		/** Extra configuration to consider */
 		SPELLconfigDict             m_scheduleConfig;
 };

@@ -5,7 +5,7 @@
 // DESCRIPTION: Manages the executor operations interacts with clients
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -30,7 +30,7 @@
 // FILES TO INCLUDE //////////////////////////////////////////////////////////
 // Local includes ------------------------------------------------------------
 #include "SPELL_CTX/SPELLclient.H"
-#include "SPELL_CTX/SPELLexecutorConfiguration.H"
+#include "SPELL_CTX/SPELLexecutorStartupParams.H"
 #include "SPELL_CTX/SPELLexecutorIPC.H"
 #include "SPELL_CTX/SPELLexecutor.H"
 #include "SPELL_CTX/SPELLpersistencyTable.H"
@@ -108,13 +108,13 @@ public: //--------------------------------------------------------------------
 		/** Start an executor and associate it to the given controlling
 		 * client
 		**////////////////////////////////////////////////////////////////////
-		void startExecutor( SPELLexecutorConfiguration& config, SPELLclient* controllingClient );
+		void startExecutor( SPELLexecutorStartupParams& config, SPELLclient* controllingClient );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Recover an executor and associate it to the given controlling
 		 * client
 		**////////////////////////////////////////////////////////////////////
-		void recoverExecutor( SPELLexecutorConfiguration& config, SPELLclient* controllingClient );
+		void recoverExecutor( SPELLexecutorStartupParams& config, SPELLclient* controllingClient );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Stop an executor
@@ -179,7 +179,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Delete files corresponding to the given executor
 		**////////////////////////////////////////////////////////////////////
-		void deleteExecutorFiles( const SPELLexecutorConfiguration& config );
+		void deleteExecutorFiles( const SPELLexecutorStartupParams& config );
 
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 

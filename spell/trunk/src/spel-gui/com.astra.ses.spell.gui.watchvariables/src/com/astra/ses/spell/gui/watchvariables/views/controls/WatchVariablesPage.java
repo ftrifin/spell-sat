@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 22, 2010 10:27:15 AM
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,6 +49,7 @@
 package com.astra.ses.spell.gui.watchvariables.views.controls;
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.eclipse.jface.viewers.CellEditor;
 import org.eclipse.jface.viewers.ICellModifier;
@@ -61,14 +62,16 @@ import org.eclipse.jface.viewers.TextCellEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Item;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -77,37 +80,36 @@ import org.eclipse.ui.part.IPage;
 import org.eclipse.ui.part.Page;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.model.notification.ErrorData;
+import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.extensions.GuiNotifications;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureStatusListener;
 import com.astra.ses.spell.gui.model.commands.CommandResult;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.watchvariables.Activator;
 import com.astra.ses.spell.gui.watchvariables.commands.ChangeVariable;
-import com.astra.ses.spell.gui.watchvariables.commands.StopWatchAllVariables;
-import com.astra.ses.spell.gui.watchvariables.commands.StopWatchVariable;
-import com.astra.ses.spell.gui.watchvariables.commands.WatchVariable;
 import com.astra.ses.spell.gui.watchvariables.commands.args.IWatchCommandArgument;
 import com.astra.ses.spell.gui.watchvariables.dialogs.VariableDetailDialog;
 import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableManager;
-import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableWatchListener;
+import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableView;
 import com.astra.ses.spell.gui.watchvariables.interfaces.IWatchVariables;
 import com.astra.ses.spell.gui.watchvariables.jobs.FormatVariableValueJob;
 import com.astra.ses.spell.gui.watchvariables.jobs.UpdateVariablesJob;
 import com.astra.ses.spell.gui.watchvariables.model.WatchVariablesContentProvider;
 import com.astra.ses.spell.gui.watchvariables.model.WatchVariablesLabelProvider;
 import com.astra.ses.spell.gui.watchvariables.model.WatchVariablesTableColumns;
-import com.astra.ses.spell.gui.watchvariables.notification.ScopeNotification;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableNotification;
-import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 
 /*******************************************************************************
  * 
  * Variables page shows the existing variables inside an execution scope
  * 
  ******************************************************************************/
-public class WatchVariablesPage extends Page implements ISelectionProvider, SelectionListener, IVariableWatchListener
+public class WatchVariablesPage extends Page implements ISelectionProvider, IVariableView, IGuiProcedureStatusListener
 {
 
 	/***************************************************************************
@@ -130,16 +132,24 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 	private IProcedure m_proc;
 	/** Table viewer for showing variable values */
 	private TableViewer m_viewer;
+	/** Enable/Disable */
+	private Button m_btnEnable;
 	/** Globals checkbox */
 	private Button m_chkGlobals;
 	/** Locals checkbox */
 	private Button m_chkLocals;
-	/** Combobox */
-	private Button m_showList;
+	/** Manual Refresh */
+	private Button m_btnRefresh;
 	/** Top composite */
 	private Composite m_top;
 	/** Variable manager */
 	private IVariableManager m_manager;
+	/** Content provider */
+	private WatchVariablesContentProvider m_contentProvider;
+	/** Refresh image */
+	private Image m_refreshImg;
+
+    private VariableViewerComparator m_comparator;
 
 	/***************************************************************************
 	 * Constructor
@@ -151,13 +161,20 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 	public WatchVariablesPage( IProcedure proc, IWatchVariablesPageListener listener)
 	{
 		m_proc = proc;
+		m_refreshImg = Activator.getImageDescriptor("icons/16x16/refresh.png").createImage();
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public String getProcId()
 	{
 		return m_proc.getProcId();
 	}
 	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void createControl(Composite parent)
 	{
@@ -170,7 +187,8 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 		m_top.setLayout(gLayout);
 
 		m_viewer = new TableViewer(m_top, SWT.MULTI | SWT.BORDER);
-		m_viewer.setContentProvider(new WatchVariablesContentProvider());
+		m_contentProvider = new WatchVariablesContentProvider();
+		m_viewer.setContentProvider(m_contentProvider);
 		m_viewer.setLabelProvider(new WatchVariablesLabelProvider());
 		m_viewer.getControl().setLayoutData(new GridData(GridData.FILL_BOTH));
 		m_viewer.getTable().addMouseListener(new MouseAdapter()
@@ -184,34 +202,41 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 				CommandHelper.executeInProgress(job, true, true);
 				if (job.result.equals(CommandResult.SUCCESS))
 				{
-					VariableDetailDialog dialog = new VariableDetailDialog( getSite().getShell(), var.name, job.details );
+					VariableDetailDialog dialog = new VariableDetailDialog( getSite().getShell(), var.getName(), job.details );
 					dialog.open();
 				}
 			}
 		});
-		new WatchVariablesMenuManager(m_viewer, this);
-
-		createColumns();
-		createOptions(m_top);
-
+		
 		IWatchVariables watch = (IWatchVariables) ServiceManager.get(IWatchVariables.class);
 		m_manager = watch.getVariableManager(m_proc.getProcId());
 		
+        m_comparator = new VariableViewerComparator();
+		
+        createColumns();
+		createOptions(m_top);
+
 		Logger.debug("Assign variable manager", Level.PROC, this);
 		
 		m_viewer.setInput(m_manager);
 
-		m_manager.addWatchListener(this);
+		m_manager.addListener(this);
+		GuiNotifications.get().addListener(this, IGuiProcedureStatusListener.class);
 		
 		// Make cells editable
 		setCellEditors();
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void dispose()
 	{
 		super.dispose();
-		m_manager.removeWatchListener(this);
+		m_refreshImg.dispose();
+		m_manager.removeListener(this);
+		GuiNotifications.get().removeListener(this);
 	}
 
 
@@ -242,7 +267,7 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 				/*
 				 * If value has not change then exit
 				 */
-				if (var.value.equals(valueExpression))
+				if (var.getValue().equals(valueExpression))
 				{
 					return;
 				}
@@ -252,9 +277,9 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 				 */
 				HashMap<String, String> args = new HashMap<String, String>();
 				args.put(IWatchCommandArgument.PROCEDURE_ID, m_proc.getProcId());
-				args.put(IWatchCommandArgument.VARIABLE_NAME, var.name);
+				args.put(IWatchCommandArgument.VARIABLE_NAME, var.getName());
 				args.put(IWatchCommandArgument.VARIABLE_VALUE_EXPR, valueExpression);
-				args.put(IWatchCommandArgument.VARIABLE_GLOBAL, Boolean.toString(var.isGlobal));
+				args.put(IWatchCommandArgument.VARIABLE_GLOBAL, Boolean.toString(var.isGlobal()));
 				/*
 				 * Execute the command
 				 */
@@ -267,11 +292,11 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 				VariableData data = (VariableData) element;
 				if (property.equals(WatchVariablesTableColumns.NAME_COLUMN.name()))
 				{
-					return data.name;
+					return data.getName();
 				}
 				else if (property.equals(WatchVariablesTableColumns.VALUE_COLUMN.name()))
 				{
-					return data.value;
+					return data.getValue();
 				}
 				return null;
 			}
@@ -298,6 +323,7 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 		cellEditors[WatchVariablesTableColumns.NAME_COLUMN.ordinal()] = null;
 		cellEditors[WatchVariablesTableColumns.VALUE_COLUMN.ordinal()] = new TextCellEditor(m_viewer.getTable());
 		m_viewer.setCellEditors(cellEditors);
+        m_viewer.setComparator(m_comparator);
 	}
 
 	/**************************************************************************
@@ -306,17 +332,40 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 	private void createColumns()
 	{
 		Table table = m_viewer.getTable();
+        int index = 0;
 		for (WatchVariablesTableColumns column : WatchVariablesTableColumns.values())
 		{
 			TableColumn col = new TableColumn(table, SWT.NONE);
 			col.setText(column.text);
 			col.setAlignment(column.alignment);
 			col.setWidth(column.width);
+            col.addSelectionListener(getSelectionAdapter(col, index));
+            Logger.debug("--- ADDING " + column.text + " COLUMN ---", Level.PROC, this);
+            index++;
 		}
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
 	}
 
+	/**************************************************************************
+	 * Add SelectionAdapter to Columns
+	 *************************************************************************/
+
+    private SelectionAdapter getSelectionAdapter(final TableColumn column, final int index){
+        SelectionAdapter selectionAdapter = new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent e){
+                Logger.debug("--- REFRESHING VARIABLE LIST ---", Level.PROC, this);
+                m_comparator.setColumn(index);
+                int dir = m_comparator.getDirection();
+                m_viewer.getTable().setSortDirection(dir);
+                m_viewer.getTable().setSortColumn(column);
+                m_viewer.refresh();
+            }
+        };
+        return selectionAdapter;
+    }
+            
 	/**************************************************************************
 	 * Create the extra controls
 	 *************************************************************************/
@@ -326,34 +375,74 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 		group.setLayout(new RowLayout(SWT.HORIZONTAL));
 		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-		String id = Activator.PLUGIN_ID;
-		String baseLocation = "platform:/plugin/" + id;
-
-		m_showList = new Button(group, SWT.TOGGLE);
-		m_showList.setImage(Activator.getImageDescriptor(baseLocation + "/icons/16x16/glasses.png").createImage());
-		m_showList.setToolTipText("Show watched variables");
-		m_showList.setSelection(false);
-		m_showList.addSelectionListener(this);
-
+		m_btnEnable = new Button(group, SWT.CHECK);
+		m_btnEnable.setText("Auto");
+		m_btnEnable.addSelectionListener( new SelectionAdapter()
+		{
+			public void widgetSelected(SelectionEvent e)
+			{
+				boolean enabled = m_btnEnable.getSelection();
+				m_manager.setEnabled(enabled);
+				if (enabled)
+				{
+					updateModel();
+				}
+				updateMechanismStatus();
+			}
+		});
+		
 		m_chkGlobals = new Button(group, SWT.CHECK);
 		m_chkGlobals.setText("Globals");
 		m_chkGlobals.setSelection(true);
 		m_chkGlobals.setToolTipText("Show global variables");
-		m_chkGlobals.addSelectionListener(this);
+		m_chkGlobals.addSelectionListener( new SelectionAdapter()
+		{
+			public void widgetSelected(SelectionEvent e)
+			{
+				showGlobals(m_chkGlobals.getSelection());
+			}
+
+		});
 
 		m_chkLocals = new Button(group, SWT.CHECK);
 		m_chkLocals.setText("Locals");
 		m_chkLocals.setSelection(true);
 		m_chkLocals.setToolTipText("Show global variables");
-		m_chkLocals.addSelectionListener(this);
+		m_chkLocals.addSelectionListener( new SelectionAdapter()
+		{
+			public void widgetSelected(SelectionEvent e)
+			{
+				showLocals(m_chkLocals.getSelection());
+			}
+
+		});
+		
+		m_btnRefresh = new Button(group, SWT.PUSH);
+		m_btnRefresh.setImage(m_refreshImg);
+		m_btnRefresh.addSelectionListener( new SelectionAdapter()
+		{
+			public void widgetSelected(SelectionEvent e)
+			{
+				updateModel();
+			}
+
+		});
+
+		updateMechanismStatus();
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public Control getControl()
 	{
 		return m_top;
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void setFocus()
 	{
@@ -396,136 +485,42 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 	}
 
 	/**************************************************************************
+	 * Refresh the enable status
+	 *************************************************************************/
+	public void updateMechanismStatus()
+	{
+		if (m_manager.isEnabled())
+		{
+			m_btnEnable.setSelection(true);
+			m_btnRefresh.setEnabled(false);
+		}
+		else
+		{
+			m_btnRefresh.setEnabled(true);
+			m_btnEnable.setSelection(false);
+		}
+	}
+
+	/**************************************************************************
 	 * Set show mode.
 	 * 
 	 * @param mode
 	 *************************************************************************/
-	public void setShowMode(WhichVariables mode)
+	public void showGlobals( boolean show )
 	{
-		Logger.debug("Set view mode " + mode, Level.PROC, this);
-		m_manager.setMode(mode);
-		updateModel();
-	}
-
-	/**************************************************************************
-	 * Subscribe to selected variables.
-	 *************************************************************************/
-	public void subscribeSelected()
-	{
-		Logger.debug("Subscribe to selected", Level.PROC, this);
-		IStructuredSelection sel = (IStructuredSelection) m_viewer.getSelection();
-		Object[] list = sel.toArray();
-		for (Object obj : list)
-		{
-			VariableData var = (VariableData) obj;
-			/*
-			 * Prepare command arguments
-			 */
-			HashMap<String, String> args = new HashMap<String, String>();
-			args.put(IWatchCommandArgument.PROCEDURE_ID, m_proc.getProcId());
-			args.put(IWatchCommandArgument.VARIABLE_NAME, var.name);
-			args.put(IWatchCommandArgument.VARIABLE_GLOBAL, new Boolean(var.isGlobal).toString());
-
-			/*
-			 * Execute the command
-			 */
-			CommandResult result = (CommandResult) CommandHelper.execute(WatchVariable.ID, args);
-			if (result == CommandResult.SUCCESS)
-			{
-				var.isRegistered = true;
-			}
-		}
-		showRegisteredNow();
-	}
-
-	/**************************************************************************
-	 * Unsubscribe to selected variables.
-	 *************************************************************************/
-	public void unsubscribeSelected()
-	{
-		Logger.debug("Unsubscribe selected", Level.PROC, this);
-		IStructuredSelection sel = (IStructuredSelection) m_viewer.getSelection();
-		Object[] list = sel.toArray();
-		for (Object obj : list)
-		{
-			VariableData var = (VariableData) obj;
-			/*
-			 * Prepare command arguments
-			 */
-			HashMap<String, String> args = new HashMap<String, String>();
-			args.put(IWatchCommandArgument.PROCEDURE_ID, m_proc.getProcId());
-			args.put(IWatchCommandArgument.VARIABLE_NAME, var.name);
-			args.put(IWatchCommandArgument.VARIABLE_GLOBAL, new Boolean(var.isGlobal).toString());
-
-			/*
-			 * Execute the command
-			 */
-			CommandResult result = (CommandResult) CommandHelper.execute(StopWatchVariable.ID, args);
-			if (result == CommandResult.SUCCESS)
-			{
-				var.isRegistered = false;
-			}
-		}
+		m_contentProvider.showGlobals(show);
 		m_viewer.refresh();
 	}
 
 	/**************************************************************************
-	 * Unsubscribe all variables.
-	 *************************************************************************/
-	public void unsubscribeAll()
-	{
-		Logger.debug("Unsubscribe all", Level.PROC, this);
-		/*
-		 * Prepare command arguments
-		 */
-		HashMap<String, String> args = new HashMap<String, String>();
-		args.put(IWatchCommandArgument.PROCEDURE_ID, m_proc.getProcId());
-		/*
-		 * Execute the command
-		 */
-		CommandResult result = (CommandResult) CommandHelper.execute(StopWatchAllVariables.ID, args);
-		if (result == CommandResult.SUCCESS)
-		{
-			setShowMode(WhichVariables.AVAILABLE_ALL);
-			m_showList.setSelection(false);
-		}
-	}
-
-	/**************************************************************************
-	 * Reset the view mode and show only watched variables.
-	 *************************************************************************/
-	private void showRegisteredNow()
-	{
-		Logger.debug("Updating model", Level.PROC, this);
-		
-		m_showList.setSelection(true);
-		if (m_chkGlobals.getSelection() && m_chkLocals.getSelection())
-		{
-			setShowMode(WhichVariables.REGISTERED_ALL);
-		}
-		else if (m_chkGlobals.getSelection())
-		{
-			setShowMode(WhichVariables.REGISTERED_GLOBALS);
-		}
-		else if (m_chkLocals.getSelection())
-		{
-			setShowMode(WhichVariables.REGISTERED_LOCALS);
-		}
-		else
-		{
-			setShowMode(WhichVariables.NONE);
-		}
-	}
-
-	/***************************************************************************
-	 * Check if the page is currently showing the existing or the watched
-	 * variables
+	 * Set show mode.
 	 * 
-	 * @return
-	 **************************************************************************/
-	public boolean isShowingRegistered()
+	 * @param mode
+	 *************************************************************************/
+	public void showLocals( boolean show )
 	{
-		return m_showList.getSelection();
+		m_contentProvider.showLocals(show);
+		m_viewer.refresh();
 	}
 
 	/***************************************************************************
@@ -540,82 +535,111 @@ public class WatchVariablesPage extends Page implements ISelectionProvider, Sele
 		return m_chkGlobals.isEnabled();
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see SelectionListener declaration
-	 * =========================================================================
-	 */
-
-	@Override
-	public void widgetSelected(SelectionEvent e)
-	{
-		boolean registered = m_showList.getSelection();
-		boolean globals = m_chkGlobals.getSelection();
-		boolean locals = m_chkLocals.getSelection();
-		setShowMode(WhichVariables.fromValues(registered, globals, locals));
-	}
-
-	@Override
-	public void widgetDefaultSelected(SelectionEvent e)
-	{
-	}
-
+	 *************************************************************************/
 	public void cleanup()
 	{
 		IWatchVariables watch = (IWatchVariables) ServiceManager.get(IWatchVariables.class);
 		watch.removeVariableManager(m_proc.getProcId());
 	}
 	
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see ISelectionProvider declaration
-	 * =========================================================================
-	 */
-
+	 *************************************************************************/
 	@Override
 	public void addSelectionChangedListener(ISelectionChangedListener listener)
 	{
 		m_viewer.addSelectionChangedListener(listener);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public ISelection getSelection()
 	{
 		return m_viewer.getSelection();
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void removeSelectionChangedListener(ISelectionChangedListener listener)
 	{
 		m_viewer.removeSelectionChangedListener(listener);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void setSelection(ISelection selection)
 	{
 		m_viewer.setSelection(selection);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void variableChanged(VariableNotification data)
+    public void variablesChanged(final List<VariableData> added, final List<VariableData> updated, final List<VariableData> removed)
     {
-		m_viewer.refresh();
+		Display.getDefault().syncExec( new Runnable(){
+			
+			public void run()
+			{
+				m_viewer.add(added.toArray());
+				m_viewer.remove(removed.toArray());
+				m_viewer.update(updated.toArray(),null);
+			}
+		});
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void scopeChanged(ScopeNotification data)
+    public void scopeChanged( final VariableNotification data )
     {
-		updateModel();
-		m_viewer.refresh();
+		Display.getDefault().syncExec( new Runnable(){
+			
+			public void run()
+			{
+				m_viewer.refresh();
+			}
+		});
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void connectionLost()
     {
-		m_viewer.refresh();
+		Display.getDefault().syncExec( new Runnable(){
+			
+			public void run()
+			{
+				m_viewer.refresh();
+			}
+		});
     }
+
+	@Override
+    public void notifyStatus(IProcedure model, StatusNotification data)
+    {
+		updateMechanismStatus();
+    }
+
+	@Override
+    public void notifyError(IProcedure model, ErrorData data) {}
+
+	@Override
+    public String getListenerId()
+    {
+	    return "Watch Variables Page";
+    }
+
 }

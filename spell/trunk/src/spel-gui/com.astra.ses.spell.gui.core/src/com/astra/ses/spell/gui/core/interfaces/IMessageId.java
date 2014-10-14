@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -102,6 +102,8 @@ public interface IMessageId
 	public final String	REQ_DETACH_EXEC	     = "REQ_DETACH_EXEC";
 	/** Identifier for remove control request */
 	public final String	REQ_REMOVE_CONTROL   = "REQ_REMOVE_CONTROL";
+	/** Identifier for setting a procedure in background mode */
+	public final String	REQ_SET_BACKGROUND   = "REQ_SET_BACKGROUND";
 	/** Identifier for getting executor info */
 	public final String	REQ_EXEC_INFO	     = "REQ_EXEC_INFO";
 	/** Identifier for getting client info */
@@ -124,9 +126,11 @@ public interface IMessageId
 	public final String	REQ_DELETE_RECOVERY  = "REQ_DELETE_RECOVERY";
 	public final String	REQ_DUMP_INTERPRETER = "REQ_DUMP_INTERPRETER";
 	public final String	REQ_SAVE_STATE       = "REQ_SAVE_STATE";
+	public final String	REQ_ASRUN_LIST	     = "REQ_ASRUN_LIST";
 
 	public final String	REQ_GET_DICTIONARY = "REQ_GET_DICTIONARY";
 	public final String	REQ_UPD_DICTIONARY = "REQ_UPD_DICTIONARY";
+	public final String	REQ_SAV_DICTIONARY = "REQ_SAV_DICTIONARY";
 
 	public final String	REQ_LIST_DATADIRS = "REQ_LIST_DATADIRS";
 	public final String	RSP_LIST_DATADIRS = "RSP_LIST_DATADIRS";
@@ -137,6 +141,8 @@ public interface IMessageId
 	public final String	REQ_INPUT_FILE = "REQ_INPUT_FILE";
 	public final String	RSP_INPUT_FILE = "RSP_INPUT_FILE";
 
+	public final String REQ_CURRENT_TIME = "REQ_CURRENT_TIME";	
+	
 	// /////////////////////////////////////////////////////////////////////////
 	// SPELL Listener Messages
 	// /////////////////////////////////////////////////////////////////////////
@@ -155,16 +161,13 @@ public interface IMessageId
 	public final String	REQ_DESTROY_CTX	     = "REQ_DESTROY_CTX";
 	/** Identifier for getting ctx info */
 	public final String	REQ_CTX_INFO	     = "REQ_CTX_INFO";
+
+	/** Request Context Executor Defaults */
+	public final String REQ_GET_CTX_EXEC_DFLT = "REQ_GET_CTX_EXEC_DFLT";
+	public final String RSP_GET_CTX_EXEC_DFLT = "RSP_GET_CTX_EXEC_DFLT";
 	
-	// /////////////////////////////////////////////////////////////////////////
-	// Alignment messages
-	// /////////////////////////////////////////////////////////////////////////
-	public final String	REQ_ALIGNMENT_STATUS     = "REQ_ALIGNMENT_STATUS";
-	public final String	REQ_PERFORM_ALIGNMENT    = "REQ_PERFORM_ALIGNMENT";
-	public final String	REQ_ADD_ALIGNMENT        = "REQ_ADD_ALIGNMENT";
-	public final String	REQ_CONNECT_ALIGNMENT    = "REQ_CONNECT_ALIGNMENT";
-	public final String	REQ_DISCONNECT_ALIGNMENT = "REQ_DISCONNECT_ALIGNMENT";
-	public final String	REQ_ABORT_ALIGNMENT      = "REQ_ABORT_ALIGNMENT";
-	public final String	REQ_ALIGNMENT_CLEANUP    = "REQ_ALIGNMENT_CLEANUP";
-	public final String	REQ_ALIGNMENT_UPDATE     = "REQ_ALIGNMENT_UPDATE";
+	/** Set Context Executor Defaults */
+	public final String REQ_SET_CTX_EXEC_DFLT = "REQ_SET_CTX_EXEC_DFLT";
+	public final String RSP_SET_CTX_EXEC_DFLT = "RSP_SET_CTX_EXEC_DFLT";
+	
 }

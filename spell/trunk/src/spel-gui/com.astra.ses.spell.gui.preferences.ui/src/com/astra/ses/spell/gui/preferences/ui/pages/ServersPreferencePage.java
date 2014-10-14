@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -69,6 +69,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbench;
 
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo.ServerRole;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
@@ -77,26 +78,28 @@ import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 public class ServersPreferencePage extends BasicPreferencesPage
 {
 	/** Servers map <serverName, ServerInfo> */
-	private Map<String, ServerInfo>	m_serversInfo;
+	private Map<String, ServerInfo> m_serversInfo;
 
 	/** Servers list */
-	private Combo	                m_serversList;
+	private Combo m_serversList;
 	/** Default server button */
-	private Combo	                m_defaultServer;
+	private Combo m_defaultServer;
 	/** Default context */
-	private Text	                m_defaultContext;
-	/** Server name text widget */
-	private Text	                m_serverName;
-	/** Server host text widget */
-	private Text	                m_serverHost;
-	/** Server port text widget */
-	private Text	                m_serverPort;
-	/** Server user text widget */
-	private Text	                m_serverUser;
-	/** Server password text widget */
-	private Text	                m_serverPassword;
+	private Text m_defaultContext;
 	/** Server role combo widget */
-	private Combo	                m_serverRole;
+	private Combo m_serverRole;
+	/** Server name text widget */
+	private Text m_serverName;
+	/** Server host text widget */
+	private Text m_serverHost;
+	/** Server port text widget */
+	private Text m_serverPort;
+	/** Server user text widget */
+	private Text m_serverUser;
+	/** Server password text widget */
+	private Text m_serverPassword;
+	/** Server password text widget */
+	private Text m_serverKeyFile;
 
 	@Override
 	protected Control createContents(Composite parent)
@@ -171,12 +174,16 @@ public class ServersPreferencePage extends BasicPreferencesPage
 		serverPasswordLabel.setText("Password");
 		m_serverPassword = new Text(serverGroup, SWT.PASSWORD | SWT.BORDER);
 		m_serverPassword.setLayoutData(GridDataFactory.copyData(expand));
+		// Server keyFile
+		Label serverKeyLabel = new Label(serverGroup, SWT.NONE);
+		serverKeyLabel.setText("Key file");
+		m_serverKeyFile = new Text(serverGroup, SWT.BORDER);
+		m_serverKeyFile.setLayoutData(GridDataFactory.copyData(expand));
 		// Label explaining what does setting a password mean
 		new Label(serverGroup, SWT.NONE);
 		Label pwdExplanation = new Label(serverGroup, SWT.WRAP);
-		pwdExplanation
-		        .setText("Setting a password for a server avoids user to be asked"
-		                + " to enter a password while connecting to it.");
+		pwdExplanation.setText("Setting a password or key file for a server avoids user to be asked"
+		        + " to enter a password while connecting to it.");
 		GridData explanationData = new GridData(GridData.FILL_HORIZONTAL);
 		explanationData.horizontalSpan = serverLayout.numColumns - 1;
 		explanationData.widthHint = 250;
@@ -218,8 +225,7 @@ public class ServersPreferencePage extends BasicPreferencesPage
 				boolean addEnabled = !m_serversInfo.containsKey(content);
 				addServer.setEnabled(addEnabled);
 				updateServer.setEnabled(addEnabled);
-				deleteServer.setEnabled(!addEnabled
-				        && (m_serversInfo.size() > 1));
+				deleteServer.setEnabled(!addEnabled && (m_serversInfo.size() > 1));
 			}
 		});
 
@@ -239,6 +245,7 @@ public class ServersPreferencePage extends BasicPreferencesPage
 		m_serverPort.addModifyListener(widgetListener);
 		m_serverUser.addModifyListener(widgetListener);
 		m_serverPassword.addModifyListener(widgetListener);
+		m_serverKeyFile.addModifyListener(widgetListener);
 		m_serverRole.addModifyListener(widgetListener);
 
 		/*
@@ -248,27 +255,31 @@ public class ServersPreferencePage extends BasicPreferencesPage
 		{
 			public void widgetSelected(SelectionEvent e)
 			{
-				ServerRole role = ServerRole.valueOf(m_serverRole
-				        .getItem(m_serverRole.getSelectionIndex()));
-				ServerInfo info = new ServerInfo(m_serverName.getText(),
-				        m_serverHost.getText(), Integer.valueOf(m_serverPort
-				                .getText()), m_serverUser.getText(),
-				        m_serverPassword.getText(), role);
+				String username = m_serverUser.getText();
+				String password = m_serverPassword.getText();
+				String keyFile = m_serverKeyFile.getText();
+
+				AuthenticationData auth = null;
+				if (username != null)
+				{
+					auth = new AuthenticationData(username, password, keyFile);
+				}
+
+				ServerRole role = ServerRole.valueOf(m_serverRole.getItem(m_serverRole.getSelectionIndex()));
+				ServerInfo info = new ServerInfo(m_serverName.getText(), m_serverHost.getText(), Integer.valueOf(m_serverPort.getText()),
+				        role, auth);
 				m_serversInfo.put(info.getName(), info);
 
 				// Get default server selection to update the widget later
-				String defaultServer = m_defaultServer.getItem(m_defaultServer
-				        .getSelectionIndex());
+				String defaultServer = m_defaultServer.getItem(m_defaultServer.getSelectionIndex());
 
 				updateServersList();
 
 				// Update default server widget position
-				int defPos = Arrays.binarySearch(m_defaultServer.getItems(),
-				        defaultServer);
+				int defPos = Arrays.binarySearch(m_defaultServer.getItems(), defaultServer);
 				m_defaultServer.select(defPos);
 				// Update servers widget contents
-				int serverPos = Arrays.binarySearch(m_serversList.getItems(),
-				        info.getName());
+				int serverPos = Arrays.binarySearch(m_serversList.getItems(), info.getName());
 				m_serversList.select(serverPos);
 
 				refreshForm(info.getName());
@@ -284,8 +295,7 @@ public class ServersPreferencePage extends BasicPreferencesPage
 			public void widgetSelected(SelectionEvent e)
 			{
 				// default server
-				String defaultServer = m_defaultServer.getItem(m_defaultServer
-				        .getSelectionIndex());
+				String defaultServer = m_defaultServer.getItem(m_defaultServer.getSelectionIndex());
 
 				int selected = m_serversList.getSelectionIndex();
 				String id = m_serversList.getItem(selected);
@@ -313,18 +323,23 @@ public class ServersPreferencePage extends BasicPreferencesPage
 			public void widgetSelected(SelectionEvent e)
 			{
 				// We have to remove current server
-				String currentServer = m_serversList.getItem(m_serversList
-				        .getSelectionIndex());
+				String currentServer = m_serversList.getItem(m_serversList.getSelectionIndex());
 				// default server
-				String defaultServer = m_defaultServer.getItem(m_defaultServer
-				        .getSelectionIndex());
+				String defaultServer = m_defaultServer.getItem(m_defaultServer.getSelectionIndex());
 
-				ServerRole role = ServerRole.valueOf(m_serverRole
-				        .getItem(m_serverRole.getSelectionIndex()));
-				ServerInfo info = new ServerInfo(m_serverName.getText(),
-				        m_serverHost.getText(), Integer.valueOf(m_serverPort
-				                .getText()), m_serverUser.getText(),
-				        m_serverPassword.getText(), role);
+				ServerRole role = ServerRole.valueOf(m_serverRole.getItem(m_serverRole.getSelectionIndex()));
+				
+				String username = m_serverUser.getText();
+				String password = m_serverPassword.getText();
+				String keyFile = m_serverKeyFile.getText();
+
+				AuthenticationData auth = null;
+				if (username != null)
+				{
+					auth = new AuthenticationData(username, password, keyFile);
+				}
+				
+				ServerInfo info = new ServerInfo(m_serverName.getText(), m_serverHost.getText(), Integer.valueOf(m_serverPort.getText()), role, auth);
 				m_serversInfo.remove(currentServer);
 				m_serversInfo.put(info.getName(), info);
 
@@ -426,10 +441,18 @@ public class ServersPreferencePage extends BasicPreferencesPage
 		m_serverName.setText(info.getName());
 		m_serverHost.setText(info.getHost());
 		m_serverPort.setText(String.valueOf(info.getPort()));
-		String user = (info.getTunnelUser() == null) ? "" : info.getTunnelUser();
+		String user = "";
+		String pwd = "";
+		String key = "";
+		if (info.getAuthentication()!= null)
+		{
+			user = info.getAuthentication().getUsername();
+			pwd = info.getAuthentication().getPassword();
+			key  = info.getAuthentication().getKeyFile();
+		}
 		m_serverUser.setText(user);
-		String pwd = (info.getTunnelPassword() == null) ? "" : info.getTunnelPassword();
 		m_serverPassword.setText(pwd);
+		m_serverKeyFile.setText(key);
 		m_serverRole.select(info.getRole().ordinal());
 	}
 
@@ -444,8 +467,7 @@ public class ServersPreferencePage extends BasicPreferencesPage
 		/* Default server */
 		if (m_defaultServer.getSelectionIndex() > 0)
 		{
-			String defServer = m_defaultServer.getItem(m_defaultServer
-			        .getSelectionIndex());
+			String defServer = m_defaultServer.getItem(m_defaultServer.getSelectionIndex());
 			conf.setProperty(PropertyKey.INITIAL_SERVER, defServer);
 		}
 		/* Default context */
@@ -479,8 +501,7 @@ public class ServersPreferencePage extends BasicPreferencesPage
 		updateServersList();
 
 		String initialServer = conf.getProperty(PropertyKey.INITIAL_SERVER);
-		int position = Arrays.binarySearch(m_defaultServer.getItems(),
-		        initialServer);
+		int position = Arrays.binarySearch(m_defaultServer.getItems(), initialServer);
 		if (position >= 0)
 		{
 			m_serversList.select(position);

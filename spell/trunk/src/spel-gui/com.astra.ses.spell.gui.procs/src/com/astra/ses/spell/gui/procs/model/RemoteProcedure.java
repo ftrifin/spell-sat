@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-07-30
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,29 +49,22 @@
 package com.astra.ses.spell.gui.procs.model;
 
 import java.util.HashMap;
-import java.util.Map;
 
-import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
-import com.astra.ses.spell.gui.core.exceptions.CommandFailed;
-import com.astra.ses.spell.gui.core.extensionpoints.IProcedureRuntimeExtension;
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.notification.ErrorData;
-import com.astra.ses.spell.gui.core.model.notification.InputData;
 import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
 import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
-import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
+import com.astra.ses.spell.gui.procs.interfaces.model.IDependenciesManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionStatusManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureRuntimeProcessor;
 import com.astra.ses.spell.gui.procs.interfaces.model.ISourceCodeProvider;
-import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
-import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 
 /*******************************************************************************
  * 
@@ -80,12 +73,8 @@ import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformation
  * handled by the user * Breakpoints, run into mode, step by step execution
  * 
  ******************************************************************************/
-public class RemoteProcedure implements IProcedure
+public class RemoteProcedure extends ProcedureBase
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
 	/** Context proxy */
 	private static IContextProxy s_proxy = null;
 
@@ -97,94 +86,6 @@ public class RemoteProcedure implements IProcedure
 		s_proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 	}
 
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-	
-	class RemoteController implements IProcedureController
-	{
-		private IStepOverControl so = new StepOverControl();
-		
-        @Override
-        public void notifyProcedurePrompt(InputData inputData){}
-        @Override
-        public void notifyProcedureCancelPrompt(InputData inputData){}
-        @Override
-        public void notifyProcedureFinishPrompt(InputData inputData){}
-        @Override
-        public String getListenerId(){ return null; }
-        @Override
-        public void setError(ErrorData data){}
-        @Override
-        public void abort() {}
-        @Override
-        public void clearBreakpoints() {}
-        @Override
-        public void gotoLine(int lineNumber) {}
-        @Override
-        public void gotoLabel(String label) {}
-        @Override
-        public void pause() {}
-        @Override
-        public void issueCommand(ExecutorCommand cmd, String[] args) throws CommandFailed {}
-        @Override
-        public void recover() {}
-        @Override
-        public void save() {}
-        @Override
-        public void reload() {}
-        @Override
-        public void refresh() throws Exception
-        {
-        	updateInfoFromRemote();
-        }
-        public void updateInfo() throws Exception
-        {
-        	updateInfoFromRemote();
-        }
-        public void updateConfig() throws Exception {};
-        @Override
-        public void run() {}
-        @Override
-        public void script(String script){}
-        @Override
-        public void setBrowsableLib(boolean showLib) {}
-        @Override
-        public void setRunInto(boolean runInto) {}
-        @Override
-        public void setStepByStep(boolean value) {}
-        @Override
-        public void setExecutionDelay(int msec) {}
-        @Override
-        public void setExecutorStatus(ExecutorStatus status) {}
-        @Override
-        public void setBreakpoint(int lineNumber, BreakpointType type) {}
-        @Override
-        public void skip() {}
-        @Override
-        public InputData getPromptData() { return null; }
-        @Override
-        public void step() {}
-        @Override
-        public void stepOver() {}
-		@Override
-        public void setForceTcConfirmation(boolean value) {}
-		@Override
-        public IStepOverControl getStepOverControl()
-        {
-	        return so;
-        }
-	};
-	
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	/** Holds the procedure identifier */
-	private String	                     m_procId;
-	/** Procedure properties */
-	private Map<ProcProperties, String>	 m_properties;
 	/** Executor information */
 	private IExecutionInformationHandler m_executionInformation;
 	/** Fake controller for remote updates */
@@ -193,12 +94,11 @@ public class RemoteProcedure implements IProcedure
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
-	public RemoteProcedure(String procId)
+	public RemoteProcedure(String instanceId)
 	{
-		m_procId = procId;
-		m_properties = new HashMap<ProcProperties,String>();//TODO
+		super(instanceId,new HashMap<ProcProperties,String>());
 		m_executionInformation = new ExecutionInformationHandler(ClientMode.UNKNOWN,this);
-		m_controller = new RemoteController();
+		m_controller = new RemoteController(this);
 	}
 
 	/***************************************************************************
@@ -206,33 +106,29 @@ public class RemoteProcedure implements IProcedure
 	 **************************************************************************/
 	public RemoteProcedure( IProcedure wasLocalProcedure )
 	{
-		m_procId = wasLocalProcedure.getProcId();
-		m_properties = new HashMap<ProcProperties,String>();
+		super(wasLocalProcedure.getProcId(),new HashMap<ProcProperties,String>());
 		for( ProcProperties prop : ProcProperties.values())
 		{
-			m_properties.put(prop, wasLocalProcedure.getProperty(prop));
+			setProperty(prop, wasLocalProcedure.getProperty(prop));
 		}
-		m_controller = new RemoteController();
+		m_controller = new RemoteController(this);
 		ClientMode cmode = wasLocalProcedure.getRuntimeInformation().getClientMode();
 		m_executionInformation = new ExecutionInformationHandler(cmode, this);
 		IExecutorInfo info = (IExecutorInfo) wasLocalProcedure.getAdapter(ExecutorInfo.class);
-		m_properties.put(ProcProperties.PROC_NAME, info.getName());
 		m_executionInformation.copyFrom(info);
 	}
 
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	private void updateInfoFromRemote() throws Exception
+	void updateInfoFromRemote() throws Exception
 	{
-		IExecutorInfo info = new ExecutorInfo(m_procId);
 		try
 		{
-			s_proxy.updateExecutorInfo(m_procId, info);
+			IExecutorInfo info =  s_proxy.getExecutorInfo(getProcId());
 			m_executionInformation.copyFrom(info);
-			ExecutorConfig cfg = new ExecutorConfig(m_procId);
-			s_proxy.updateExecutorConfig(m_procId, cfg);
-			m_properties.put(ProcProperties.PROC_NAME, info.getName());
+			ExecutorConfig cfg = new ExecutorConfig(getProcId());
+			s_proxy.updateExecutorConfig(getProcId(), cfg);
 			m_executionInformation.copyFrom(cfg);
 		}
 		catch(Exception ex)
@@ -263,7 +159,7 @@ public class RemoteProcedure implements IProcedure
 	 * 
 	 **************************************************************************/
 	@Override
-	public IProcedureRuntimeExtension getRuntimeProcessor()
+	public IDependenciesManager getDependenciesManager()
 	{
 		return null;
 	}
@@ -272,36 +168,9 @@ public class RemoteProcedure implements IProcedure
 	 * 
 	 **************************************************************************/
 	@Override
-	public String getProcId()
+	public IProcedureRuntimeProcessor getRuntimeProcessor()
 	{
-		return m_procId;
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getProcName()
-	{
-		return getProperty(ProcProperties.PROC_NAME);
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getParent()
-	{
-		return getRuntimeInformation().getParent();
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getProperty(ProcProperties property)
-	{
-		return m_properties.get(property);
+		return null;
 	}
 
 	/***************************************************************************
@@ -324,30 +193,6 @@ public class RemoteProcedure implements IProcedure
 	 **************************************************************************/
 	@Override
 	public boolean isInReplayMode() { return false; };
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@SuppressWarnings("rawtypes")
-	@Override
-	public Object getAdapter(Class adapter)
-	{
-		Object result = null;
-		if (adapter.equals(ExecutorInfo.class))
-		{
-			IExecutorInfo info = new ExecutorInfo(m_procId);
-			// TODO info.setParent(getParent().getProcId());
-			getRuntimeInformation().visit(info);
-			result = info;
-		}
-		else if (adapter.equals(ExecutorConfig.class))
-		{
-			ExecutorConfig cfg = new ExecutorConfig(m_procId);
-			getRuntimeInformation().visit(cfg);
-			result = cfg;
-		}
-		return result;
-	}
 
 	/***************************************************************************
 	 * 

@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -55,20 +55,24 @@ import com.astra.ses.spell.gui.core.interfaces.IMessageField;
 import com.astra.ses.spell.gui.core.interfaces.IMessageValue;
 import com.astra.ses.spell.gui.core.model.server.TransferData;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
-import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 
 public class SPELLmessageGetVariables extends SPELLmessageRequest
 {
-	public SPELLmessageGetVariables(String procId, WhichVariables whichOnes)
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public SPELLmessageGetVariables(String procId)
 	{
-		this(procId, whichOnes, -1);
+		this(procId, -1);
 	}
 
-	public SPELLmessageGetVariables(String procId, WhichVariables whichOnes, int chunkNo)
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public SPELLmessageGetVariables(String procId, int chunkNo)
 	{
-		super(IWVMessageId.REQ_VARIABLE_NAMES);
+		super(IWVMessageId.REQ_GET_VARIABLES);
 		set(IMessageField.FIELD_PROC_ID, procId);
-		set(IWVMessageField.FIELD_VARIABLE_GET, whichOnes.name());
 		setSender(IMessageValue.CLIENT_SENDER);
 		if (chunkNo >= 0)
 		{
@@ -77,6 +81,9 @@ public class SPELLmessageGetVariables extends SPELLmessageRequest
 		setReceiver(procId);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public static TransferData getValueChunk(SPELLmessage response)
 	{
 		TransferData data = null;
@@ -101,12 +108,18 @@ public class SPELLmessageGetVariables extends SPELLmessageRequest
 		return data;
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public static String[] getValues( String valueList)
 	{
 		return valueList.split(IMessageField.VARIABLE_SEPARATOR);
 	}
 
-	public static VariableData[] getVariables(WhichVariables whichOnes, SPELLmessage response)
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public static VariableData[] getVariables(SPELLmessage response)
 	{
 		ArrayList<VariableData> result = new ArrayList<VariableData>();
 		try
@@ -114,55 +127,19 @@ public class SPELLmessageGetVariables extends SPELLmessageRequest
 			String nameList = response.get(IWVMessageField.FIELD_VARIABLE_NAME);
 			String typeList = response.get(IWVMessageField.FIELD_VARIABLE_TYPE);
 			String globalList = response.get(IWVMessageField.FIELD_VARIABLE_GLOBAL);
-			String regList = response.get(IWVMessageField.FIELD_VARIABLE_REGISTERED);
 
+			if (nameList.trim().isEmpty()) return null;
+			
 			String[] names = nameList.split(IMessageField.VARIABLE_SEPARATOR);
 			String[] types = typeList.split(IMessageField.VARIABLE_SEPARATOR);
 			String[] globals = globalList.split(IMessageField.VARIABLE_SEPARATOR);
-			String[] registereds = regList.split(IMessageField.VARIABLE_SEPARATOR);
 
 			VariableData var = null;
 			for (int index = 0; index < names.length; index++)
 			{
 				boolean global = globals[index].equals("True");
-				boolean registered = registereds[index].equals("True");
-				switch (whichOnes)
-				{
-				case AVAILABLE_ALL:
-					var = new VariableData(names[index], types[index], null, global, registered);
-					result.add(var);
-					break;
-				case AVAILABLE_GLOBALS:
-					if (!global)
-						continue;
-					var = new VariableData(names[index], types[index], null, global, registered);
-					result.add(var);
-					break;
-				case AVAILABLE_LOCALS:
-					if (global)
-						continue;
-					var = new VariableData(names[index], types[index], null, global, registered);
-					result.add(var);
-					break;
-				case REGISTERED_ALL:
-					if (!registered)
-						continue;
-					var = new VariableData(names[index], types[index], null, global, registered);
-					result.add(var);
-					break;
-				case REGISTERED_GLOBALS:
-					if ((!registered) || (!global))
-						continue;
-					var = new VariableData(names[index], types[index], null, global, registered);
-					result.add(var);
-					break;
-				case REGISTERED_LOCALS:
-					if ((!registered) || (global))
-						continue;
-					var = new VariableData(names[index], types[index], null, global, registered);
-					result.add(var);
-					break;
-				}
+				var = new VariableData(names[index], types[index], null, global);
+				result.add(var);
 			}
 		}
 		catch (MessageException ex)

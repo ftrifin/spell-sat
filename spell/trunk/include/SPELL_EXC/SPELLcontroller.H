@@ -5,7 +5,7 @@
 // DESCRIPTION: Controls the command processing in a separate thread.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -160,11 +160,6 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcontrollerIF.
 		**////////////////////////////////////////////////////////////////////
-		void setExecutionDelay( const long delay );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcontrollerIF.
-		**////////////////////////////////////////////////////////////////////
 		void enableRunInto( const bool enable );
 
 		//////////////////////////////////////////////////////////////////////
@@ -295,6 +290,7 @@ protected: //-----------------------------------------------------------------
 		void notifyOnLineStep();
 		void notifyBeforeDriverOperation();
 		void notifyAfterDriverOperation();
+		void notifyCommandToCore( const std::string& commandId );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Perform the STEP or STEP_OVER command operations.
@@ -310,9 +306,13 @@ protected: //-----------------------------------------------------------------
 
 		//////////////////////////////////////////////////////////////////////
 		/** Perform the PAUSE command operations.
-		 *
 		**////////////////////////////////////////////////////////////////////
 		void doPause();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Perform the INTERRUPT command operations.
+		**////////////////////////////////////////////////////////////////////
+		void doInterrupt();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Perform the ABORT command operations.
@@ -432,8 +432,6 @@ private: //-------------------------------------------------------------------
 		SPELLexecutionMode    m_mode;
 		/** Reference to the mailbox object. */
 		SPELLcommandMailbox   m_mailbox;
-		/** Holds the programmed execution delay in msec. */
-		long m_execDelay;
 		/** True if the skip-out-function mechanism is being used. */
 		bool m_skipping;
 		/** True if the procedure has been aborted. */
@@ -450,6 +448,8 @@ private: //-------------------------------------------------------------------
 		bool m_reload;
 		/** True if the user wants to pause. Required for pausing during step overs */
 		bool m_wantPause;
+		/** True if the user wants to interrupt. Required to differentiate interruptions from pauses */
+		bool m_wantInterrupt;
 		/** Dispatch loop repeat flag */
 		bool m_shallRepeat;
 		/** Holds the name of the main procedure file. */

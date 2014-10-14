@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -41,13 +41,16 @@
 //=============================================================================
 // CONSTRUCTOR: SPELLexecutorModel::SPELLexecutorModel()
 //=============================================================================
-SPELLexecutorModel::SPELLexecutorModel( const SPELLexecutorConfiguration& config )
+SPELLexecutorModel::SPELLexecutorModel( const SPELLexecutorStartupParams& config )
 {
 	m_procId = config.getProcId();
 	m_instanceId = config.getInstanceId();
 	m_timeId = config.getTimeId();
 	m_instanceNum = config.getInstanceNum();
 	m_parentProcId = config.getParentInstanceId();
+	m_parentCallingLine = config.getParentCallingLine();
+	m_groupId = config.getGroupId();
+	m_originId = config.getOriginId();
 	m_arguments = config.getArguments();
 	m_condition = config.getCondition();
 	m_openMode = config.getOpenMode();
@@ -59,6 +62,8 @@ SPELLexecutorModel::SPELLexecutorModel( const SPELLexecutorConfiguration& config
 	m_status = STATUS_UNKNOWN;
 	m_logFileName = "";
 	m_wsFileName = config.getRecoveryFile();
+	m_currentStageId = "";
+	m_currentStageTitle = "";
 }
 
 //=============================================================================

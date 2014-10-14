@@ -14,7 +14,7 @@ Authoring
 
 @organization: SES ENGINEERING
 
-@copyright: Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+@copyright: Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
             
 @license:  This file is part of SPELL.
 
@@ -47,6 +47,7 @@ from spell.lang.modifiers import *
 from spell.lib.exception import *
 from spell.lib.adapter.utctime import *
 from spell.lib.registry import *
+from spell.lib.adapter.expression import Expression,AND_TYPE,OR_TYPE
 
 #===============================================================================
 # Local imports
@@ -59,7 +60,7 @@ import time,os,string
 
 
 #==============================================================================
-def Abort( message = None ):
+def Abort( message = "Execution Aborted" ):
     """
     Aborts the procedure execution.
     
@@ -104,7 +105,7 @@ def DisplayStep( id, description ):
         REGISTRY['EXEC'].setStep(id,description)
 
 #==============================================================================
-def Finish( message = None ):
+def Finish( message = "Completed Execution" ):
     """
     Finishes the procedure execution.
     
@@ -1123,6 +1124,26 @@ def ShowText( *args, **kargs ):
     """
     Display("NOT IMPLEMENTED",WARNING)
     return True
+
+#==============================================================================
+def GetTMparam( *args, **kargs ):
+    """
+    Get a TM parameter property.
+    """
+    from helpers.tmhelper import GetTMparam_Helper
+    helper = GetTMparam_Helper()
+    helper.configure(*args, **kargs)
+    return helper.execute(*args, **kargs)
+
+#==============================================================================
+def SetTMparam( *args, **kargs ):
+    """
+    Set a TM parameter property.
+    """
+    from helpers.tmhelper import SetTMparam_Helper
+    helper = SetTMparam_Helper()
+    helper.configure(*args, **kargs)
+    return helper.execute(*args, **kargs)
     
 #==============================================================================
 def GetLimits( *args, **kargs ):
@@ -1156,8 +1177,6 @@ def GetLimits( *args, **kargs ):
     helper = GetLimits_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
-# Alias for backwards compatibility
-GetTMparam = GetLimits
 
 #==============================================================================
 def SetLimits( *args, **kargs ):
@@ -1209,9 +1228,6 @@ def SetLimits( *args, **kargs ):
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
 
-# Alias for backwards compatibility
-SetTMparam = SetLimits
-
 #==============================================================================
 def LoadLimits( *args, **kargs ):
     """
@@ -1231,8 +1247,6 @@ def LoadLimits( *args, **kargs ):
     helper = LoadLimits_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
-# Alias for backwards compatibility
-GetTMparam = GetLimits
 
 #==============================================================================
 def RestoreNormalLimits( *args, **kargs ):
@@ -1563,6 +1577,40 @@ def ChangeLanguageConfig( *args, **kargs ):
     return helper.execute( *args, **kargs )
 
 #==============================================================================
+def GetLanguageConfig( *args, **kargs ):
+    """
+    Modify the defaults for a given language interface or function
+    
+    Syntax 1:
+    =========
+    
+    Change a default value for the (e.g.) TM interface::
+    
+        ChangeLanguageConfig( TM, Wait = False )
+
+    Syntax 2:
+    =========
+    
+    Change a default value for the (e.g.) Send function::
+    
+        ChangeLanguageConfig( Send, Delay = 3 )
+    
+    Modifiers:
+    ==========
+    
+    None
+    
+    Return:
+    =======
+    
+    None
+    """
+    from helpers.genhelper import GetLanguageConfig_Helper
+    helper = GetLanguageConfig_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
 def SetUserAction( *args, **kargs ):
     """
     Associate a procedure function to an action which can be triggered by the user
@@ -1669,32 +1717,218 @@ def bin( number, count = 24 ):
     """
     return "".join([str((number >> y) & 1) for y in range(count-1, -1, -1)])
 
-   
 #==============================================================================
-def Open( *args, **kargs ):
+def OpenFile( *args, **kargs ):
     from helpers.filehelper import OpenFile_Helper
     helper = OpenFile_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
     
 #==============================================================================
-def Write( *args, **kargs ):
+def WriteFile( *args, **kargs ):
     from helpers.filehelper import WriteFile_Helper
     helper = WriteFile_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
     
 #==============================================================================
-def Close( *args, **kargs ):
+def CloseFile( *args, **kargs ):
     from helpers.filehelper import CloseFile_Helper
     helper = CloseFile_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
     
 #==============================================================================
-def Read( *args, **kargs ):
+def ReadFile( *args, **kargs ):
     from helpers.filehelper import ReadFile_Helper
     helper = ReadFile_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
 
+#==============================================================================
+def DeleteFile( *args, **kargs ): 
+    from helpers.filehelper import DeleteFile_Helper
+    helper = DeleteFile_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def ReadDirectory( *args, **kargs ):
+    from helpers.filehelper import ReadDirectory_Helper 
+    helper = ReadDirectory_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def SetSharedData ( *args, **kargs ):
+    from helpers.datahelper import SetSharedData_Helper
+    helper = SetSharedData_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetSharedData ( *args, **kargs ):
+    from helpers.datahelper import GetSharedData_Helper
+    helper = GetSharedData_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetSharedDataKeys ( *args, **kargs ):
+    from helpers.datahelper import GetSharedDataKeys_Helper
+    helper = GetSharedDataKeys_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def ClearSharedData ( *args, **kargs ):
+    from helpers.datahelper import ClearSharedData_Helper
+    helper = ClearSharedData_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetSharedDataScopes ( *args, **kargs ):
+    from helpers.datahelper import GetSharedDataScopes_Helper
+    helper = GetSharedDataScopes_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def AddSharedDataScope ( *args, **kargs ):
+    from helpers.datahelper import AddSharedDataScope_Helper
+    helper = AddSharedDataScope_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def ClearSharedDataScopes ( *args, **kargs ):
+    from helpers.datahelper import ClearSharedDataScopes_Helper
+    helper = ClearSharedDataScopes_Helper()
+    helper.configure( *args, **kargs ) 
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def EnableRanging( *args, **kargs ):
+    from helpers.rnghelper import EnableRanging_Helper
+    helper = EnableRanging_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def DisableRanging ( *args, **kargs ):
+    from helpers.rnghelper import DisableRanging_Helper
+    helper = DisableRanging_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def SetBasebandConfig ( *args, **kargs ):
+    from helpers.rnghelper import SetBasebandConfig_Helper
+    helper = SetBasebandConfig_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetBasebandConfig ( *args, **kargs ):
+    from helpers.rnghelper import GetBasebandConfig_Helper
+    helper = GetBasebandConfig_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def StartRanging ( *args, **kargs ):
+    from helpers.rnghelper import StartRanging_Helper
+    helper = StartRanging_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetRangingStatus ( *args, **kargs ):
+    from helpers.rnghelper import GetRangingStatus_Helper
+    helper = GetRangingStatus_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def AbortRanging ( *args, **kargs ):
+    from helpers.rnghelper import AbortRanging_Helper
+    helper = AbortRanging_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def StartRangingCalibration ( *args, **kargs ):
+    from helpers.rnghelper import StartRangingCalibration_Helper
+    helper = StartRangingCalibration_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetBasebandNames ( *args, **kargs ):
+    from helpers.rnghelper import GetBasebandNames_Helper
+    helper = GetBasebandNames_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetAntennaNames ( *args, **kargs ):
+    from helpers.rnghelper import GetAntennaNames_Helper
+    helper = GetAntennaNames_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GetRangingPaths ( *args, **kargs ):
+    from helpers.rnghelper import GetRangingPaths_Helper
+    helper = GetRangingPaths_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def GenerateMemoryReport ( *args, **kargs ):
+    from helpers.memhelper import GenerateMemoryReport_Helper
+    helper = GenerateMemoryReport_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def MemoryLookup( *args, **kargs ):
+    from helpers.memhelper import MemoryLookup_Helper
+    helper = MemoryLookup_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def CompareMemoryImages( *args, **kargs ):
+    from helpers.memhelper import CompareMemoryImages_Helper
+    helper = CompareMemoryImages_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+#==============================================================================
+def TMTCLookup( *args, **kargs ):
+    from helpers.genhelper import TMTCLookup_Helper
+    helper = TMTCLookup_Helper()
+    helper.configure( *args, **kargs )
+    return helper.execute( *args, **kargs )
+
+################################################################################
+def RAW_VALUE(item):
+    return REGISTRY['TM'][item].raw()
+
+################################################################################
+def ENG_VALUE(item):
+    return REGISTRY['TM'][item].eng()
+
+################################################################################
+class AND(Expression):
+    
+    def getType(self):
+        return AND_TYPE
+
+################################################################################
+class OR(Expression):
+    
+    def getType(self):
+        return OR_TYPE

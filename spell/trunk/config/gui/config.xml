@@ -2,37 +2,77 @@
 
 <configuration>
     <property name="AppName">SPELL</property>
-    <property name="ConnectAtStartup">NO</property>
-    <property name="ScpConnectionUser">spell</property>
-    <property name="ScpConnectionPassword">spell</property>
+    <property name="ConnectAtStartup">YES</property>
+    <!-- NO, ALL, CHILDREN -->
+    <property name="AutomaticClose">CHILDREN</property>
     <property name="InitialServer">LOCAL</property>
     <property name="InitialContext">STD</property>
     <property name="ResponseTimeout">18000</property>
     <property name="OpenTimeout">122000</property>
+    <!-- command path -->
     <property name="ProceduresEditor"></property>
     <property name="LastServerConnected">LOCAL</property>
     <property name="LastHostConnected"></property>
     <property name="LastPortConnected"></property>
     <property name="LastConnectionManual">NO</property>
+    <!-- Wav file path -->
     <property name="PromptSoundFile"></property>
-    <property name="PromptSoundDelay">60</property>
+    <!-- YES, NO -->
     <property name="PreferencesEnabled">YES</property>
-
+    <!-- YES, NO -->
+    <property name="ShowDateLine">NO</property>
+    <!-- YES, NO -->
+    <property name="ShowTextTimestamp">YES</property>
+    <!-- NAME, VALUE, BOTH -->
+    <property name="DisplayData">BOTH</property>
+    <!-- Maximum number of item notifications to store per procedure line -->
+    <property name="LineHistoryItems">50</property>
+    <!-- Maximum number of lines to keep in text view -->
+    <property name="TextHistoryItems">1000</property>
+    <!-- Confirm before aborting a procedure: YES, NO, PROMPT -->
+    <property name="ConfirmAbort">NO</property>
+    <!-- Multiple attach: YES, NO, PROMPT -->
+    <property name="MultipleAttach">PROMPT</property>
+    <!-- ASRUN when controlling: YES, NO, PROMPT -->
+    <property name="AsRunControl">PROMPT</property>
+    <!-- ASRUN when monitoring: YES, NO, PROMPT -->
+    <property name="AsRunMonitor">PROMPT</property>
+  
+    <connectivity>
+       <user>spell</user>
+       <pwd>spell</pwd>
+       <key>/home/spell/SPELL/config/gui/spell_key</key>
+    </connectivity>
+ 
     <presentations>
         <presentation name="Tabular" default="yes" enabled="yes"/>
         <presentation name="Text" enabled="yes"/>
         <presentation name="Shell" enabled="yes"/>
     </presentations>
 
+   <procpanel>
+        <component id="CMD_RUN">Run</component>
+        <component id="CMD_STEP">Step</component>
+        <component id="CMD_STEP_OVER">S.Over</component>
+        <component id="CMD_PAUSE">Pause</component>
+        <component id="CMD_INTERRUPT">Interrupt</component>
+        <component id="CMD_SKIP">Skip</component>
+        <component id="CMD_GOTO">Goto</component>
+        <component id="CMD_ABORT">Abort</component>
+        <component id="CMD_RECOVER">Recover</component>
+        <component id="STATUS">Status</component>
+    </procpanel>
+
     <appearance>
         <fonts>
-            <font id="MASTERC" face="Courier New" size="10" style="norm"/>
-            <font id="CODE" face="Courier New" size="9" style="norm"/>
+            <font id="MASTERC" face="Monospace" size="10" style="norm"/>
+            <font id="CODE" face="Monospace" size="9" style="norm"/>
             <font id="TEXT" face="Courier New" size="9" style="norm"/>
             <font id="HEADER" face="Sans" size="12" style="norm"/>
             <font id="BANNER" face="Arial" size="25" style="bold"/>
             <font id="GUI_BOLD" face="Sans" size="9" style="bold"/>
             <font id="GUI_NOM" face="Sans" size="10" style="norm"/>
+            <font id="GUI_BIG" face="Sans" size="15" style="norm"/>
         </fonts>
         <styles>
             <style id="PROC" font="TEXT" color="0:0:255" style="norm"/>
@@ -84,12 +124,18 @@
             </proccolors>
         </colors>
     </appearance>
+    
     <servers>
         <server>
             <name>LOCAL</name>
             <host>localhost</host>
             <port>9980</port>
             <role>COMMANDING</role>
+	        <connectivity>
+        	  <user>spell</user>
+	          <pwd>spell</pwd>
+        	  <key>/home/spell/SPELL/config/gui/spell_key</key>
+            </connectivity>
         </server>
     </servers>
 </configuration>

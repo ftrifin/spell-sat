@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -55,13 +55,13 @@ import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.IFileManager;
 import com.astra.ses.spell.gui.core.interfaces.IServerProxy;
 import com.astra.ses.spell.gui.core.interfaces.IShellManager;
-import com.astra.ses.spell.gui.core.interfaces.IStatusManager;
+import com.astra.ses.spell.gui.core.interfaces.IApplicationStatusManager;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.services.ContextProxy;
 import com.astra.ses.spell.gui.core.services.FileManager;
 import com.astra.ses.spell.gui.core.services.ServerProxy;
 import com.astra.ses.spell.gui.core.services.ShellManager;
-import com.astra.ses.spell.gui.core.services.StatusManager;
+import com.astra.ses.spell.gui.core.services.ApplicationStatusManager;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -97,7 +97,6 @@ public class Activator extends Plugin
 		createServices();
 		connectServices();
 		setupServices();
-		CoreExtensions.get().loadExtensions();
 	}
 
 	/* *************************************************************************
@@ -135,7 +134,7 @@ public class Activator extends Plugin
 			ServiceManager.registerService(IContextProxy.class, new ContextProxy());
 			ServiceManager.registerService(IShellManager.class, new ShellManager());
 			ServiceManager.registerService(IFileManager.class, new FileManager());
-			ServiceManager.registerService(IStatusManager.class, new StatusManager());
+			ServiceManager.registerService(IApplicationStatusManager.class, new ApplicationStatusManager());
 		}
 		catch (Exception e)
 		{
@@ -152,7 +151,7 @@ public class Activator extends Plugin
 		ServiceManager.get(IContextProxy.class).setup();
 		ServiceManager.get(IShellManager.class).setup();
 		ServiceManager.get(IFileManager.class).setup();
-		ServiceManager.get(IStatusManager.class).setup();
+		ServiceManager.get(IApplicationStatusManager.class).setup();
 	}
 
 	/***************************************************************************
@@ -164,7 +163,7 @@ public class Activator extends Plugin
 		ServiceManager.get(IContextProxy.class).subscribe();
 		ServiceManager.get(IShellManager.class).subscribe();
 		ServiceManager.get(IFileManager.class).subscribe();
-		ServiceManager.get(IStatusManager.class).subscribe();
+		ServiceManager.get(IApplicationStatusManager.class).subscribe();
 	}
 
 	/***************************************************************************
@@ -176,6 +175,6 @@ public class Activator extends Plugin
 		ServiceManager.get(IContextProxy.class).cleanup();
 		ServiceManager.get(IShellManager.class).cleanup();
 		ServiceManager.get(IFileManager.class).cleanup();
-		ServiceManager.get(IStatusManager.class).cleanup();
+		ServiceManager.get(IApplicationStatusManager.class).cleanup();
 	}
 }

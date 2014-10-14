@@ -6,7 +6,7 @@
 //				that affect the executor features at runtime.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -84,6 +84,24 @@ public: //--------------------------------------------------------------------
 		bool isExecutable( unsigned int lineNo ) const;
 
 		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line is to be kept with next one (used for multiline skips).
+		 *
+		 * \param lineNo IN: the line number
+		 *
+		 * \return True if the line needs to be kept with the next one (cannot be single-skipped)
+		**////////////////////////////////////////////////////////////////////
+		bool isKeepWithNext( unsigned int lineNo ) const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line is a return <constant>
+		 *
+		 * \param lineNo IN: the line number
+		 *
+		 * \return True if the line contains a return <constant> statement
+		**////////////////////////////////////////////////////////////////////
+		bool isReturnConstant( unsigned int lineNo ) const;
+
+		//////////////////////////////////////////////////////////////////////
 		/** Check if the given line is within a try-except block
 		 *
 		 * \param lineNo IN: the line number
@@ -91,6 +109,24 @@ public: //--------------------------------------------------------------------
 		 * \return True if the line is inside try block
 		**////////////////////////////////////////////////////////////////////
 		bool isInTryBlock( unsigned int lineNo ) const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line is within a try-except block
+		 *
+		 * \param lineNo IN: the line number
+		 *
+		 * \return True if the line is inside try block
+		**////////////////////////////////////////////////////////////////////
+		bool isInExceptBlock( unsigned int lineNo ) const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line is within a try-except block
+		 *
+		 * \param lineNo IN: the line number
+		 *
+		 * \return True if the line is inside try block
+		**////////////////////////////////////////////////////////////////////
+		bool isInFinallyBlock( unsigned int lineNo ) const;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Check if the given line is the last one of a try block
@@ -139,10 +175,22 @@ protected: //-----------------------------------------------------------------
 		/** Bytecode information for a given line of the procedure */
 		typedef struct BLine_
 		{
+			BLine_()
+			{
+				executable = false;
+				keepWithNext = false;
+				returnConst = false;
+				lineno = -1;
+				opcode = -1;
+				offset = -1;
+			};
+
 			unsigned int lineno;
 			unsigned int offset;
 			unsigned int opcode;
 			bool executable;
+			bool keepWithNext;
+			bool returnConst;
 		}
 		BLine;
 		/** List of line information */
@@ -151,8 +199,9 @@ protected: //-----------------------------------------------------------------
 		typedef struct _tryblock
 		{
 			unsigned int try_lineno;
-			unsigned int bexcept_lineno;
+			unsigned int end_try_lineno;
 			unsigned int except_lineno;
+			unsigned int end_except_lineno;
 			unsigned int end_lineno;
 		} TryBlock;
 

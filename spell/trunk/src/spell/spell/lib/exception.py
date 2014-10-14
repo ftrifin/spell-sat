@@ -5,7 +5,7 @@
 ## DESCRIPTION: Exceptions
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -69,7 +69,23 @@ class NotAvailable   ( SpellException ): pass
 class DriverException( SpellException ): pass
 class CancelException( SpellException ): pass
 class VerifyException( SpellException ): pass
-class SyntaxException( SpellException ): pass 
+class SyntaxException( SpellException ): pass
+
+
+#*******************************************************************************
+# Customized Exceptions 
+#*******************************************************************************
+class Handle:
+    
+    code = 0
+    type = None
+    item = None
+    
+    def __init__(self, code = 0, type = None, item = None):
+        self.code = code
+        self.type = type
+        self.item = item
+ 
 #*******************************************************************************
 # Module globals
 #*******************************************************************************

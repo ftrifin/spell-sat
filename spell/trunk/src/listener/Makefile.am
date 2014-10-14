@@ -30,7 +30,7 @@ bin_PROGRAMS = SPELL-Listener
 
 SPELL_Listener_SOURCES = src/SPELLlistenerMain.C
 
-SPELL_Listener_LDFLAGS = -lxerces-c -lpthread -lrt -lutil -ldl -lz $(AM_LDFLAGS)
+SPELL_Listener_LDFLAGS = -lxerces-c -lpthread -lrt -lutil -ldl -lz -lcrypto $(AM_LDFLAGS)
 
 SPELL_Listener_LDADD = \
                        ${top_builddir}/lib/SPELL_LST/libSPELL_LST.la \

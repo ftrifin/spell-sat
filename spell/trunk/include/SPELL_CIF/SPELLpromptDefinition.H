@@ -5,7 +5,7 @@
 // DESCRIPTION: Parameters defining a prompt
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -32,6 +32,7 @@
 // Local includes ----------------------------------------------------------
 // Project includes --------------------------------------------------------
 #include "SPELL_UTIL/SPELLbase.H"
+#include "SPELL_UTIL/SPELLtime.H"
 
 /** \addtogroup SPELL_CIF */
 /*@{*/
@@ -61,8 +62,10 @@ public:
 	std::string message;
 	Options options;
 	Options expected;
+	std::string defaultAnswer;
 	unsigned int scope;
 	unsigned int typecode;
+	SPELLtime timeout;
 };
 
 /*@}*/

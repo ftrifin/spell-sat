@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 22, 2010 10:22:20 AM
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,17 +48,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.watchvariables.views;
 
-import java.util.Iterator;
-
-import org.eclipse.jface.action.Action;
-import org.eclipse.jface.action.IToolBarManager;
-import org.eclipse.jface.action.Separator;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.viewers.ISelectionChangedListener;
-import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.SelectionChangedEvent;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.IPage;
 import org.eclipse.ui.part.Page;
@@ -66,8 +55,6 @@ import org.eclipse.ui.part.Page;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.views.ProcedurePageView;
-import com.astra.ses.spell.gui.watchvariables.Activator;
-import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
 import com.astra.ses.spell.gui.watchvariables.views.controls.WatchVariablesPage;
 import com.astra.ses.spell.gui.watchvariables.views.controls.WatchVariablesPage.IWatchVariablesPageListener;
 
@@ -76,29 +63,21 @@ import com.astra.ses.spell.gui.watchvariables.views.controls.WatchVariablesPage.
  * WatchVariables page allows the user to follow variable value changes
  * 
  ******************************************************************************/
-public class WatchVariablesView extends ProcedurePageView implements ISelectionChangedListener, IWatchVariablesPageListener
+public class WatchVariablesView extends ProcedurePageView implements IWatchVariablesPageListener
 {
 	public static final String ID = "com.astra.ses.spell.gui.views.tools.WatchVariables";
-
-	/** Subscribe action */
-	private Action m_subscribeAction;
-	/** Unsubscribe action */
-	private Action m_unsubscribeAction;
-	/** Unsubscribe all action */
-	private Action m_unsubscribeAllAction;
-	/** Refresh action */
-	private Action m_refreshAction;
 
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
 	public WatchVariablesView()
 	{
-		super("(No variables to watch)", "Variables");
-		makeActions();
-		resetActions();
+		super("(No variables)", "Variables");
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	protected Page createMyPage(String procedureId, String name)
 	{
@@ -106,256 +85,22 @@ public class WatchVariablesView extends ProcedurePageView implements ISelectionC
 		return new WatchVariablesPage(mgr.getProcedure(procedureId), this);
 	}
 
-	@Override
-	protected PageRec doCreatePage(IWorkbenchPart part)
-	{
-		PageRec pageRec = super.doCreatePage(part);
-		/* Add a selection change listener to the page */
-		WatchVariablesPage wv = (WatchVariablesPage) pageRec.page;
-		wv.addSelectionChangedListener(this);
-		return pageRec;
-	}
-
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	protected void doDestroyPage(IWorkbenchPart part, PageRec pageRecord)
 	{
 		WatchVariablesPage wv = (WatchVariablesPage) pageRecord.page;
 		/* Remove the listener */
-		wv.removeSelectionChangedListener(this);
 		wv.cleanup();
 		/* Destroy the page */
 		super.doDestroyPage(part, pageRecord);
 	}
 
-	@Override
-	public void createPartControl(Composite parent)
-	{
-		super.createPartControl(parent);
-		contributeToActionBars();
-	}
-
-	@Override
-	protected void showPageRec(PageRec pageRec)
-	{
-		super.showPageRec(pageRec);
-		/*
-		 * Update actions according to the selection of the page
-		 */
-		if (pageRec.page.getClass().equals(WatchVariablesPage.class))
-		{
-			WatchVariablesPage page = (WatchVariablesPage) pageRec.page;
-			IStructuredSelection selection = (IStructuredSelection) page.getSelection();
-			updateActionState(selection);
-		}
-		else
-		{
-			resetActions();
-		}
-	}
-
-	/***************************************************************************
+	/**************************************************************************
 	 * 
-	 **************************************************************************/
-	private void contributeToActionBars()
-	{
-		IActionBars bars = getViewSite().getActionBars();
-		fillLocalToolBar(bars.getToolBarManager());
-	}
-
-	/***************************************************************************
-	 * 
-	 * @param manager
-	 **************************************************************************/
-	private void fillLocalToolBar(IToolBarManager manager)
-	{
-		manager.add(m_refreshAction);
-		manager.add(m_subscribeAction);
-		manager.add(m_unsubscribeAction);
-		manager.add(m_unsubscribeAllAction);
-		manager.add(new Separator());
-	}
-
-	/***************************************************************************
-	 * Make actions to apply over the different pages on demand
-	 **************************************************************************/
-	private void makeActions()
-	{
-		String baseLocation = "platform:/plugin/" + Activator.PLUGIN_ID;
-
-		m_refreshAction = new Action()
-		{
-			public void run()
-			{
-				try
-				{
-					showBusy(true);
-					IPage current = getCurrentPage();
-					if (current.getClass().equals(WatchVariablesPage.class))
-					{
-						WatchVariablesPage page = (WatchVariablesPage) current;
-						page.updateModel();
-					}
-				}
-				finally
-				{
-					showBusy(false);
-				}
-			}
-		};
-		m_refreshAction.setText("Refresh variables");
-		m_refreshAction.setToolTipText("Refresh variables");
-		m_refreshAction.setImageDescriptor(Activator.getImageDescriptor(baseLocation + "/icons/16x16/refresh.png"));
-
-		m_subscribeAction = new Action()
-		{
-			public void run()
-			{
-				try
-				{
-					showBusy(true);
-					IPage current = getCurrentPage();
-					if (current.getClass().equals(WatchVariablesPage.class))
-					{
-						WatchVariablesPage page = (WatchVariablesPage) current;
-						page.subscribeSelected();
-					}
-				}
-				finally
-				{
-					showBusy(false);
-				}
-			}
-		};
-		m_subscribeAction.setText("Watch variables");
-		m_subscribeAction.setToolTipText("Watch variables");
-		m_subscribeAction.setImageDescriptor(Activator.getImageDescriptor(baseLocation + "/icons/16x16/zoom_in.png"));
-
-		m_unsubscribeAction = new Action()
-		{
-			public void run()
-			{
-				try
-				{
-					showBusy(true);
-					IPage current = getCurrentPage();
-					if (current.getClass().equals(WatchVariablesPage.class))
-					{
-						WatchVariablesPage page = (WatchVariablesPage) current;
-						page.unsubscribeSelected();
-					}
-				}
-				finally
-				{
-					showBusy(false);
-				}
-			}
-		};
-		m_unsubscribeAction.setText("Stop watching variables");
-		m_unsubscribeAction.setToolTipText("Stop watching variables");
-		m_unsubscribeAction.setImageDescriptor(Activator.getImageDescriptor(baseLocation + "/icons/16x16/zoom_out.png"));
-
-		m_unsubscribeAllAction = new Action()
-		{
-			public void run()
-			{
-				try
-				{
-					showBusy(true);
-					IPage current = getCurrentPage();
-					if (current.getClass().equals(WatchVariablesPage.class))
-					{
-						WatchVariablesPage page = (WatchVariablesPage) current;
-						boolean proceed = MessageDialog.openConfirm(getSite().getShell(), "Remove all watches",
-						        "Do you really want to remove all variable watches?");
-						if (proceed)
-						{
-							page.unsubscribeAll();
-						}
-					}
-				}
-				finally
-				{
-					showBusy(false);
-				}
-			}
-		};
-		m_unsubscribeAllAction.setText("Stop watching all variables");
-		m_unsubscribeAllAction.setToolTipText("Stop watching all variables");
-		m_unsubscribeAllAction.setImageDescriptor(Activator.getImageDescriptor(baseLocation + "/icons/16x16/cancel.png"));
-	}
-
-	/***************************************************************************
-	 * Enable the actions at their default status
-	 **************************************************************************/
-	private void resetActions()
-	{
-		m_refreshAction.setEnabled(false);
-		m_unsubscribeAction.setEnabled(false);
-		m_subscribeAction.setEnabled(false);
-		m_unsubscribeAllAction.setEnabled(false);
-	}
-
-	/***************************************************************************
-	 * Update actions status
-	 **************************************************************************/
-	private void updateActionState(IStructuredSelection selection)
-	{
-		int selectionSize = selection.size();
-
-		boolean refresh = true;
-		boolean subscribe = false;
-		boolean unsubscribe = false;
-		boolean cleanup = false;
-
-		WatchVariablesPage page = (WatchVariablesPage) getCurrentPage();
-		boolean registered = page.isShowingRegistered();
-		boolean active = page.isActive();
-
-		refresh = active;
-
-		if (selectionSize > 0)
-		{
-			subscribe = !registered;
-			unsubscribe = true;
-
-			@SuppressWarnings("unchecked")
-			Iterator<VariableData> variableIterator = selection.iterator();
-			while (variableIterator.hasNext())
-			{
-				VariableData var = variableIterator.next();
-				subscribe = (subscribe && (!var.isRegistered));
-				unsubscribe = (unsubscribe && (var.isRegistered));
-			}
-			cleanup = !subscribe;
-		}
-
-		m_refreshAction.setEnabled(refresh);
-		m_unsubscribeAction.setEnabled(unsubscribe);
-		m_subscribeAction.setEnabled(subscribe);
-		m_unsubscribeAllAction.setEnabled(cleanup);
-	}
-
-	/*
-	 * ==========================================================================
-	 * Selection listener methods
-	 * =========================================================================
-	 */
+	 *************************************************************************/
 	@Override
-	public void selectionChanged(SelectionChangedEvent event)
-	{
-		IStructuredSelection selection = (IStructuredSelection) event.getSelection();
-		updateActionState(selection);
-	}
-
-	@Override
-	public void notifyActive(IPage page, boolean active)
-	{
-		IPage current = getCurrentPage();
-		if (current == page)
-		{
-			WatchVariablesPage wv = (WatchVariablesPage) page;
-			IStructuredSelection selection = (IStructuredSelection) wv.getSelection();
-			updateActionState(selection);
-		}
-	}
+	public void notifyActive(IPage page, boolean active) {}
 }

@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for execution functions
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -332,58 +332,5 @@ class DismissUserAction_Helper(WrapperHelper):
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry dismiss user action", {Severity:WARNING} )
-        return [True,False]
-
-################################################################################
-class SetAlignmentMode_Helper(WrapperHelper):
-    
-    #===========================================================================
-    def __init__(self):
-        WrapperHelper.__init__(self, "")
-        self._opName = "Set alignment mode" 
-
-    #===========================================================================
-    def _doOperation(self, *args, **kargs ):
-        
-        mode = None
-        period = TIME(30)
-        
-        self._setActionString( ACTION_SKIP   ,  "Skip setting alignment mode and return success (True)")
-        self._setActionString( ACTION_CANCEL ,  "Skip setting alignment and return failure (False)")
-        self._setActionString( ACTION_REPEAT ,  "Try to set the alignment mode again")
-
-        if len(args)==0:
-            if not kargs.has_key(Mode): 
-                raise SyntaxException("Bad arguments")
-            if kargs.has_key(Mode):
-                mode = kargs.get(Mode)
-            if kargs.has_key(Period):
-                period = kargs.get(Period)
-        else:
-            mode = args[0]
-            if len(args)==2:
-                period = args[1]
-
-        if mode is None:
-            raise SyntaxException("No alignment mode given")
-        
-        if REGISTRY.exists('EXEC'):
-            REGISTRY['EXEC'].setAlignmentMode( mode, period )
-            
-        return [False,True,NOTIF_STATUS_OK,"Mode set"]
-        
-    #===========================================================================
-    def _doSkip(self):
-        self._write("Set alignment mode skipped", {Severity:WARNING} )
-        return [False,True]        
-
-    #===========================================================================
-    def _doCancel(self):
-        self._write("Set alignment mode skipped", {Severity:WARNING} )
-        return [False,False]        
-                
-    #===========================================================================
-    def _doRepeat(self):
-        self._write("Retry set alignment mode", {Severity:WARNING} )
         return [True,False]
 

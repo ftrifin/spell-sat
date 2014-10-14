@@ -5,7 +5,7 @@
 // DESCRIPTION: WS frame manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -81,13 +81,14 @@ public: //--------------------------------------------------------------------
 		/** Constructor. Create a frame manager for an already existing frame
 		 * during normal procedure execution.
 		 *
+		 * \param id IN: frame identifier
 		 * \param info IN: startup configuration
 		 * \param depth IN: recursion depth of this frame.
 		 * \param frame IN: the associated frame, or previous/original head
 		 *                  frame in recovery mode
 		 *
 		**////////////////////////////////////////////////////////////////////
-		SPELLwsFrame( const SPELLwsStartupInfo& info, unsigned int depth, PyFrameObject* frame );
+		SPELLwsFrame( const std::string& id, const SPELLwsStartupInfo& info, unsigned int depth, PyFrameObject* frame );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
@@ -132,6 +133,11 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void cleanup();
 
+		//////////////////////////////////////////////////////////////////////
+		/** Get the frame identifier
+		**////////////////////////////////////////////////////////////////////
+		std::string getCodeId() { return m_codeId; };
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 protected: //-----------------------------------------------------------------
@@ -152,6 +158,8 @@ private: //-------------------------------------------------------------------
     // METHODS ///////////////////////////////////////////////////////////////
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
+		/** Internal identifier of the frame model */
+		std::string         m_codeId;
 		/** Borrowed reference of the Python frame */
 		PyFrameObject*      m_frame;
 		/** Static data file manager */

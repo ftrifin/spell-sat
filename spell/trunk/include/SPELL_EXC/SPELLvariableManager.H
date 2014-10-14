@@ -5,7 +5,7 @@
 // DESCRIPTION: Manager of procedure runtime variables
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -71,19 +71,17 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Enable or disable the manager.
 		**////////////////////////////////////////////////////////////////////
-		void setEnabled( bool enabled ) { m_enabled = enabled; };
+		void setEnabled( bool enabled );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Check enabled
 		**////////////////////////////////////////////////////////////////////
-		bool isEnabled() { return m_enabled; };
+		bool isEnabled();
 
 		//////////////////////////////////////////////////////////////////////
-		/** Get currently available variables.
-		 *
-		 * \return The list of variables.
+		/** Analysis on demand
 		**////////////////////////////////////////////////////////////////////
-		std::vector<SPELLvarInfo> getAllVariables();
+		void analyze();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get currently available global variables.
@@ -100,55 +98,12 @@ public: //--------------------------------------------------------------------
 		std::vector<SPELLvarInfo> getLocalVariables();
 
 		//////////////////////////////////////////////////////////////////////
-		/** Get currently registered variables.
-		 *
-		 * \return The list of variables.
-		**////////////////////////////////////////////////////////////////////
-		std::vector<SPELLvarInfo> getRegisteredVariables();
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get currently registered global variables.
-		 *
-		 * \return The list of variables.
-		**////////////////////////////////////////////////////////////////////
-		std::vector<SPELLvarInfo> getRegisteredGlobalVariables();
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get currently registered local variables.
-		 *
-		 * \return The list of variables.
-		**////////////////////////////////////////////////////////////////////
-		std::vector<SPELLvarInfo> getRegisteredLocalVariables();
-
-		//////////////////////////////////////////////////////////////////////
-		/** Register a variable in the current frame.
-		 *
-		 * \param var INOUT: the variable information
-		 *
-		 * \return True if success.
-		**////////////////////////////////////////////////////////////////////
-		bool registerVariable( SPELLvarInfo& var );
-
-		//////////////////////////////////////////////////////////////////////
-		/** Unregister a variable in the current frame.
-		 *
-		 * \param var IN: the variable to unregister.
-		 *
-		**////////////////////////////////////////////////////////////////////
-		void unregisterVariable( SPELLvarInfo& var );
-
-		//////////////////////////////////////////////////////////////////////
 		/** Change a variable value.
 		 *
 		 * \param var IN: the variable data.
 		 *
 		**////////////////////////////////////////////////////////////////////
 		void changeVariable( SPELLvarInfo& var );
-
-		//////////////////////////////////////////////////////////////////////
-		/** Unregister all variables in all frames.
-		**////////////////////////////////////////////////////////////////////
-		void unregisterAll();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get Python reference to a variable
@@ -184,8 +139,6 @@ private: //-------------------------------------------------------------------
     // DATA MEMBERS //////////////////////////////////////////////////////////
 		/** Holds reference to the frame manager */
 		SPELLframeManager& m_frameManager;
-		/** Enable flag */
-		bool m_enabled;
 };
 
 /*@}*/

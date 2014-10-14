@@ -34,6 +34,9 @@ prepare:
             echo "FATAL: cannot find eclipse installation at ${WITH_ECLIPSE}";\
             exit -1; \
         fi
+	
+types-plugin: 
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.types ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
 core-plugin: 
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.core ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
@@ -45,10 +48,13 @@ procs-plugin:
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.procs ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
 print-plugin: 
-	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.print ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.print ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
 gui-plugin: 
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
+
+clock-plugin:
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.clock ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
 codeview-plugin:
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.codeview ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
@@ -80,22 +86,40 @@ outline-plugin:
 doc-plugin:
 	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.documentation ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
 
+htree-plugin:
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.htree ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
+
+replay-plugin:
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.replay ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
+
+shared-plugin:
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.shared ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
+
+sampleview-plugin:
+	${PLUGIN_COMPILER} $(SRC_DIR) com.astra.ses.spell.gui.sampleview ${DEST_DIR} ${RCP_TEMPLATES} ${WITH_ECLIPSE} ${RCP_PLUGINS}
+
 all-local: prepare \
+     types-plugin \
 	   core-plugin \
 	   language-plugin \
 	   preferences-plugin \
-	   preferences-gui-plugin \
 	   procs-plugin \
-	   print-plugin \
+	   preferences-gui-plugin \
 	   gui-plugin \
+	   print-plugin \
+	   clock-plugin \
 	   codeview-plugin \
 	   textview-plugin \
-           shellview-plugin \
+     shellview-plugin \
+     sampleview-plugin \
 	   commskt-plugin \
 	   shell-plugin \
-           wvariables-plugin \
-           outline-plugin \
-           doc-plugin
+     wvariables-plugin \
+     outline-plugin \
+     doc-plugin \
+     replay-plugin \
+     shared-plugin \
+     htree-plugin 
 
 clean-local:
 	rm -rf ${DEST_DIR}/lib_plugins

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -65,6 +65,7 @@ import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.DisplayData;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
+import com.astra.ses.spell.gui.core.model.notification.InputData;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
@@ -72,26 +73,31 @@ import com.astra.ses.spell.gui.core.model.notification.UserActionNotification;
 import com.astra.ses.spell.gui.core.model.notification.UserActionNotification.UserActionStatus;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ExecutionMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.dialogs.CloseProcDialog;
+import com.astra.ses.spell.gui.interfaces.IControlArea;
+import com.astra.ses.spell.gui.interfaces.IPresentationNotifier;
+import com.astra.ses.spell.gui.interfaces.IPresentationPanel;
 import com.astra.ses.spell.gui.interfaces.IProcedurePresentation;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
+import com.astra.ses.spell.gui.interfaces.ISashListener;
+import com.astra.ses.spell.gui.interfaces.ProcedureViewCloseMode;
 import com.astra.ses.spell.gui.model.commands.ToggleByStep;
 import com.astra.ses.spell.gui.model.commands.ToggleRunInto;
+import com.astra.ses.spell.gui.model.commands.ToggleTcConfirm;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
-import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 import com.astra.ses.spell.gui.views.controls.ControlArea;
 import com.astra.ses.spell.gui.views.controls.PresentationPanel;
-import com.astra.ses.spell.gui.views.controls.SplitPanel;
+import com.astra.ses.spell.gui.views.controls.generic.SplitPanel;
 import com.astra.ses.spell.gui.views.presentations.PresentationManager;
 import com.astra.ses.spell.gui.views.presentations.PresentationNotifier;
 import com.astra.ses.spell.gui.views.presentations.PresentationStack;
@@ -101,7 +107,7 @@ import com.astra.ses.spell.gui.views.presentations.PresentationStack;
  *        required for executing/controlling the procedure.
  * @date 09/10/07
  ******************************************************************************/
-public class ProcedureView extends ViewPart implements ISaveablePart2
+public class ProcedureView extends ViewPart implements ISaveablePart2, IProcedureView
 {
 	private static IConfigurationManager s_cfg = null;
 	private static IContextProxy s_proxy = null;
@@ -115,13 +121,13 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/** Holds the presentation stack */
 	private PresentationStack m_presentationStack;
 	/** Holds the presentation control ares */
-	private PresentationPanel m_presentationPanel;
+	private IPresentationPanel m_presentationPanel;
 	/** Holds the presentation manager */
 	private PresentationManager m_presentationManager;
 	/** Holds the presentation notifier */
-	private PresentationNotifier m_presentationNotifier;
+	private IPresentationNotifier m_presentationNotifier;
 	/** Holds the control area */
-	private ControlArea m_controlArea;
+	private IControlArea m_controlArea;
 	/** Holds the procedure model */
 	private IProcedure m_model;
 	/** Holds the closeable flag */
@@ -129,21 +135,9 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/** Enabled flag */
 	private boolean m_enabled;
 	/** Close mode */
-	private CloseMode m_closeMode;
+	private ProcedureViewCloseMode m_closeMode;
 	/** Splitter composite */
 	private SplitPanel m_splitPanel;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	public enum CloseMode
-	{
-		CLOSE, KILL, DETACH, NONE
-	}
-
-	// =========================================================================
-	// ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor.
@@ -162,16 +156,19 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 			s_proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 		}
 		m_closeable = true;
-		m_closeMode = CloseMode.CLOSE;
+		m_closeMode = ProcedureViewCloseMode.CLOSE;
 		Logger.debug("Created", Level.INIT, this);
 	}
 
 	/***************************************************************************
 	 * Dispose the view. Called when the view part is closed.
 	 **************************************************************************/
+	@Override
 	public void dispose()
 	{
 		super.dispose();
+		// Dispose the presentations
+		m_presentationManager.disposeAll();
 		// If the view is closeable, promptToSaveOnClose won't be called
 		Logger.debug("Disposed", Level.GUI, this);
 	}
@@ -179,7 +176,8 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Set view close mode
 	 **************************************************************************/
-	public void setCloseMode(CloseMode mode)
+	@Override
+	public void setCloseMode(ProcedureViewCloseMode mode)
 	{
 		m_closeMode = mode;
 	}
@@ -187,37 +185,40 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Obtain view close mode
 	 **************************************************************************/
-	public CloseMode getCloseMode()
+	@Override
+	public ProcedureViewCloseMode getCloseMode()
 	{
 		// If we have no model return the original mode
-		if (m_model != null)
+		if (getModel() != null)
 		{
 			// If we are not controlling, we shall ensure that the only
 			// thing we can do is detach
-			ClientMode mode = m_model.getRuntimeInformation().getClientMode();
-			if (!mode.equals(ClientMode.CONTROLLING))
+			ClientMode mode = getModel().getRuntimeInformation().getClientMode();
+			if (!mode.equals(ClientMode.CONTROL))
 			{
-				if (m_closeMode != CloseMode.NONE)
+				if (m_closeMode != ProcedureViewCloseMode.NONE)
 				{
-					return CloseMode.DETACH;
+					return ProcedureViewCloseMode.DETACH;
 				}
 			}
 		}
 		return m_closeMode;
 	}
 
-	/***************************************************************************
-	 * Enable or disable the view
-	 **************************************************************************/
-	public void setEnabled(boolean enable)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#setEnabled(boolean)
+     */
+	@Override
+    public void setEnabled(boolean enable)
 	{
 		m_presentationManager.enablePresentations(enable);
 	}
 
-	/***************************************************************************
-	 * Enable or disable the autoscroll
-	 **************************************************************************/
-	public void setAutoScroll(boolean enable)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#setAutoScroll(boolean)
+     */
+	@Override
+    public void setAutoScroll(boolean enable)
 	{
 		m_presentationManager.setPresentationsAutoScroll(enable);
 	}
@@ -245,12 +246,12 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_top.setLayout(layout);
 		m_top.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
-		// Obtain the corresponding sat name
-		m_domain = s_proxy.getInfo().getSC();
 		// Save the procedure id
 		String procId = getViewSite().getSecondaryId();
-		// Get the model
-		m_model = ((IProcedureManager) ServiceManager.get(IProcedureManager.class)).getProcedure(procId);
+		// Obtain the corresponding sat name
+		m_domain = s_proxy.getInfo().getSC();
+
+		attachToModel(procId);
 
 		// Presentations loaded and controller
 		m_presentationManager = new PresentationManager();
@@ -260,11 +261,10 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 
 		// Page control pannel, controls the page switch and provides pres.
 		// buttons
-		int numAvailablePresentations = m_presentationManager.getNumAvailablePresentations();
-		m_presentationPanel = new PresentationPanel(this, m_model, m_top, SWT.NONE, numAvailablePresentations);
+		m_presentationPanel = createPresentationPanel( m_top );
 
 		// Splitter panel
-		m_splitPanel = new SplitPanel(m_top, 40, 83);
+		m_splitPanel = new SplitPanel(m_top, 40, m_presentationPanel);
 		m_splitPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
 		GridLayout section1_layout = new GridLayout();
 		section1_layout.numColumns = 1;
@@ -274,7 +274,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		section1_layout.marginRight = 0;
 		section1_layout.marginHeight = 0;
 		section1_layout.marginWidth = 0;
-		m_splitPanel.getSection(SplitPanel.Section.PRESENTATION).setLayout(section1_layout);
+		getPresentationSection().setLayout(section1_layout);
 		GridLayout section2_layout = new GridLayout();
 		section2_layout.numColumns = 1;
 		section2_layout.marginTop = 0;
@@ -283,18 +283,43 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		section2_layout.marginRight = 0;
 		section2_layout.marginHeight = 0;
 		section2_layout.marginWidth = 0;
-		m_splitPanel.getSection(SplitPanel.Section.CONTROL_AREA).setLayout(section2_layout);
+		getControlSection().setLayout(section2_layout);
 
-		/*
-		 * Load and create presentations
-		 */
+		// Load and create presentations
+		setupPresentations();
 
+		// Create the control area
+		m_controlArea = createControlArea();
+		m_controlArea.getControl().setLayoutData(new GridData(GridData.FILL_BOTH));
+		m_splitPanel.addSashListener( (ISashListener) m_controlArea );
+
+		// In case we are taking control of a procedure with user action already enabled
+		recreateUserAction();
+		
+		Logger.debug("Controls created", Level.INIT, this);
+		m_controlArea.setFocus();
+	}
+
+	/***************************************************************************
+	 * Get the amount of available presentations
+	 **************************************************************************/
+	protected int getAvailablePresentationsCount()
+	{
+		return m_presentationManager.getNumAvailablePresentations();
+	}
+
+	/***************************************************************************
+	 * Add all existing presentations
+	 **************************************************************************/
+	private void setupPresentations()
+	{
 		// Create the stack control for presentations
-		m_presentationStack = new PresentationStack(m_model, m_splitPanel.getSection(SplitPanel.Section.PRESENTATION));
+		m_presentationStack = new PresentationStack(getModel(), getPresentationSection());
 		// Presentation notifier
-		m_presentationNotifier = new PresentationNotifier(m_model);
+		m_presentationNotifier = new PresentationNotifier(getModel());
 
 		// Check amount of available presentations
+		int numAvailablePresentations = getAvailablePresentationsCount();
 		int numLoadedPresentations = 0;
 		if (numAvailablePresentations > 0)
 		{
@@ -302,7 +327,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 			numLoadedPresentations = m_presentationManager.getNumLoadedPresentations();
 		}
 
-		// Check amount of actually loaded presentations
+
 		if (numLoadedPresentations > 0)
 		{
 			for (int index = 0; index < numLoadedPresentations; index++)
@@ -320,46 +345,74 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 			}
 			m_presentationPanel.selectPresentation(0);
 		}
+	}
 
-		// Create the control area
-		m_controlArea = new ControlArea(this, m_model, m_splitPanel.getSection(SplitPanel.Section.CONTROL_AREA), m_model.getProcId());
-		m_controlArea.setLayoutData(new GridData(GridData.FILL_BOTH));
-		m_splitPanel.addSashListener(m_controlArea);
+	/***************************************************************************
+	 * Recreate the user action button if needed
+	 **************************************************************************/
+	private void recreateUserAction()
+	{
+		String uaction = getModel().getRuntimeInformation().getUserAction();
+		UserActionStatus uastatus = getModel().getRuntimeInformation().getUserActionStatus();
+		Severity uasev = getModel().getRuntimeInformation().getUserActionSeverity();
+		if (uaction != null && uastatus != null)
+		{
+			if (!uastatus.equals(UserActionStatus.DISMISSED))
+			{
+				m_controlArea.updateUserAction(uastatus, uaction, uasev);
+			}
+		}
+	}
 
-		Logger.debug("Controls created", Level.INIT, this);
-		m_controlArea.setFocus();
+	/***************************************************************************
+	 * Attach the view to a model
+	 **************************************************************************/
+	protected void attachToModel( String instanceId )
+	{
+		IProcedure model = ((IProcedureManager) ServiceManager.get(IProcedureManager.class)).getProcedure(instanceId);
+		setModel(model);
+	}
+
+	/***************************************************************************
+	 * Model setter
+	 **************************************************************************/
+	protected void setModel( IProcedure model )
+	{
+		m_model = model;
 	}
 
 	/***************************************************************************
 	 * Get a presentation by identifier
 	 **************************************************************************/
+	@Override
 	public IProcedurePresentation getPresentation(String identifier)
 	{
 		return m_presentationManager.getPresentation(identifier);
 	}
 
-	/***************************************************************************
-	 * Get associated procedure identifier
-	 **************************************************************************/
-	public String getProcId()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#getProcId()
+     */
+	@Override
+    public String getProcId()
 	{
-		return m_model.getProcId();
+		return getModel().getProcId();
 	}
 
-	/***************************************************************************
-	 * Get associated procedure name
-	 **************************************************************************/
-	public String getProcName()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#getProcName()
+     */
+	@Override
+    public String getProcName()
 	{
-		return m_model.getProcName();
+		return getModel().getProcName();
 	}
 
-	/***************************************************************************
-	 * Obtain the associated satellite name
-	 * 
-	 * @return The satellite name
-	 **************************************************************************/
-	public String getDomain()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#getDomain()
+     */
+	@Override
+    public String getDomain()
 	{
 		return m_domain;
 	}
@@ -370,15 +423,18 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	public void computeSplit( boolean options )
 	{
 		Point ssSize = m_splitPanel.getSection(SplitPanel.Section.CONTROL_AREA).computeSize(SWT.DEFAULT, SWT.DEFAULT);
-		int offset = m_top.getClientArea().height - m_presentationPanel.getClientArea().height - ssSize.y + (options ? 15 : 0);
+		int topHeight = m_top.getClientArea().height;
+		int presentationPanelHeight = m_presentationPanel.getControl().getClientArea().height;
+		int offset = topHeight - presentationPanelHeight - ssSize.y + (options ? 15 : 0);
 		if (offset < 200) offset = 200;
 		m_splitPanel.setDivision(offset);
 	}
 
-	/***************************************************************************
-	 * Show the desired page: code, log or display.
-	 **************************************************************************/
-	public void showPresentation(int index)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#showPresentation(int)
+     */
+	@Override
+    public void showPresentation(int index)
 	{
 		// Show the required presentation in the stack
 		m_presentationStack.showPresentation(index);
@@ -389,19 +445,18 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Cancel prompt input
 	 **************************************************************************/
+	@Override
 	public boolean cancelPrompt()
 	{
 		Logger.debug("Prompt cancelled", Level.GUI, this);
-		return m_controlArea.cancelPrompt();
+		return m_controlArea.cancelPrompt(false);
 	}
 
-	/***************************************************************************
-	 * Change font size
-	 * 
-	 * @param increase
-	 *            If true, increase the font size. Otherwise decrease it.
-	 **************************************************************************/
-	public void zoom(boolean increase)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#zoom(boolean)
+     */
+	@Override
+    public void zoom(boolean increase)
 	{
 		m_presentationManager.zoomPresentations(increase);
 		m_controlArea.zoom(increase);
@@ -434,6 +489,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Makes an asterisk to appear in the title when the procedure is running
 	 **************************************************************************/
+	@Override
 	public boolean isDirty()
 	{
 		return (m_enabled && !m_closeable);
@@ -442,6 +498,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Doesn't make sense
 	 **************************************************************************/
+	@Override
 	public boolean isSaveAsAllowed()
 	{
 		return false;
@@ -450,6 +507,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Force the dirty status
 	 **************************************************************************/
+	@Override
 	public void setCloseable(boolean closeable)
 	{
 		m_closeable = closeable;
@@ -458,29 +516,30 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Trigger the "save on close" event if the procedure is runnning
 	 **************************************************************************/
+	@Override
 	public boolean isSaveOnCloseNeeded()
 	{
 		return (!m_closeable);
 	}
 
-	// =========================================================================
-	// NON-ACCESSIBLE METHODS
-	// =========================================================================
-
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void setFocus()
 	{
-		if (m_controlArea != null)
-		{
-			m_controlArea.setFocus();
-		}
+		m_presentationManager.showCurrentLine();
 		IRuntimeSettings runtime = (IRuntimeSettings) ServiceManager.get(IRuntimeSettings.class);
 		try
 		{
-			runtime.setRuntimeProperty(RuntimeProperty.ID_PROCEDURE_SELECTION, m_model.getProcId());
+			runtime.setRuntimeProperty(RuntimeProperty.ID_PROCEDURE_SELECTION, getModel().getProcId());
 		}
 		catch (Exception ex)
 		{
+		}
+		if (m_controlArea != null)
+		{
+			m_controlArea.setFocus();
 		}
 	}
 
@@ -493,7 +552,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	{
 		Logger.debug("Procedure not directly closeable, asking user", Level.GUI, this);
 		Shell shell = Display.getCurrent().getActiveShell();
-		CloseProcDialog dialog = new CloseProcDialog(shell, m_model);
+		CloseProcDialog dialog = new CloseProcDialog(shell, getModel());
 		int retcode = dialog.open();
 		Logger.debug("User selection " + retcode, Level.GUI, this);
 		if (retcode == IDialogConstants.CANCEL_ID)
@@ -503,26 +562,30 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		}
 		else if (retcode == CloseProcDialog.DETACH)
 		{
-			m_closeMode = CloseMode.DETACH;
+			m_closeMode = ProcedureViewCloseMode.DETACH;
+		}
+		else if (retcode == CloseProcDialog.BACKGROUND)
+		{
+			m_closeMode = ProcedureViewCloseMode.BACKGROUND;
 		}
 		else if (retcode == CloseProcDialog.KILL)
 		{
-			m_closeMode = CloseMode.KILL;
+			m_closeMode = ProcedureViewCloseMode.KILL;
 		}
 		else if (retcode == CloseProcDialog.CLOSE)
 		{
-			m_closeMode = CloseMode.CLOSE;
+			m_closeMode = ProcedureViewCloseMode.CLOSE;
 		}
 		return ISaveablePart2.NO;
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyDisplay(DisplayData data)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyDisplay(com.astra.ses.spell.gui.core.model.notification.DisplayData)
+     */
+	@Override
+    public void notifyDisplay(DisplayData data)
 	{
-		if (m_presentationPanel.isDisposed())
+		if (m_presentationPanel.getControl().isDisposed())
 			return;
 		if (data.getExecutionMode() != ExecutionMode.MANUAL)
 		{
@@ -531,14 +594,14 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyProcedureDisplay(data);
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyError(ErrorData data)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyError(com.astra.ses.spell.gui.core.model.notification.ErrorData)
+     */
+	@Override
+    public void notifyError(ErrorData data)
 	{
 		Logger.debug("Notified error: " + data.getMessage(), Level.GUI, this);
-		if (m_presentationPanel.isDisposed())
+		if (m_presentationPanel.getControl().isDisposed())
 			return;
 		// Cancel any ongoing prompt
 		cancelPrompt();
@@ -552,32 +615,32 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyProcedureError(data);
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyItem(ItemNotification data)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyItem(com.astra.ses.spell.gui.core.model.notification.ItemNotification)
+     */
+	@Override
+    public void notifyItem(ItemNotification data)
 	{
 		// Report to presentations
 		m_presentationNotifier.notifyProcedureItem(data);
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyStack(StackNotification data)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyStack(com.astra.ses.spell.gui.core.model.notification.StackNotification)
+     */
+	@Override
+    public void notifyStack(StackNotification data)
 	{
 		m_presentationPanel.setStage(data.getStageId(), data.getStageTitle());
 		// Report to presentations
 		m_presentationNotifier.notifyProcedureStack(data);
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyModelDisabled()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyModelDisabled()
+     */
+	@Override
+    public void notifyModelDisabled()
 	{
 		m_enabled = false;
 		m_presentationPanel.setEnabled(false);
@@ -586,11 +649,11 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyModelDisabled();
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyModelEnabled()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyModelEnabled()
+     */
+	@Override
+    public void notifyModelEnabled()
 	{
 		m_enabled = true;
 		m_presentationPanel.setEnabled(true);
@@ -599,16 +662,16 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyModelEnabled();
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyModelLoaded()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyModelLoaded()
+     */
+	@Override
+    public void notifyModelLoaded()
 	{
 		Logger.debug(this + ": Notified LOADED. Assigned view model", Level.PROC, this);
 		// Link to the model
 
-		IExecutionInformation info = m_model.getRuntimeInformation();
+		IExecutionInformation info = getModel().getRuntimeInformation();
 		ExecutorStatus st = info.getStatus();
 		ClientMode cm = info.getClientMode();
 
@@ -645,7 +708,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 			m_controlArea.setProcedureStatus(st, false);
 
 			// Notify the initial status now
-			StatusNotification statusNotification = new StatusNotification(m_model.getProcId(), modelStatus);
+			StatusNotification statusNotification = new StatusNotification(getModel().getProcId(), modelStatus);
 			// Report to presentations
 			m_presentationNotifier.notifyProcedureStatus(statusNotification);
 			
@@ -657,11 +720,11 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		Logger.debug(this + ": Initialization done", Level.PROC, this);
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyModelReset()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyModelReset()
+     */
+	@Override
+    public void notifyModelReset()
 	{
 		Logger.debug(this + ": Notified model reset", Level.GUI, this);
 		m_presentationPanel.reset();
@@ -669,11 +732,11 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyModelReset();
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyModelUnloaded()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyModelUnloaded()
+     */
+	@Override
+    public void notifyModelUnloaded()
 	{
 		Logger.debug(this + ": Removed view model", Level.GUI, this);
 		// Link to the model
@@ -682,73 +745,84 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyModelUnloaded();
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyModelConfigured()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyModelConfigured()
+     */
+	@Override
+    public void notifyModelConfigured()
 	{
-		m_presentationPanel.notifyModelConfigured(m_model);
+		m_presentationPanel.notifyModelConfigured(getModel());
 		updateDependentCommands();
 		// Report to presentations
 		m_presentationNotifier.notifyModelConfigured();
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyPrompt()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyPrompt()
+     */
+	@Override
+    public void notifyPrompt()
 	{
 		// Do not process the notification update, a second notification of prompt
 		// will be done in monitoring clients
-		if (m_model.getController().getPromptData().isNotification()) return;
+		if (getModel().getController().getPromptData().isNotification()) return;
 
 		Logger.debug("Prompt start notified", Level.GUI, this);
 		// Notify the control area so that the input area creates the
 		// appropriate controls
-		m_controlArea.startPrompt( m_model.getController().getPromptData() );
+		m_controlArea.startPrompt( getModel().getController().getPromptData() );
 		// Report to presentations
-		m_presentationNotifier.notifyProcedurePrompt(m_model.getController().getPromptData());
-		// Then compute the split of the view
-		computeSplit( m_model.getController().getPromptData().getOptions() != null );
+		m_presentationNotifier.notifyProcedurePrompt(getModel().getController().getPromptData());
+
+		// Then compute the split of the view (we postpone the split with syncExec in order to
+		// have the area properly shown, otherwise the calculation is not properly done).
+		getSite().getShell().getDisplay().syncExec(new Runnable() 
+		{
+			@Override
+			public void run() {
+				InputData promptData = getModel().getController().getPromptData();
+				boolean options = promptData.getOptions() != null;
+				computeSplit(options);	
+			}
+		});
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyFinishPrompt()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyFinishPrompt()
+     */
+	@Override
+    public void notifyFinishPrompt()
 	{
 		Logger.debug("Prompt finish notified", Level.GUI, this);
+		m_controlArea.resetPrompt();
 		// Compute the split of the view
 		computeSplit(false);
 		// Report to presentations
-		m_presentationNotifier.notifyProcedureFinishPrompt(m_model.getController().getPromptData());
+		m_presentationNotifier.notifyProcedureFinishPrompt(getModel().getController().getPromptData());
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyCancelPrompt()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyCancelPrompt()
+     */
+	@Override
+    public void notifyCancelPrompt()
 	{
 		Logger.debug("Prompt cancel notified", Level.GUI, this);
-		m_controlArea.cancelPrompt();
+		m_controlArea.cancelPrompt(true);
 		// Then compute the split of the view
 		computeSplit(false);
 		// Report to presentations
-		m_presentationNotifier.notifyProcedureCancelPrompt(m_model.getController().getPromptData());
+		m_presentationNotifier.notifyProcedureCancelPrompt(getModel().getController().getPromptData());
 	}
 
-	/***************************************************************************
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyStatus(StatusNotification data)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyStatus(com.astra.ses.spell.gui.core.model.notification.StatusNotification)
+     */
+	@Override
+    public void notifyStatus(StatusNotification data)
 	{
 		Logger.debug(this + ": Notified status " + data.getStatus(), Level.GUI, this);
-		if (m_model == null)
+		if (getModel() == null)
 			return;
 		updatePartName(data.getStatus());
 		updateCloseable(data.getStatus());
@@ -761,12 +835,11 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 		m_presentationNotifier.notifyProcedureStatus(data);
 	}
 
-	/***************************************************************************
-	 * An event about the user action arrives
-	 * 
-	 * @param data
-	 **************************************************************************/
-	public void notifyUserAction(UserActionNotification data)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.IProcedureView#notifyUserAction(com.astra.ses.spell.gui.core.model.notification.UserActionNotification)
+     */
+	@Override
+    public void notifyUserAction(UserActionNotification data)
 	{
 		UserActionStatus st = data.getUserActionStatus();
 		m_controlArea.updateUserAction(st, data.getAction(), data.getSeverity());
@@ -775,9 +848,58 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	}
 
 	/***************************************************************************
+	 * Create the presentation panel
+	 **************************************************************************/
+	protected IPresentationPanel createPresentationPanel( Composite parent )
+	{
+		int numAvailablePresentations = m_presentationManager.getNumAvailablePresentations();
+		return new PresentationPanel(this, getModel(), parent, SWT.NONE, numAvailablePresentations);
+	}
+
+	/***************************************************************************
+	 * Create the control area
+	 **************************************************************************/
+	protected IControlArea createControlArea()
+	{
+		return new ControlArea(this, getModel(), getControlSection(), getModel().getProcId());
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IProcedure getModel()
+	{
+		return m_model;
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected Composite getControlSection()
+	{
+		return m_splitPanel.getSection(SplitPanel.Section.CONTROL_AREA);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected Composite getPresentationSection()
+	{
+		return m_splitPanel.getSection(SplitPanel.Section.PRESENTATION);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IPresentationNotifier getPresentationNotifier()
+	{
+		return m_presentationNotifier;
+	}
+
+	/***************************************************************************
 	 * Update part name
 	 **************************************************************************/
-	private void updatePartName(ExecutorStatus status)
+	protected void updatePartName(ExecutorStatus status)
 	{
 		// Parse the ID. If there are several instances, show the
 		// instance number in the part title
@@ -796,7 +918,7 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	 **************************************************************************/
 	public String toString()
 	{
-		return "[ ProcView " + m_model.getProcId() + "]";
+		return "[ ProcView " + getModel().getProcId() + "]";
 	}
 
 	/***************************************************************************
@@ -832,18 +954,18 @@ public class ProcedureView extends ViewPart implements ISaveablePart2
 	/***************************************************************************
 	 * Update dependent command status
 	 **************************************************************************/
+	@Override
 	public void updateDependentCommands()
 	{
 		// Update command states for those commands which depend on the model
 		// configuration
-		IExecutionInformation info = m_model.getRuntimeInformation();
-		IStepOverControl so = m_model.getController().getStepOverControl();
 		try
 		{
-			boolean stateValue = so.getMode().equals(StepOverMode.STEP_INTO_ALWAYS);
-			CommandHelper.setToggleCommandState(ToggleRunInto.ID, ToggleRunInto.STATE_ID, stateValue);
-			stateValue = info.isStepByStep();
-			CommandHelper.setToggleCommandState(ToggleByStep.ID, ToggleByStep.STATE_ID, stateValue);
+			boolean isRunInto = getModel().getExecutionManager().isRunInto();
+			CommandHelper.setToggleCommandState(ToggleRunInto.ID, ToggleRunInto.STATE_ID, isRunInto);
+			IExecutionInformation info = getModel().getRuntimeInformation();
+			CommandHelper.setToggleCommandState(ToggleByStep.ID, ToggleByStep.STATE_ID, info.isStepByStep());
+			CommandHelper.setToggleCommandState(ToggleTcConfirm.ID, ToggleTcConfirm.STATE_ID, info.isForceTcConfirmation());
 		}
 		catch (ExecutionException e)
 		{

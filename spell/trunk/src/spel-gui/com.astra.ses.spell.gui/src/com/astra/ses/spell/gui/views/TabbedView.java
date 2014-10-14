@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -50,6 +50,7 @@ package com.astra.ses.spell.gui.views;
 
 import java.util.ArrayList;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlEvent;
@@ -67,6 +68,7 @@ import com.astra.ses.spell.gui.core.model.files.LogFile;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.ServerFileType;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.model.commands.CommandResult;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.model.jobs.GetAsRunFileJob;
 import com.astra.ses.spell.gui.model.jobs.GetLogFileJob;
@@ -272,12 +274,42 @@ public class TabbedView extends ViewPart implements ControlListener
 			case ASRUN:
 				GetAsRunFileJob job = new GetAsRunFileJob(m_procId);
 				CommandHelper.executeInProgress(job, true, true);
-				m_tabbedFile = (IServerFile) job.asRunFile;
+				if (job.result.equals(CommandResult.SUCCESS))
+				{
+					m_tabbedFile = (IServerFile) job.asRunFile;
+				}
+				else
+				{
+					if (job.error != null)
+					{
+						MessageDialog.openError(getSite().getShell(), "Unable to display ASRUN file", job.error.getLocalizedMessage());
+					}
+					else
+					{
+						MessageDialog.openError(getSite().getShell(), "Unable to display ASRUN file", "Retrieval failed");
+					}
+					return;
+				}
 				break;
 			case EXECUTOR_LOG:
 				GetLogFileJob ljob = new GetLogFileJob(m_procId);
 				CommandHelper.executeInProgress(ljob, true, true);
-				m_tabbedFile = (IServerFile) ljob.logFile;
+				if (ljob.result.equals(CommandResult.SUCCESS))
+				{
+					m_tabbedFile = (IServerFile) ljob.logFile;
+				}
+				else
+				{
+					if (ljob.error != null)
+					{
+						MessageDialog.openError(getSite().getShell(), "Unable to display log file", ljob.error.getLocalizedMessage());
+					}
+					else
+					{
+						MessageDialog.openError(getSite().getShell(), "Unable to display log file", "Retrieval failed");
+					}
+					return;
+				}
 				break;
 			}
 
@@ -285,13 +317,11 @@ public class TabbedView extends ViewPart implements ControlListener
 			m_viewer.getControl().setFocus();
 
 			IRuntimeSettings runtime = (IRuntimeSettings) ServiceManager.get(IRuntimeSettings.class);
-			runtime.setRuntimeProperty(RuntimeProperty.ID_PROCEDURE_SELECTION,
-			        m_procId);
+			runtime.setRuntimeProperty(RuntimeProperty.ID_PROCEDURE_SELECTION,m_procId);
 		}
 		catch (Exception ex)
 		{
-			Logger.warning("Error: cannot retrive the log file", Level.PROC,
-			        this);
+			Logger.warning("Error: cannot display the file: " + ex.getLocalizedMessage(), Level.PROC,this);
 		}
 	}
 }

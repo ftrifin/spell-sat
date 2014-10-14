@@ -5,7 +5,7 @@
 // DESCRIPTION: Python safe operation monitors
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -59,14 +59,14 @@ class SPELLsafePythonOperations
 public:
 	SPELLsafePythonOperations( const std::string& where )
 	{
-		//std::cerr << "SAFE PYTHON OPERATIONS IN " << where << std::endl;
+		//std::cerr << "PYTHON OPERATIONS IN " << where << std::endl;
 		m_state = SPELLpythonHelper::instance().acquireGIL();
 		m_where = where;
 	};
 	~SPELLsafePythonOperations()
 	{
 		SPELLpythonHelper::instance().releaseGIL(m_state);
-		//std::cerr << "END SAFE PYTHON OPERATIONS IN " << m_where << std::endl;
+		//std::cerr << "PYTHON OPERATIONS OUT " << m_where << std::endl;
 	};
 private:
 	PyGILState_STATE m_state;
@@ -88,14 +88,14 @@ class SPELLsafeThreadOperations
 public:
 		SPELLsafeThreadOperations( const std::string& where )
 		{
-			//std::cerr << "SAFE THREAD OPERATIONS IN " << where << std::endl;
+			//std::cerr << "THREAD OPERATIONS IN " << where << std::endl;
 			m_state = SPELLpythonHelper::instance().beginSafeAllowThreads();
 			m_where = where;
 		};
 		~SPELLsafeThreadOperations()
 		{
 			SPELLpythonHelper::instance().endSafeAllowThreads( m_state );
-			//std::cerr << "END SAFE THREAD OPERATIONS IN " << m_where << std::endl;
+			//std::cerr << "THREAD OPERATIONS OUT " << m_where << std::endl;
 		};
 private:
 	 PyThreadState* m_state;

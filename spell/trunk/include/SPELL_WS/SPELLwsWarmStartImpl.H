@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the WS interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -99,7 +99,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLwarmStart.
 		**////////////////////////////////////////////////////////////////////
-		void notifyCall( PyFrameObject* newFrame );
+		void notifyCall( const std::string& id, PyFrameObject* newFrame );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLwarmStart.
@@ -184,7 +184,7 @@ private: //-------------------------------------------------------------------
 		 *
 		 * \param frame IN: the newly created frame.
 		**////////////////////////////////////////////////////////////////////
-		void addFrame( PyFrameObject* frame );
+		void addFrame( const std::string& id, PyFrameObject* frame );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Remove the frame manager on top, as a result of a return event

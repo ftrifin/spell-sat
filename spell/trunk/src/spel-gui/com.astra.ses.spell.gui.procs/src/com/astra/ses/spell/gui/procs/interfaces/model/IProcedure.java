@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-03
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -50,7 +50,7 @@ package com.astra.ses.spell.gui.procs.interfaces.model;
 
 import org.eclipse.core.runtime.IAdaptable;
 
-import com.astra.ses.spell.gui.core.extensionpoints.IProcedureRuntimeExtension;
+import com.astra.ses.spell.gui.core.extensionpoints.ICoreProcedureRuntimeListener;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
 
 /*******************************************************************************
@@ -85,6 +85,13 @@ public interface IProcedure extends IAdaptable
 	public String getParent();
 
 	/***************************************************************************
+	 * Check if the procedure is a main one (no parent)
+	 * 
+	 * @return true if there is no parent
+	 **************************************************************************/
+	public boolean isMain();
+
+	/***************************************************************************
 	 * Get an IProcedure property whose key is the given one
 	 * 
 	 * @param propertyKey
@@ -102,12 +109,12 @@ public interface IProcedure extends IAdaptable
 	public IProcedureController getController();
 
 	/***************************************************************************
-	 * Get the {@link IProcedureRuntimeExtension} object that will process
+	 * Get the {@link ICoreProcedureRuntimeListener} object that will process
 	 * runtime notifications
 	 * 
 	 * @return
 	 **************************************************************************/
-	public IProcedureRuntimeExtension getRuntimeProcessor();
+	public IProcedureRuntimeProcessor getRuntimeProcessor();
 
 	/***************************************************************************
 	 * Return a class which grants access to some of the procedure's properties
@@ -116,6 +123,11 @@ public interface IProcedure extends IAdaptable
 	 *         about the current procedure status
 	 **************************************************************************/
 	public IExecutionInformation getRuntimeInformation();
+
+	/***************************************************************************
+	 * Return the manager of inter-procedure dependencies
+	 **************************************************************************/
+	public IDependenciesManager getDependenciesManager();
 
 	/***************************************************************************
 	 * Return this object's execution status manager

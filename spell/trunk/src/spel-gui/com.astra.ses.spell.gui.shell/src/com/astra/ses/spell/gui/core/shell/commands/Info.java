@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -67,26 +67,6 @@ import com.astra.ses.spell.gui.core.shell.services.ShellManager;
  ******************************************************************************/
 public class Info extends ShellCommand
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
-
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
@@ -211,7 +191,7 @@ public class Info extends ShellCommand
 		if (m_args.size() != 2) { throw new CommandFailed("No procedure identifier given"); }
 		IContextProxy cproxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 		if (!cproxy.isConnected()) { throw new CommandFailed("Not connected to a server"); }
-		Map<String, String> procs = cproxy.getAvailableProcedures();
+		Map<String, String> procs = cproxy.getAvailableProcedures(true);
 		String procId = m_args.get(1);
 		if (!procs.containsKey(procId)) { throw new CommandFailed("No such procedure: " + procId); }
 		Map<ProcProperties, String> props = cproxy.getProcedureProperties(procId);
@@ -225,7 +205,7 @@ public class Info extends ShellCommand
 	/***************************************************************************
 	 * Show information about a given executor
 	 **************************************************************************/
-	protected void infoExecutor()
+	protected void infoExecutor() throws Exception
 	{
 		if (m_args.size() != 2) { throw new CommandFailed("No procedure identifier given"); }
 		IContextProxy cproxy = (IContextProxy) ServiceManager.get(IContextProxy.class);

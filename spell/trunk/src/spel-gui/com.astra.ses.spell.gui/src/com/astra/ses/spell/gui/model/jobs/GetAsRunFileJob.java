@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -63,9 +63,10 @@ import com.astra.ses.spell.gui.model.commands.CommandResult;
 
 public class GetAsRunFileJob implements IRunnableWithProgress
 {
-	public CommandResult	result;
+	public CommandResult result;
 	public AsRunFile	 asRunFile;
 	protected String	 m_instanceId;
+	public Exception     error = null;
 
 	public GetAsRunFileJob(String instanceId)
 	{
@@ -85,13 +86,15 @@ public class GetAsRunFileJob implements IRunnableWithProgress
 			String path = fileMgr.getServerFilePath(m_instanceId, ServerFileType.ASRUN, monitor);
 			Logger.debug("ASRUN file path: '" + path + "'", Level.PROC, this);
 			
-			asRunFile = (AsRunFile) fileMgr.getServerFile(path, ServerFileType.ASRUN, monitor);
+			asRunFile = (AsRunFile) fileMgr.getServerFile(path, ServerFileType.ASRUN, null, monitor);
 			
 			result = CommandResult.SUCCESS;
 		}
 		catch (Exception e)
 		{
-			Logger.error("Could retrieve ASRUN:" + e.getLocalizedMessage(),Level.PROC, this);
+			Logger.error("Could not retrieve ASRUN:" + e.getLocalizedMessage(),Level.PROC, this);
+			error = e;
+			result = CommandResult.FAILED;
 		}
 		monitor.done();
 	}

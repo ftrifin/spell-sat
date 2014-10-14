@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the logger
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -96,7 +96,7 @@ std::string SPELLlog::originStr( const std::string& origin )
 //=============================================================================
 // METHOD    : SPELLlog::setLogFile
 //=============================================================================
-void SPELLlog::setLogFile( std::string filename, std::string timestamp )
+void SPELLlog::setLogFile( const std::string& filename, const std::string timestamp )
 {
     SPELLmonitor m(m_logMutex);
     m_logFile.close();
@@ -206,7 +206,7 @@ void SPELLlog::trace( const std::string& location, const std::string& msg )
 //=============================================================================
 // METHOD    : SPELLlog::log
 //=============================================================================
-void SPELLlog::log( std::string msg, LogSeverity sev, LogLevel lev )
+void SPELLlog::log( const std::string& msg, LogSeverity sev, LogLevel lev )
 {
 	if (!m_enabled) return;
     if (sev == LOG_WARN || sev == LOG_ERROR || (lev <= m_maxLevel))

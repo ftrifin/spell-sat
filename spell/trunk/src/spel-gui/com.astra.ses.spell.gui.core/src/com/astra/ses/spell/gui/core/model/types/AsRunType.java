@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -65,5 +65,7 @@ public enum AsRunType
 	ITEM, 
 	ERROR, 
 	STAGE, 
+	CHILD,
+	UACTION,
 	UNKNOWN
 }

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the argument helper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -138,7 +138,7 @@ bool SPELLpyArgs::getModifier_Wait() const
 bool SPELLpyArgs::getModifier_PromptUser() const
 {
     PyObject* valueObj = (*this)[LanguageModifiers::PromptUser];
-    DEBUG("[CFGHLP] Configured prompt user: " + PYREPR(valueObj) + " - " + PYREPR( PyObject_Type(valueObj)))
+    DEBUG("[CFGHLP] Configured prompt user: " + PYREPR(valueObj) );
     bool value = true;
     if (valueObj != NULL)
     {
@@ -184,7 +184,7 @@ bool SPELLpyArgs::getModifier_Sequence() const
 SPELLtime SPELLpyArgs::getModifier_AsTime( const std::string& modifier ) const
 {
     PyObject* timeObj = (*this)[modifier];
-    DEBUG("[CFGHLP] Configured modifier: " + PYREPR(timeObj) + " - " + PYREPR( PyObject_Type(timeObj)))
+    DEBUG("[CFGHLP] Configured modifier: " + PYREPR(timeObj));
     SPELLtime time(0,true);
     if (timeObj != NULL)
     {
@@ -217,7 +217,7 @@ SPELLtime SPELLpyArgs::getModifier_AsTime( const std::string& modifier ) const
 bool SPELLpyArgs::getModifier_AsBoolean( const std::string& modifier ) const
 {
     PyObject* valueObj = (*this)[modifier];
-    DEBUG("[CFGHLP] Configured modifier: " + PYREPR(valueObj) + " - " + PYREPR( PyObject_Type(valueObj)))
+    DEBUG("[CFGHLP] Configured modifier: " + PYREPR(valueObj))
     bool value = false;
     if (valueObj != NULL)
     {
@@ -519,6 +519,54 @@ int SPELLpyArgs::getModifier_Type() const
     else
     {
     	THROW_EXCEPTION("Failed to get type value", "Could not get value", SPELL_ERROR_LANGUAGE);
+    }
+	return value;
+}
+
+//=============================================================================
+// METHOD: SPELLpyArgs::getModifier_Default()
+//=============================================================================
+std::string SPELLpyArgs::getModifier_Default() const
+{
+    PyObject* valueObj = (*this)[LanguageModifiers::Default];
+
+    std::string value = "";
+    if ( valueObj != NULL )
+    {
+        if (PyString_Check( valueObj ))
+        {
+        	value = PYSTR(valueObj);
+        }
+        else if (PyInt_Check( valueObj ) || PyLong_Check( valueObj ))
+        {
+        	value = ISTR(PyLong_AsLong(valueObj));
+        }
+        else if (PyFloat_Check( valueObj ))
+        {
+        	char* buffer = new char[512];
+        	PyFloat_AsString(buffer, (PyFloatObject*) (valueObj) );
+        	value = std::string(buffer);
+        	delete buffer;
+        }
+        else if (PyBool_Check( valueObj ))
+        {
+        	if (valueObj == Py_True)
+        	{
+        		value = "True";
+        	}
+        	else
+        	{
+        		value = "False";
+        	}
+        }
+        else
+        {
+        	THROW_EXCEPTION("Failed to get default value", "Failed type detection", SPELL_ERROR_LANGUAGE);
+        }
+    }
+    else
+    {
+    	THROW_EXCEPTION("Failed to get default value", "Could not get value", SPELL_ERROR_LANGUAGE);
     }
 	return value;
 }

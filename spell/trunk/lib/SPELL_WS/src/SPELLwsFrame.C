@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the frame data manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -38,7 +38,7 @@
 //=============================================================================
 // CONSTRUCTOR: SPELLwsFrame::SPELLwsFrame
 //=============================================================================
-SPELLwsFrame::SPELLwsFrame( const SPELLwsStartupInfo& info, unsigned int depth, PyFrameObject* frame )
+SPELLwsFrame::SPELLwsFrame( const std::string& id, const SPELLwsStartupInfo& info, unsigned int depth, PyFrameObject* frame )
 {
 	// If mode is recover and depth > 0, 'frame' contains the f_back frame.
 	// If depth is zero and mode is recover, we just need to fix the dynamics.
@@ -62,7 +62,8 @@ SPELLwsFrame::SPELLwsFrame( const SPELLwsStartupInfo& info, unsigned int depth, 
 		m_static = new SPELLwsStaticData(info,depth,m_frame);
 		m_dynamic = new SPELLwsDynamicData(info,depth,m_frame);
 	}
-	DEBUG("[FRM] Created manager for frame " + PYCREPR(m_frame));
+	DEBUG("[FRM] Created manager for frame " + PYCREPR(m_frame) + "with identifier " + id);
+	m_codeId = id;
 	m_lastInstruction = m_frame->f_lasti;
 	m_lastLine = m_frame->f_lineno;
 }
@@ -124,12 +125,9 @@ void SPELLwsFrame::fixState( PyThreadState* newState, bool isHead )
 		DEBUG("[FRM] Original instruction was " + ISTR(m_lastInstruction));
 		DEBUG("[FRM] Last line was " + ISTR(m_lastLine));
 
-		std::string filename = PYSTR(m_frame->f_code->co_filename);
-		std::string codename = PYSTR(m_frame->f_code->co_name);
-		std::string code_id = filename + "-" + codename;
-		int nextLine = SPELLexecutor::instance().getFrameManager().getModel(code_id).lineAfter(m_lastLine);
+		int nextLine = SPELLexecutor::instance().getFrameManager().getModel(getCodeId()).lineAfter(m_lastLine);
 		DEBUG("[FRM] Next line is " + ISTR(nextLine));
-		int nextInstruction = SPELLexecutor::instance().getFrameManager().getModel(code_id).offset(nextLine);
+		int nextInstruction = SPELLexecutor::instance().getFrameManager().getModel(getCodeId()).offset(nextLine);
 		m_lastInstruction = nextInstruction -1; // Will position it in the lastLine but POP_TOP instr.
 		DEBUG("[FRM] Set instruction to: " + ISTR(m_lastInstruction));
 	}
@@ -141,6 +139,13 @@ void SPELLwsFrame::fixState( PyThreadState* newState, bool isHead )
 	m_frame->f_lineno = m_lastLine;
 	m_frame->f_tstate = newState;
 	m_frame->f_stacktop = m_frame->f_valuestack;
+	// Reset exception trace
+	Py_XDECREF(m_frame->f_exc_traceback);
+	Py_XDECREF(m_frame->f_exc_type);
+	Py_XDECREF(m_frame->f_exc_value);
+	m_frame->f_exc_traceback = NULL;
+	m_frame->f_exc_type = NULL;
+	m_frame->f_exc_value = NULL;
 
 	// Recover the dynamic data and update the frame
 	DEBUG("[FRM] Recovering dynamic data");

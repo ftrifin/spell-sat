@@ -6,7 +6,7 @@
 //
 // DATE      : Feb 6, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,7 +53,7 @@ import org.eclipse.jface.viewers.EditingSupport;
 import org.eclipse.jface.viewers.TextCellEditor;
 import org.eclipse.swt.SWT;
 
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 
 public class VariableEditSupport extends EditingSupport
 {
@@ -70,26 +70,29 @@ public class VariableEditSupport extends EditingSupport
 	@Override
     protected CellEditor getCellEditor(Object element)
     {
-		TypedVariable var = (TypedVariable) element;
+		DataVariable var = (DataVariable) element;
 		switch(m_forItem)
 		{
 		case VALUE:
 		    return new TextCellEditor(m_viewer.getTable());
 		case CONFIRM:
-			String[] confirm = new String[2];
-			confirm[0] = "True";
-			confirm[1] = "False";
-			ComboBoxCellEditor editor = new ComboBoxCellEditor(m_viewer.getTable(), confirm);
-			editor.setStyle( SWT.READ_ONLY );
-			if (var.getConfirmGet().equals("True"))
+			if (var.isTyped())
 			{
-				editor.setValue(0);
+				String[] confirm = new String[2];
+				confirm[0] = "True";
+				confirm[1] = "False";
+				ComboBoxCellEditor editor = new ComboBoxCellEditor(m_viewer.getTable(), confirm);
+				editor.setStyle( SWT.READ_ONLY );
+				if (var.getConfirmGet().equals("True"))
+				{
+					editor.setValue(0);
+				}
+				else
+				{
+					editor.setValue(1);
+				}
+				return editor;
 			}
-			else
-			{
-				editor.setValue(1);
-			}
-			return editor;
 		}
 		return null;
     }
@@ -97,11 +100,13 @@ public class VariableEditSupport extends EditingSupport
 	@Override
     protected boolean canEdit(Object element)
     {
+		DataVariable var = (DataVariable) element;
 	    switch(m_forItem)
 	    {
 	    case VALUE:
-	    case CONFIRM:
 	    	return true;
+	    case CONFIRM:
+	    	return var.isTyped();
     	default:
     		return false;
 	    }
@@ -110,21 +115,28 @@ public class VariableEditSupport extends EditingSupport
 	@Override
     protected Object getValue(Object element)
     {
-		TypedVariable var = (TypedVariable) element;
+		DataVariable var = (DataVariable) element;
 		switch(m_forItem)
 		{
 		case VALUE:
 		    return var.formatValue(var.getValue());
 		case CONFIRM:
-		    String cf = var.getConfirmGet();
-		    if (cf.equals("True"))
-		    {
-		    	return 0;
-		    }
-		    else
-		    {
-		    	return 1;
-		    }
+			if (var.isTyped())
+			{
+			    String cf = var.getConfirmGet();
+			    if (cf.equals("True"))
+			    {
+			    	return 0;
+			    }
+			    else
+			    {
+			    	return 1;
+			    }
+			}
+			else
+			{
+				return 1;
+			}
 		}
 		return null;
     }
@@ -132,7 +144,7 @@ public class VariableEditSupport extends EditingSupport
 	@Override
     protected void setValue(Object element, Object value)
     {
-		TypedVariable var = (TypedVariable) element;
+		DataVariable var = (DataVariable) element;
 		switch(m_forItem)
 		{
 		case VALUE:
@@ -147,23 +159,26 @@ public class VariableEditSupport extends EditingSupport
 		    m_viewer.valueEdited();
 		    break;
 		case CONFIRM:
-			try
+			if (var.isTyped())
 			{
-				int idx = (Integer) value;
-				if (idx == 0)
+				try
 				{
-					var.setConfirmGet(true);
+					int idx = (Integer) value;
+					if (idx == 0)
+					{
+						var.setConfirmGet(true);
+					}
+					else
+					{
+						var.setConfirmGet(false);
+					}
 				}
-				else
+				catch(Exception ex)
 				{
-					var.setConfirmGet(false);
+					MessageDialog.openError(m_viewer.getTable().getShell(), "Set confirm", "Cannot set confirm flag: \n" + ex.getLocalizedMessage());
 				}
+			    m_viewer.valueEdited();
 			}
-			catch(Exception ex)
-			{
-				MessageDialog.openError(m_viewer.getTable().getShell(), "Set confirm", "Cannot set confirm flag: \n" + ex.getLocalizedMessage());
-			}
-		    m_viewer.valueEdited();
 		    break;
 		}
     }

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -87,13 +87,20 @@ public class SPELLmessagePromptEnd extends SPELLmessageOneway
 			Vector<String> options = getOptions();
 			Vector<String> expected = getExpected();
 			Scope scope = Scope.SYS;
+			
+			String defaultAnswer = "";
+			if (hasKey(IMessageField.FIELD_DEFAULT))
+			{
+				defaultAnswer = get(IMessageField.FIELD_DEFAULT);
+			}
+
 			if (hasKey(IMessageField.FIELD_SCOPE))
 			{
 				scope = Scope.fromCode(get(IMessageField.FIELD_SCOPE));
 			}
 			if (options == null)
 			{
-				m_promptInput = new InputData(this, procId, text, scope, numeric, true);
+				m_promptInput = new InputData(this, procId, text, scope, defaultAnswer, numeric, true);
 			}
 			else
 			{
@@ -104,7 +111,7 @@ public class SPELLmessagePromptEnd extends SPELLmessageOneway
 				{
 					promptDisplayType = PromptDisplayType.COMBO;
 				}
-				m_promptInput = new InputData(this, procId, text, scope, options, expected, true, promptDisplayType);
+				m_promptInput = new InputData(this, procId, text, scope, options, expected, defaultAnswer, true, promptDisplayType);
 			}
 		}
 		catch (MessageException e)

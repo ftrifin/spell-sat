@@ -6,7 +6,7 @@
 //
 // DATE      : Feb 9, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,7 +53,7 @@ import com.astra.ses.spell.gui.core.interfaces.IMessageId;
 import com.astra.ses.spell.gui.core.interfaces.IMessageValue;
 import com.astra.ses.spell.gui.core.model.server.TransferData;
 import com.astra.ses.spell.gui.core.model.types.DataContainer;
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 import com.astra.ses.spell.gui.core.model.types.ValueFormat;
 import com.astra.ses.spell.gui.core.model.types.ValueType;
 
@@ -123,7 +123,7 @@ public class SPELLmessageGetInputFile extends SPELLmessageRequest
 			}
 			
 			// Infer the format when reading from server input files
-			ValueType type = TypedVariable.inferTypeFromValue(value);
+			ValueType type = DataVariable.inferTypeFromValue(value);
 			ValueFormat format = ValueFormat.NONE;
 			if (type.equals(ValueType.LONG))
 			{
@@ -145,7 +145,7 @@ public class SPELLmessageGetInputFile extends SPELLmessageRequest
 				}
 			}
 
-			TypedVariable var = new TypedVariable(varname, value,null, null, format, type, false);
+			DataVariable var = new DataVariable(varname, value,null, null, format, type, false);
 			container.addVariable(varname, var);
 		}
 	}

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the procedure variable monitor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -37,6 +37,8 @@
 // GLOBALS ////////////////////////////////////////////////////////////////////
 #define EMPTY_STRING "<empty>"
 
+bool SPELLvariableMonitor::s_enabled = false;
+
 //=============================================================================
 // CONSTRUCTOR : SPELLvariableMonitor::SPELLvariableMonitor
 //=============================================================================
@@ -45,9 +47,12 @@ SPELLvariableMonitor::SPELLvariableMonitor( SPELLvariableChangeListener* listene
 		                                    std::set<std::string>& initialVariables)
 : m_frame(frame),
   m_listener(listener),
-  m_initialVariables(initialVariables)
+  m_ignoreVariables(initialVariables)
 {
-	DEBUG("[VM] Created frame for code " + PYSTR(m_frame->f_code->co_name));
+	DEBUG("[VM] Created variable monitor for code " + PYSTR(m_frame->f_code->co_name));
+	DEBUG("[VM] Ignored: " + ISTR(m_ignoreVariables.size()));
+	m_initialized = false;
+	m_scopeName = PSTR(m_frame);
 }
 
 //=============================================================================
@@ -59,17 +64,19 @@ SPELLvariableMonitor::~SPELLvariableMonitor()
 	m_frame = NULL;
 	// Do not delete! borrowed reference
 	m_listener = NULL;
-	m_variables.clear();
+	m_localVariables.clear();
+	m_globalVariables.clear();
 	DEBUG("[VM] Destroyed");
 }
 
 //=============================================================================
 // METHOD: SPELLvariableMonitor::retrieveGlobalVariables()
 //=============================================================================
-void SPELLvariableMonitor::retrieveGlobalVariables(std::vector<SPELLvarInfo>& vars,
-												   std::set<std::string> locals)
+void SPELLvariableMonitor::retrieveGlobalVariables()
 {
 	DEBUG("[VM] Retrieve Globals");
+
+	m_globalVariables.clear();
 
 	/*
 	 * Once we get the bottom stack frame, we have to iterate over all the keys
@@ -82,39 +89,10 @@ void SPELLvariableMonitor::retrieveGlobalVariables(std::vector<SPELLvarInfo>& va
 	{
 		PyObject* key = PyList_GetItem( itemList, index );
 		std::string varName = PYSSTR(key);
-
-		// Do the following check just when the considered variables are not internal databases
-		if ( (varName != DatabaseConstants::SCDB) &&
-			 (varName != DatabaseConstants::GDB)  &&
-			 (varName != DatabaseConstants::PROC) &&
-			 (varName != DatabaseConstants::ARGS) &&
-			 (varName != DatabaseConstants::IVARS))
-		{
-			/* If they key is contained in the initial variables set, then ignore it */
-			if (m_initialVariables.find(varName) != m_initialVariables.end())
-			{
-				continue;
-			}
-		}
-		/* If a variable with the same name has been retrieved in the local scope
-		 * then it must be ignored */
-		if (locals.find(varName) != locals.end())
-		{
-			continue;
-		}
-
-		// Ignore internal flags
-		if (varName == "__USERLIB__") continue;
-
 		PyObject* object = PyDict_GetItem( dict, key );
 
-		if (!SPELLpythonHelper::instance().isInstance(object, "Database", "spell.lib.adapter.databases.database"))
-		{
-			if (PyCallable_Check(object)) continue;
-			if (PyClass_Check(object)) continue;
-			if (PyModule_Check(object)) continue;
-			if (PyInstance_Check(object)) continue;
-		}
+		if (shouldDiscard(varName,object)) continue;
+
 		DEBUG("[VM] Processing " + varName);
 
 		std::string type = PYSSTR( PyObject_Type(object) );
@@ -123,27 +101,29 @@ void SPELLvariableMonitor::retrieveGlobalVariables(std::vector<SPELLvarInfo>& va
 		DEBUG("[VM] Type      : " + type);
 		DEBUG("[VM] Value     : " + value);
 		DEBUG("[VM] Global    : " + BSTR(true));
-		DEBUG("[VM] Registered: " + BSTR(isRegistered(PYSSTR(key))));
 
 		// Mark empty values (empty strings) as "<empty>"
 		if (value == "") value = EMPTY_STRING;
 
-		vars.push_back( SPELLvarInfo(varName, type, value, true, isRegistered(PYSSTR(key))) );
+		m_globalVariables.insert( std::make_pair(varName, SPELLvarInfo(varName, type, value, true)) );
 	}
 }
 
 //=============================================================================
 // METHOD: SPELLvariableMonitor::retrieveLocalVariables()
 //=============================================================================
-void SPELLvariableMonitor::retrieveLocalVariables(std::vector<SPELLvarInfo>& vars)
+void SPELLvariableMonitor::retrieveLocalVariables()
 {
 	DEBUG("[VM] Retrieve Locals");
+	DEBUG("[VM] Frame: " + PYCREPR(m_frame));
 
 	/*
 	 * Bottom stack frame is discarded,
 	 * as globals and locals are the same dictionary
 	 */
 	if (m_frame->f_back == NULL) return;
+
+	m_localVariables.clear();
 
 	/*
 	 * Get the names defined in the current code, including arguments
@@ -156,7 +136,6 @@ void SPELLvariableMonitor::retrieveLocalVariables(std::vector<SPELLvarInfo>& var
 	 */
 	PyFrame_FastToLocals(m_frame);
 	PyObject* dict = m_frame->f_locals;
-	DEBUG("[VM] Frame: " + PYCREPR(m_frame));
 	for( unsigned int index = 0; index< varNames.size(); index++)
 	{
 		std::string varName = varNames[index];
@@ -165,25 +144,19 @@ void SPELLvariableMonitor::retrieveLocalVariables(std::vector<SPELLvarInfo>& var
 		{
 			PyObject* object = PyDict_GetItem( dict, pyVarName );
 
-			if (!SPELLpythonHelper::instance().isInstance(object, "Database", "spell.lib.adapter.databases.database"))
-			{
-				if (PyCallable_Check(object)) continue;
-				if (PyClass_Check(object)) continue;
-				if (PyModule_Check(object)) continue;
-				if (PyInstance_Check(object)) continue;
-			}
+			if (shouldDiscard(varName,object)) continue;
+
 			DEBUG("[VM] Processing " + varName);
 			std::string type = PYSSTR( PyObject_Type(object) );
 			DEBUG("[VM] Type      : " + type);
 			std::string value = PYREPR( object );
 			DEBUG("[VM] Value     : " + value);
 			DEBUG("[VM] Global    : " + BSTR(false));
-			DEBUG("[VM] Registered: " + BSTR(isRegistered(varName)));
 
 			// Mark empty values (empty strings) as "<empty>"
 			if (value == "") value = EMPTY_STRING;
 
-			vars.push_back( SPELLvarInfo(varName, type, value, false, isRegistered(varName)) );
+			m_localVariables.insert( std::make_pair( varName, SPELLvarInfo(varName, type, value, false)) );
 		}
 	}
 	PyFrame_LocalsToFast(m_frame,0);
@@ -223,179 +196,35 @@ std::vector<std::string> SPELLvariableMonitor::retrieveNames()
 }
 
 //=============================================================================
-// METHOD: SPELLvariableMonitor::getAllVariables()
+// METHOD: SPELLvariableMonitor::initialize()
 //=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableMonitor::getAllVariables()
+void SPELLvariableMonitor::initialize()
 {
-	SPELLsafePythonOperations ops("SPELLvariableMonitor::getAllVariables()");
-	std::vector<SPELLvarInfo> vars;
-	// We need to retrieve the function arguments and other locals, which are only stored in
-	// fast locals by default
-	PyFrame_FastToLocals(m_frame);
-
-	/*
-	 * Get locals
-	 */
-	retrieveLocalVariables(vars);
-
-	/*
-	 * Get the name of the found locals to filter them while retrieving
-	 * the locals
-	 */
-	std::set<std::string> locals;
-	/*
-	 * TODO maybe we should filter globals variables whose names are the same as
-	 * variables found in the local scope
-	 * To do this, uncomment the following loop
-	 */
-	/*for (unsigned int index = 0; index< vars.size(); index++)
+	if (!m_initialized)
 	{
-		SPELLvarInfo var = vars[index];
-		locals.insert(var.varName);
-	}*/
-
-	/*
-	 * Get globals
-	 */
-	retrieveGlobalVariables(vars, locals);
-
-	return vars;
-}
-
-//=============================================================================
-// METHOD: SPELLvariableMonitor::getRegisteredVariables()
-//=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableMonitor::getRegisteredVariables()
-{
-	std::vector<SPELLvarInfo> vars;
-	VarMap::iterator it;
-	for( it = m_variables.begin(); it != m_variables.end(); it++)
-	{
-		vars.push_back( it->second );
-		DEBUG("[VM] Registered variable: " + it->second.varName );
+		SPELLsafePythonOperations ops("SPELLvariableMonitor::initialize()");
+		retrieveLocalVariables();
+		retrieveGlobalVariables();
+		m_initialized = true;
 	}
-	return vars;
 }
 
 //=============================================================================
-// METHOD: SPELLvariableMonitor::getAllVariables()
+// METHOD: SPELLvariableMonitor::getGlobalVariables()
 //=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableMonitor::getGlobalVariables()
+const SPELLvariableMonitor::VarMap& SPELLvariableMonitor::getGlobalVariables()
 {
-	SPELLsafePythonOperations ops("SPELLvariableMonitor::getGlobalVariables()");
-	std::vector<SPELLvarInfo> vars;
-
-	std::set<std::string> locals;
-
-	retrieveGlobalVariables( vars, locals );
-
-	return vars;
+	if (!m_initialized) initialize();
+	return m_globalVariables;
 }
 
 //=============================================================================
-// METHOD: SPELLvariableMonitor::getAllVariables()
+// METHOD: SPELLvariableMonitor::getLocalVariables()
 //=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableMonitor::getLocalVariables()
+const SPELLvariableMonitor::VarMap& SPELLvariableMonitor::getLocalVariables()
 {
-	SPELLsafePythonOperations ops("SPELLvariableMonitor::getLocalVariables()");
-	std::vector<SPELLvarInfo> vars;
-
-	// We need to retrieve the function arguments and other locals, which are only stored in
-	// fast locals by default
-	PyFrame_FastToLocals(m_frame);
-
-	retrieveLocalVariables( vars );
-
-	return vars;
-}
-
-//=============================================================================
-// METHOD: SPELLvariableMonitor::getAllVariables()
-//=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableMonitor::getRegisteredGlobalVariables()
-{
-	std::vector<SPELLvarInfo> vars;
-	VarMap::iterator it;
-	for( it = m_variables.begin(); it != m_variables.end(); it++)
-	{
-		if (it->second.isGlobal)
-		{
-			vars.push_back( it->second );
-			DEBUG("[VM] Registered variable: " + it->second.varName );
-		}
-	}
-	return vars;
-}
-
-//=============================================================================
-// METHOD: SPELLvariableMonitor::getAllVariables()
-//=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableMonitor::getRegisteredLocalVariables()
-{
-	std::vector<SPELLvarInfo> vars;
-	VarMap::iterator it;
-	for( it = m_variables.begin(); it != m_variables.end(); it++)
-	{
-		if (!it->second.isGlobal)
-		{
-			vars.push_back( it->second );
-			DEBUG("[VM] Registered variable: " + it->second.varName );
-		}
-	}
-	return vars;
-}
-
-//=============================================================================
-// METHOD: SPELLvariableMonitor::registerVariable()
-//=============================================================================
-bool SPELLvariableMonitor::registerVariable( SPELLvarInfo& var )
-{
-	SPELLsafePythonOperations ops("SPELLvariableMonitor::registerVariable()");
-
-	if ((m_frame->f_globals)&&(var.isGlobal))
-	{
-		var.varValue = PYSSTR( PyDict_GetItemString( m_frame->f_globals, var.varName.c_str() ));
-		if (var.varValue == "") var.varValue = EMPTY_STRING;
-		var.varType = PYSSTR( PyObject_Type( PyDict_GetItemString( m_frame->f_globals, var.varName.c_str() )) );
-		var.isGlobal = true;
-		var.isRegistered = true;
-		m_variables.insert( std::make_pair( var.varName, var ) );
-		DEBUG("[VM] Registered global variable: " + var.varName + ", current value: " + var.varValue );
-		return true;
-	}
-	else if ((m_frame->f_locals)&&(!var.isGlobal))
-	{
-		// We need to retrieve the function arguments and other locals, which are only stored in
-		// fast locals by default
-		PyFrame_FastToLocals(m_frame);
-		var.varValue = PYSSTR( PyDict_GetItemString( m_frame->f_locals, var.varName.c_str() ));
-		if (var.varValue == "") var.varValue = EMPTY_STRING;
-		var.varType = PYSSTR( PyObject_Type( PyDict_GetItemString( m_frame->f_locals, var.varName.c_str() )) );
-		var.isGlobal = true;
-		var.isRegistered = true;
-		m_variables.insert( std::make_pair( var.varName, var ) );
-		DEBUG("[VM] Registered local variable: " + var.varName + ", current value: " + var.varValue );
-		return true;
-	}
-	var.varValue = "???";
-	var.varType = "???";
-	var.isRegistered = false;
-	DEBUG("[VM] No such variable: " + var.varName);
-	return false;
-}
-
-//=============================================================================
-// METHOD: SPELLvariableMonitor::unregisterVariable()
-//=============================================================================
-void SPELLvariableMonitor::unregisterVariable( SPELLvarInfo& var )
-{
-	VarMap::iterator it = m_variables.find(var.varName);
-	if (it != m_variables.end())
-	{
-		m_variables.erase(it);
-		DEBUG("[VM] Unregistered variable: " + var.varName );
-		var.isRegistered = false;
-	}
+	if (!m_initialized) initialize();
+	return m_localVariables;
 }
 
 //=============================================================================
@@ -406,6 +235,8 @@ void SPELLvariableMonitor::changeVariable( SPELLvarInfo& var )
 	SPELLsafePythonOperations ops("SPELLvariableMonitor::changeVariable()");
 
 	DEBUG("[VM] Request changing variable " + var.varName);
+
+	if (!m_initialized) initialize();
 
 	// Evaluate the value for the variable
 	PyObject* value = NULL;
@@ -441,15 +272,30 @@ void SPELLvariableMonitor::changeVariable( SPELLvarInfo& var )
 	var.varValue = PYSSTR(value);
 	if (var.varValue == "") var.varValue = EMPTY_STRING;
 
-	// Update the variable if it is registered, and notify to listeners
-	VarMap::iterator it = m_variables.find(var.varName);
-	if (it != m_variables.end())
+	// Update the variable in the internal model and notify to listeners
+	if (var.isGlobal)
 	{
-		std::vector<SPELLvarInfo> changed;
-		it->second.varValue = var.varValue;
-		DEBUG("[VM] Variable changed by user: " + var.varName + ", current value: " + var.varValue );
-		changed.push_back(it->second);
-		m_listener->variableChanged( changed );
+		VarMap::iterator it = m_globalVariables.find(var.varName);
+		if (it != m_globalVariables.end())
+		{
+			std::vector<SPELLvarInfo> added, changed, deleted;
+			it->second.varValue = var.varValue;
+			LOG_INFO("[VM] Global variable changed by user: " + var.varName + ", current value: " + var.varValue );
+			changed.push_back(it->second);
+			m_listener->variableChanged( added, changed, deleted );
+		}
+	}
+	else
+	{
+		VarMap::iterator it = m_localVariables.find(var.varName);
+		if (it != m_localVariables.end())
+		{
+			std::vector<SPELLvarInfo> added, changed, deleted;
+			it->second.varValue = var.varValue;
+			LOG_INFO("[VM] Local variable changed by user: " + var.varName + ", current value: " + var.varValue );
+			changed.push_back(it->second);
+			m_listener->variableChanged( added, changed, deleted );
+		}
 	}
 }
 
@@ -466,43 +312,68 @@ PyObject* SPELLvariableMonitor::getVariableRef( const std::string& name )
 }
 
 //=============================================================================
-// METHOD: SPELLvariableMonitor::unregisterAll()
-//=============================================================================
-void SPELLvariableMonitor::unregisterAll()
-{
-	m_variables.clear();
-}
-
-//=============================================================================
 // METHOD: SPELLvariableMonitor::getVariable()
 //=============================================================================
 void SPELLvariableMonitor::getVariable( SPELLvarInfo& var )
 {
-	VarMap::iterator it = m_variables.find(var.varName);
-	if (it != m_variables.end())
+	if (!m_initialized) initialize();
+	VarMap::iterator it = m_globalVariables.find(var.varName);
+	VarMap::iterator lit = m_localVariables.find(var.varName);
+	if (it != m_globalVariables.end())
 	{
 		var.varValue = it->second.varValue;
 		if (var.varValue == "") var.varValue = EMPTY_STRING;
 		var.varType = it->second.varType;
-		var.isGlobal = it->second.isGlobal;
-		var.isRegistered = true;
+		var.isGlobal = true;
+	}
+	else if (lit != m_localVariables.end())
+	{
+		var.varValue = lit->second.varValue;
+		if (var.varValue == "") var.varValue = EMPTY_STRING;
+		var.varType = lit->second.varType;
+		var.isGlobal = false;
 	}
 	else
 	{
 		var.varValue = "???";
 		var.varType = "???";
 		var.isGlobal = false;
-		var.isRegistered = false;
 	}
 }
 
 //=============================================================================
-// METHOD: SPELLvariableMonitor::isRegistered()
+// METHOD: SPELLvariableMonitor::shouldDiscard()
 //=============================================================================
-bool SPELLvariableMonitor::isRegistered( const std::string& varName )
+bool SPELLvariableMonitor::shouldDiscard( const std::string& varName, PyObject* value )
 {
-	VarMap::iterator it = m_variables.find(varName);
-	return (it != m_variables.end());
+	// Do the following check just when the considered variables are not internal databases
+	if ( (varName == DatabaseConstants::SCDB) ||
+		 (varName == DatabaseConstants::GDB)  ||
+		 (varName == DatabaseConstants::PROC) ||
+		 (varName == DatabaseConstants::ARGS) ||
+		 (varName == DatabaseConstants::IVARS))
+	{
+		return true;
+	}
+
+	/* If they key is contained in the initial variables set, then ignore it */
+	if (m_ignoreVariables.find(varName) != m_ignoreVariables.end())
+	{
+		return true;
+	}
+
+	// Ignore internal flags
+	if (varName == "__USERLIB__") return true;
+
+	// Ignore callables and complex objects
+	if (SPELLpythonHelper::instance().isInstance(value, "Database", "spell.lib.adapter.databases.database")) return true;
+	if (PyCallable_Check(value)) return true;
+	if (PyFunction_Check(value)) return true;
+	if (PyClass_Check(value)) return true;
+	if (PyModule_Check(value)) return true;
+	if (PyInstance_Check(value)) return true;
+
+	return false;
 }
 
 //=============================================================================
@@ -510,46 +381,132 @@ bool SPELLvariableMonitor::isRegistered( const std::string& varName )
 //=============================================================================
 void SPELLvariableMonitor::analyze()
 {
+	if (!m_initialized) initialize();
+
+	SPELLsafePythonOperations ops("SPELLvariableMonitor::analyze()");
+
+	DEBUG("[VM] Analyze changes in " + PYCREPR(m_frame));
+
+	std::vector<SPELLvarInfo> added;
 	std::vector<SPELLvarInfo> changed;
-	bool copyFast = true;
+	std::vector<SPELLvarInfo> deleted;
 
+	PyObject* dict = m_frame->f_globals;
+	PyObject* globalsItemList = PyDict_Keys(dict);
+	unsigned int numItems = PyList_Size(globalsItemList);
 	VarMap::iterator it;
-	for( it = m_variables.begin(); it != m_variables.end(); it++ )
+	for( unsigned int index = 0; index<numItems; index++)
 	{
-		std::string varName = it->first;
-		std::string currentValue = "";
-		std::string lastValue = "";
+		PyObject* key = PyList_GetItem( globalsItemList, index );
+		PyObject* object = PyDict_GetItem( dict, key );
+		std::string varName = PYSTR(key);
 
-		if ( (it->second.isGlobal) && (m_frame->f_globals) )
+		if (shouldDiscard(varName,object)) continue;
+
+		it = m_globalVariables.find(varName);
+		std::string value = PYREPR( object );
+
+		// The variable is new
+		if (it == m_globalVariables.end())
 		{
-			PyObject* pyCurrentValue = PyDict_GetItemString( m_frame->f_globals, varName.c_str() );
-			currentValue = PYSSTR(pyCurrentValue);
-			lastValue = it->second.varValue;
+			LOG_INFO("Add new global variable '" + varName + "'");
+			std::string type = PYSSTR( PyObject_Type(object) );
+			m_globalVariables.insert( std::make_pair( varName, SPELLvarInfo(varName, type, value, true)) );
+			it = m_globalVariables.find(varName);
+			added.push_back( it->second );
 		}
-		else if ( (!it->second.isGlobal) && (m_frame->f_locals) )
+		// The variable exists, compare values
+		else
 		{
-			if (copyFast)
+			if (it->second.varValue != value)
 			{
-				copyFast = false;
-				// We need to retrieve the function arguments and other locals, which are only stored in
-				// fast locals by default
-				PyFrame_FastToLocals(m_frame);
+				LOG_INFO("[VM] Global variable change: " + varName + ", current value: " + value + ", previous: " + it->second.varValue );
+				it->second.varValue = value;
+				changed.push_back(it->second);
 			}
-			PyObject* pyCurrentValue = PyDict_GetItemString( m_frame->f_locals, varName.c_str() );
-			currentValue = PYSSTR(pyCurrentValue);
-			lastValue = it->second.varValue;
-		}
-
-		if (lastValue != currentValue)
-		{
-			if (currentValue == "") currentValue == EMPTY_STRING;
-			DEBUG("[VM] Variable change: " + varName + ", current value: " + currentValue + ", previous: " + it->second.varValue );
-			it->second.varValue = currentValue;
-			changed.push_back(it->second);
 		}
 	}
-	if (changed.size()>0)
+
+	// We need to retrieve the function arguments and other locals, which are only stored in
+	// fast locals by default
+	PyFrame_FastToLocals(m_frame);
+	dict = m_frame->f_locals;
+	PyObject* localsItemList = PyDict_Keys(dict);
+	numItems = PyList_Size(localsItemList);
+
+	for( unsigned int index = 0; index<numItems; index++)
 	{
-		m_listener->variableChanged( changed );
+		PyObject* key = PyList_GetItem( localsItemList, index );
+		if (PyDict_Contains(m_frame->f_globals,key)) continue;
+		PyObject* object = PyDict_GetItem( dict, key );
+		std::string varName = PYSTR(key);
+
+		if (shouldDiscard(varName,object)) continue;
+
+		it = m_localVariables.find(varName);
+		std::string value = PYREPR( object );
+
+		// The variable is new
+		if (it == m_localVariables.end() )
+		{
+			LOG_INFO("Add new local variable '" + varName + "'");
+			std::string type = PYSSTR( PyObject_Type(object) );
+			m_localVariables.insert( std::make_pair( varName, SPELLvarInfo(varName, type, value, false)) );
+			it = m_localVariables.find(varName);
+			added.push_back( it->second );
+		}
+		// The variable exists, compare values
+		else
+		{
+			if (it->second.varValue != value)
+			{
+				LOG_INFO("[VM] Local variable change: " + varName + ", current value: " + value + ", previous: " + it->second.varValue );
+				it->second.varValue = value;
+				changed.push_back(it->second);
+			}
+		}
+	}
+
+	// Finally, check if variables have been deleted
+	std::vector<std::string> globalsToClean;
+	std::vector<std::string> localsToClean;
+
+	for( it = m_globalVariables.begin(); it != m_globalVariables.end(); it++ )
+	{
+		PyObject* gkey = SSTRPY(it->first);
+		if (!PyDict_Contains( m_frame->f_globals, gkey ))
+		{
+			deleted.push_back(it->second);
+			globalsToClean.push_back(it->first);
+			LOG_INFO("[VM] Global variable removed: " + it->first );
+		}
+	}
+	for( it = m_localVariables.begin(); it != m_localVariables.end(); it++ )
+	{
+		PyObject* lkey = SSTRPY(it->first);
+		if (!PyDict_Contains( m_frame->f_locals, lkey ))
+		{
+			deleted.push_back(it->second);
+			localsToClean.push_back(it->first);
+			LOG_INFO("[VM] Local variable removed: " + it->first );
+		}
+	}
+	for( std::vector<std::string>::const_iterator sit = globalsToClean.begin(); sit != globalsToClean.end(); sit++)
+	{
+		it = m_globalVariables.find(*sit);
+		m_globalVariables.erase(it);
+	}
+	for( std::vector<std::string>::const_iterator sit = localsToClean.begin(); sit != localsToClean.end(); sit++)
+	{
+		it = m_localVariables.find(*sit);
+		m_localVariables.erase(it);
+	}
+
+	PyFrame_LocalsToFast(m_frame,0);
+
+
+	if (added.size()>0 || changed.size()>0 || deleted.size()>0 )
+	{
+		m_listener->variableChanged( added, changed, deleted );
 	}
 }

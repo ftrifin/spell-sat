@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 23, 2010
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -57,6 +57,9 @@ public enum WatchVariablesTableColumns
 {
 	NAME_COLUMN("Name", 80, SWT.LEFT), VALUE_COLUMN("Value", 80, SWT.LEFT);
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	private WatchVariablesTableColumns(String text, int width, int alignment)
 	{
 		this.width = width;
@@ -68,6 +71,9 @@ public enum WatchVariablesTableColumns
 	public String	text;
 	public int	  alignment;
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public static WatchVariablesTableColumns fromIndex(int index)
 	{
 		for (WatchVariablesTableColumns value : values())

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -110,6 +110,10 @@ class ItemInfoTableContentProvider implements IStructuredContentProvider
 					element.status = ItemStatus.fromName(notification.getItemStatus().get(index));
 					element.comments = notification.getComments().get(index);
 					element.time = notification.getTimes().get(index);
+					if (element.time == null || element.time.trim().isEmpty())
+					{
+						element.time = notification.getTime();
+					}
 					elements.add(element);
 				}
 			}

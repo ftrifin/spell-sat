@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -51,7 +51,7 @@ package com.astra.ses.spell.gui.dialogs.controls;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerFilter;
 
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 
 /*******************************************************************************
  * @brief
@@ -79,7 +79,7 @@ public class DictVariablesFilter extends ViewerFilter
     {
 		if (m_searchString == null) return true;
 		
-	    TypedVariable var = (TypedVariable) element;
+	    DataVariable var = (DataVariable) element;
 	    if (var.getName().matches(m_searchString))
 	    {
 	    	return true;

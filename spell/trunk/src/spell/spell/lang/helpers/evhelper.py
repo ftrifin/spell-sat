@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for event functions
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -81,6 +81,9 @@ class Event_Helper(WrapperHelper):
         self._setActionString( ACTION_SKIP   ,  "Skip injecting event and return success (True)")
         self._setActionString( ACTION_CANCEL ,  "Skip injecting event and return failure (False)")
         self._setActionString( ACTION_REPEAT ,  "Try to inject the event again")
+
+        # Store information for possible failures
+        self.setFailureInfo("EV", self.__msg)
 
         self._write( self.__msg, self.getConfig() )
         import sys

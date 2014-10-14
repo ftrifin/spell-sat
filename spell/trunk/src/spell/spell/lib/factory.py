@@ -5,7 +5,7 @@
 ## DESCRIPTION: Driver factory
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -35,6 +35,8 @@ import spell.lib.empty.tc
 import spell.lib.empty.ev
 import spell.lib.empty.task
 import spell.lib.empty.resources
+import spell.lib.empty.ranging
+import spell.lib.empty.memory
 import spell.lib.empty.usr
 import spell.lib.adapter.gcstime
 from spell.lib.adapter.dbmgr import *
@@ -62,9 +64,9 @@ class FactoryError(BaseException): pass
 
 __all__ = ['Factory', 'FactoryError' ] 
 
-KNOWN_INTERFACES = [ 'TM', 'TC', 'EV', 'RSC', 'TIME', 'TASK', 'USER', 'CONFIG', 'DBMGR' ]
+KNOWN_INTERFACES = [ 'TM', 'TC', 'EV', 'RSC', 'TIME', 'TASK', 'USER', 'CONFIG', 'DBMGR', 'RNG', 'MEM' ]
 
-IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'EV':'ev', 
+IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'EV':'ev', 'RNG':'ranging', 'MEM': 'memory',
                  'RSC':'resources', 'TIME':'gcstime', 'TASK':'task', 
                  'USER':'usr', 'CONFIG':'config' }
 
@@ -173,7 +175,7 @@ class FactoryClass(object):
             interface = importedPackage.__dict__.get(ifcName)
             
             if interface is None:
-                raise FactoryError("Unable to create interface " + repr(ifcName))
+                raise FactoryError("Unable to create interface " + repr(ifcName) + " from '" + packageRoot + "'")
 
         except ImportError,err:
             LOG("Interface " + repr(ifcName) + 
@@ -214,6 +216,10 @@ class FactoryClass(object):
             return spell.lib.empty.resources.ResourceInterface()
         elif ifcName == 'TIME':
             return spell.lib.adapter.gcstime.TimeInterface()
+        elif ifcName == 'RNG':
+            return spell.lib.empty.ranging.RngInterface()
+        elif ifcName == 'MEM':
+            return spell.lib.empty.memory.MemInterface()
         else:
             raise FactoryError("Cannot create empty interface '" + ifcName + "'")
 

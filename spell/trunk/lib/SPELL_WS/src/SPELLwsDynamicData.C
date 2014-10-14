@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the dynamic runtime data manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -64,7 +64,7 @@ SPELLwsDynamicData::SPELLwsDynamicData( const SPELLwsStartupInfo& info, unsigned
 	if (info.persistentFile != "")
 	{
 		m_persistentFile = info.persistentFile + "_" + ISTR(depth) + ".wsd";
-		LOG_INFO("DYN Using persistent file: '" + m_persistentFile + "'");
+		DEBUG("DYN Using persistent file: '" + m_persistentFile + "'");
 	}
 	else
 	{
@@ -74,15 +74,15 @@ SPELLwsDynamicData::SPELLwsDynamicData( const SPELLwsStartupInfo& info, unsigned
 	if (info.recoveryFile != "")
 	{
 		m_recoveryFile = info.recoveryFile + "_" + ISTR(depth) + ".wsd";
-		LOG_INFO("DYN Using recovery file: '" + m_recoveryFile + "'");
+		DEBUG("DYN Using recovery file: '" + m_recoveryFile + "'");
 	}
 	else
 	{
 		m_recoveryFile = "";
 	}
 
-	LOG_INFO("DYN working mode: " + WorkingModeToString(m_startup.workingMode));
-	LOG_INFO("DYN perform recovery: " + BSTR(m_startup.performRecovery));
+	DEBUG("DYN working mode: " + WorkingModeToString(m_startup.workingMode));
+	DEBUG("DYN perform recovery: " + BSTR(m_startup.performRecovery));
 
 	// If we are in recovery mode
 	if (m_startup.performRecovery && m_recoveryFile != "")
@@ -686,7 +686,7 @@ void SPELLwsDynamicData::loadLocals()
 
 	if (restored != NULL)
 	{
-		DEBUG("[DYN] Restored locals dictionary: " + ISTR(PyList_Size(PyDict_Keys(restored))));
+		DEBUG("[DYN] Restored locals dictionary");
 		// IMPORTANT: do not remove this PyFrame calls. Inside functions, local variables MAY be defined in the
 		// fast locals, depending on their contents. These calls are needed so that the storeDictionary() call
 		// is able to store those local variables which were not moved to fast locals. Fast locals and locals

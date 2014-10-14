@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the CIF helper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -60,7 +60,15 @@ void SPELLcifHelper::generatePromptOptions( PyObject* args, SPELLpromptDefinitio
     PyObject* optionsObj = argumentsA[1];
     PyObject* configObj = argumentsA[2];
 
+	def.defaultAnswer = "";
+
     SPELLpyArgs argumentsC(args,configObj);
+
+    std::string deflt = "";
+	if (argumentsC.hasModifier(LanguageModifiers::Default))
+	{
+		deflt = argumentsC.getModifier_Default();
+	}
 
     if ((optionsObj != NULL)&&(PyList_Size(optionsObj)>0))
     {
@@ -116,6 +124,15 @@ void SPELLcifHelper::generatePromptOptions( PyObject* args, SPELLpromptDefinitio
     		def.options.push_back( optionString );
             def.expected.push_back(key);
     	}
+
+    	if (deflt != "")
+    	{
+    		std::vector<std::string>::iterator it = std::find(def.expected.begin(),def.expected.end(),deflt);
+    		if (it != def.expected.end())
+    		{
+    			def.defaultAnswer = deflt;
+    		}
+    	}
     }
     else
     {
@@ -127,24 +144,40 @@ void SPELLcifHelper::generatePromptOptions( PyObject* args, SPELLpromptDefinitio
 			{
 				def.options.push_back("O: Ok");
 				def.expected.push_back("O");
+				if (deflt == "O" || deflt == ISTR(LanguageConstants::PROMPT_OK))
+				{
+					def.defaultAnswer = "O";
+				}
 				break;
 			}
 			case LanguageConstants::PROMPT_CANCEL:
 			{
 				def.options.push_back("C: Cancel");
 				def.expected.push_back("C");
+				if (deflt == "C" || deflt == ISTR(LanguageConstants::PROMPT_CANCEL))
+				{
+					def.defaultAnswer = "C";
+				}
 				break;
 			}
 			case LanguageConstants::PROMPT_YES:
 			{
 				def.options.push_back("Y: Yes");
 				def.expected.push_back("Y");
+				if (deflt == "Y" || deflt == ISTR(LanguageConstants::PROMPT_YES))
+				{
+					def.defaultAnswer = "Y";
+				}
 				break;
 			}
 			case LanguageConstants::PROMPT_NO:
 			{
 				def.options.push_back("N: No");
 				def.expected.push_back("N");
+				if (deflt == "N" || deflt == ISTR(LanguageConstants::PROMPT_NO))
+				{
+					def.defaultAnswer = "N";
+				}
 				break;
 			}
 			case LanguageConstants::PROMPT_YES_NO:
@@ -153,6 +186,14 @@ void SPELLcifHelper::generatePromptOptions( PyObject* args, SPELLpromptDefinitio
 				def.options.push_back("N: No");
 				def.expected.push_back("Y");
 				def.expected.push_back("N");
+				if (deflt == "Y" || deflt == ISTR(LanguageConstants::PROMPT_YES) )
+				{
+					def.defaultAnswer = "Y";
+				}
+				else if (deflt == "N" || deflt == ISTR(LanguageConstants::PROMPT_NO))
+				{
+					def.defaultAnswer = "N";
+				}
 				break;
 			}
 			case LanguageConstants::PROMPT_OK_CANCEL:
@@ -161,7 +202,21 @@ void SPELLcifHelper::generatePromptOptions( PyObject* args, SPELLpromptDefinitio
 				def.options.push_back("C: Cancel");
 				def.expected.push_back("O");
 				def.expected.push_back("C");
+				if (deflt == "O" || deflt == ISTR(LanguageConstants::PROMPT_OK) )
+				{
+					def.defaultAnswer = "O";
+				}
+				else if (deflt == "C" || deflt == ISTR(LanguageConstants::PROMPT_CANCEL))
+				{
+					def.defaultAnswer = "C";
+				}
 				break;
+			}
+			// For numeric or alphanumeric prompts
+			default:
+			{
+				def.defaultAnswer = deflt;
+		    	break;
 			}
     	}
     }
@@ -180,6 +235,12 @@ PyObject* SPELLcifHelper::getPythonResult( const std::string& result, const SPEL
 	if (result == PROMPT_CANCELLED || result == PROMPT_ERROR || result == PROMPT_TIMEOUT )
 	{
 		Py_RETURN_NONE;
+	}
+
+	// Headless procedure with prompt
+	if (result == PROMPT_NOCLIENT)
+	{
+		return SSTRPY(result);
 	}
 
     // Now translate the result to python type
@@ -298,20 +359,10 @@ std::string SPELLcifHelper::getResult( const std::string& result, const SPELLpro
         // If LIST of options defined
         if ((def.options.size()>0))
         {
-        	std::cerr << "Options defined (index " << result << ")" << std::endl;
-        	for(std::vector<std::string>::const_iterator it = def.options.begin(); it != def.options.end(); it++)
-        	{
-        		std::cerr << "  opt: " << *it << std::endl;
-        	}
-        	for(std::vector<std::string>::const_iterator it = def.expected.begin(); it != def.expected.end(); it++)
-        	{
-        		std::cerr << "  exp: " << *it << std::endl;
-        	}
         	int optionIndex = STRI(result);
         	// Conversion LIST|ALPHA
         	if ( (def.typecode & LanguageConstants::PROMPT_ALPHA)>0)
         	{
-            	std::cerr << "Mode LIST|ALPHA" << std::endl;
             	// If either way, the user has chosen to provide key:value pairs:
             	if (def.options[0].find(":") != std::string::npos)
             	{
@@ -344,13 +395,11 @@ std::string SPELLcifHelper::getResult( const std::string& result, const SPELLpro
         	// Conversion LIST|NUM
         	else if ( (def.typecode & LanguageConstants::PROMPT_NUM)>0)
         	{
-            	std::cerr << "Mode LIST|NUM" << std::endl;
         		promptResult = ISTR(STRI(result) + 1); // index correction
         	}
         	// LIST: return the key
         	else
         	{
-            	std::cerr << "Mode LIST" << std::endl;
             	// The result corresponds to the index of the key, not necessarily to the key value
             	// (numbering can be different)
 				promptResult = def.expected[optionIndex];
@@ -365,45 +414,66 @@ std::string SPELLcifHelper::getResult( const std::string& result, const SPELLpro
     return promptResult;
 }
 
+
 //=============================================================================
-// METHOD    : SPELLcifHelper::getPythonResult()
+// METHOD    : SPELLcifHelper::commandLinePrompt()
 //=============================================================================
-std::string SPELLcifHelper::commandLinePrompt( const SPELLpromptDefinition& def )
+void SPELLcifHelper::displayPrompt( const SPELLpromptDefinition& def )
+{
+	std::cout << def.message << std::endl;
+	if (def.options.size()>0)
+	{
+		unsigned int count = 0;
+		std::string gap = "    ";
+		std::cout << gap << "Options: " << std::endl;
+		SPELLpromptDefinition::Options::const_iterator it;
+		for( it = def.options.begin(); it != def.options.end(); it++)
+		{
+			std::string key = "";
+			std::vector<std::string> tokens = SPELLutils::tokenize( (*it), ":" );
+			key = tokens[0];
+			SPELLutils::trim(key);
+			std::cout << gap << "  " << (*it);
+			if ( count < (def.options.size()-1) ) std::cout << ",\n";
+			count++;
+		} //for
+		std::cout << std::endl;
+	} //if
+} //displayPrompt
+
+//=============================================================================
+// METHOD    : SPELLcifHelper::commandLinePrompt()
+//=============================================================================
+std::string SPELLcifHelper::commandLinePrompt( const SPELLpromptDefinition& def, bool useRaw )
 {
     std::string answer = "";
     bool keepTrying = true;
-	unsigned int count = 0;
     while(keepTrying)
     {
         answer= "";
-        std::cout << std::endl << def.message << std::endl;
-        if (def.options.size()>0)
-        {
-			std::cout << "    Options: ";
-			SPELLpromptDefinition::Options::const_iterator it;
-			count = 0;
-			for( it = def.options.begin(); it != def.options.end(); it++)
-			{
-				std::string key = "";
-				std::vector<std::string> tokens = SPELLutils::tokenize( (*it), ":" );
-				key = tokens[0];
-				SPELLutils::trim(key);
-				std::cout << (*it);
-				if (count<def.options.size()-1) std::cout << ", ";
-				count++;
-			}
-        }
-        std::cout << ">> ";
+        std::cout << std::endl;
 
+        displayPrompt( def );
+
+        std::cout << ">> "; // write cursor
+
+        // Reset the stream otherwise the failbit may still be set from previous 'while' iterations
+        std::cin.clear();
+
+        // Get the answer from standard input
         std::getline(std::cin,answer);
 
+        // Trim and check for errors (CTRL+C, CTRL+D, etc)
         SPELLutils::trim(answer);
         if ((std::cin.rdstate() & std::ifstream::failbit ) != 0 )
         {
         	return "";
         }
+
+        // Repeat on empty answers
         if (answer== "") continue;
 
+        // Check against options if defined
 		if (def.options.size()>0)
 		{
 			SPELLpromptDefinition::Options::const_iterator eit;
@@ -412,7 +482,10 @@ std::string SPELLcifHelper::commandLinePrompt( const SPELLpromptDefinition& def 
 			{
 				if (*eit == answer )
 				{
-					answer = ISTR(count);
+					if (useRaw)
+					{
+						answer = ISTR(count);
+					}
 					keepTrying = false;
 					break;
 				}
@@ -435,6 +508,59 @@ std::string SPELLcifHelper::commandLinePrompt( const SPELLpromptDefinition& def 
 		{
 			keepTrying = false;
 		}
-    }
+    } //while keep trying
     return answer;
 }
+
+
+//=============================================================================
+// METHOD    : SPELLcifHelper::getRawAnswer()
+//=============================================================================
+std::string SPELLcifHelper::getRawAnswer( std::string answer, const SPELLpromptDefinition& def )
+{
+	std::string rawAnswer = "";
+	bool answerNotFound = true;
+
+	SPELLutils::trim(answer);
+
+	if (answer != "")
+	{
+		if (def.options.size()>0)
+		{
+			// When there are a list of expexted values: boolean values or PROMPT_LIST.
+			SPELLpromptDefinition::Options::const_iterator eit;
+			int count = 0;
+			for( eit = def.expected.begin(); eit != def.expected.end(); eit++)
+			{
+				if (*eit == answer )
+				{
+					rawAnswer = ISTR(count);  //index of the introduced value.
+					answerNotFound = false;
+					break;
+				}
+				count++;
+			} //for
+
+			if (answerNotFound)  //when answer does not match one of the expected options.
+			{
+				std::cerr << "ERROR: Expected one of the following: " << std::endl;
+				count = 0;
+				for( eit = def.expected.begin(); eit != def.expected.end(); eit++)
+				{
+					std::cout << "   " << (*eit);
+					if (count<def.expected.size()-1) std::cout << ", ";
+					count++;
+				}
+				std::cout << std::endl;
+			} // if answer not Found
+
+		} //if def options
+		else {
+			// There is no options. So free text or number expected.
+			// Values are PROMPT_NUM, PROMPT_ALPHA or PROMPT_DATE when there are not PROMPT_LIST
+			rawAnswer = answer;
+		}
+	} //if ! empty answer
+
+	return rawAnswer;
+} //getRawAnswer

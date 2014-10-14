@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -51,7 +51,10 @@ package com.astra.ses.spell.gui.services;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IViewPart;
@@ -72,21 +75,27 @@ import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
 import com.astra.ses.spell.gui.core.model.notification.UserActionNotification;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.UnloadType;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.exceptions.NoSuchViewException;
-import com.astra.ses.spell.gui.extensions.ProcedureBridge;
+import com.astra.ses.spell.gui.extensions.GuiNotifications;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
+import com.astra.ses.spell.gui.interfaces.ProcedureViewCloseMode;
 import com.astra.ses.spell.gui.model.commands.CommandResult;
+import com.astra.ses.spell.gui.model.commands.EditDictionary;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.model.jobs.CloseProcedureJob;
 import com.astra.ses.spell.gui.model.jobs.KillProcedureJob;
 import com.astra.ses.spell.gui.model.jobs.ReleaseProcedureJob;
-import com.astra.ses.spell.gui.procs.exceptions.NoSuchProcedure;
-import com.astra.ses.spell.gui.procs.extensionpoints.IProcedureViewExtension;
+import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
+import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
+import com.astra.ses.spell.gui.procs.extensionpoints.IProcedureListener;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
+import com.astra.ses.spell.gui.procs.interfaces.IProcedureModelListener;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
+import com.astra.ses.spell.gui.views.MasterView;
 import com.astra.ses.spell.gui.views.ProcedureView;
 import com.astra.ses.spell.gui.views.TabbedView;
 
@@ -95,29 +104,20 @@ import com.astra.ses.spell.gui.views.TabbedView;
  *        including procedure views, control view and the navigation view.
  * @date 09/10/07
  ******************************************************************************/
-public class ViewManager extends BaseService implements IViewManager, IProcedureViewExtension, IPartListener2
+public class ViewManager extends BaseService implements IViewManager, 
+														IProcedureListener, 
+														IProcedureModelListener, 
+														IPartListener2, 
+														IPropertyChangeListener
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	public static final String ID = "com.astra.ses.spell.gui.ViewManager";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the list of registered views */
 	private Map<String, ViewPart> m_viewList;
 	/** Holds the list of registered procedure views */
-	private Map<String, ProcedureView> m_procViewList;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
+	private Map<String, IProcedureView> m_procViewList;
+	/** True if procedures should be automatically closed on finish */
+	private String m_autoClose;
 
 	/***************************************************************************
 	 * Constructor
@@ -131,16 +131,20 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 	@Override
 	public void setup()
 	{
+		IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 		Logger.debug("Setting up", Level.INIT, this);
 		m_viewList = new TreeMap<String, ViewPart>();
-		m_procViewList = new TreeMap<String, ProcedureView>();
-		ProcedureBridge.get().addProcedureListener(this);
+		m_procViewList = new TreeMap<String, IProcedureView>();
+		m_autoClose = cfg.getProperty(PropertyKey.AUTOMATIC_CLOSE);
+		GuiNotifications.get().addListener(this, IProcedureListener.class);
+		GuiNotifications.get().addListener(this, IProcedureModelListener.class);
+		cfg.addPropertyChangeListener(this);
 	}
 
 	@Override
 	public void cleanup()
 	{
-		ProcedureBridge.get().removeProcedureListener(this);
+		GuiNotifications.get().removeListener(this);
 	}
 
 	@Override
@@ -173,7 +177,7 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 	 * @param view
 	 *            View reference
 	 **************************************************************************/
-	private void registerProcView(String viewId, ProcedureView view)
+	private void registerProcView(String viewId, IProcedureView view)
 	{
 		Logger.debug("Registering proc view: " + viewId, Level.PROC, this);
 		m_procViewList.put(viewId, view);
@@ -215,12 +219,49 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 		return m_viewList.get(viewId);
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
-	public ProcedureView getProcView(String viewId) throws NoSuchViewException
+	public IProcedureView getProcedureView(String viewId) throws NoSuchViewException
 	{
 		if (!m_procViewList.containsKey(viewId))
 			throw new NoSuchViewException("Unknown view: " + viewId);
 		return m_procViewList.get(viewId);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public boolean containsProcedureView( String viewId )
+	{
+		return m_procViewList.containsKey(viewId);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void showProcedureView( String procId )
+	{
+		Logger.debug("Open procedure view: " + procId, Level.PROC, this);
+		try
+		{
+			if (m_procViewList.containsKey(procId))
+			{
+				IWorkbenchWindow wbw = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+				wbw.getActivePage().showView(ProcedureView.ID, procId, IWorkbenchPage.VIEW_ACTIVATE);
+			}
+			else
+			{
+				Logger.error("Could not show procedure view " + procId + ", not found", Level.PROC, this);
+			}
+		}
+		catch (PartInitException e)
+		{
+			Logger.error("Could not show procedure view " + procId + ": " + e.getLocalizedMessage(), Level.PROC, this);
+		}
 	}
 
 	/***************************************************************************
@@ -260,7 +301,7 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 			IViewReference ref = page.findViewReference(ProcedureView.ID, procId);
 			if (ref != null)
 			{
-				getProcView(procId).setCloseable(true);
+				getProcedureView(procId).setCloseable(true);
 				wbw.getActivePage().hideView(ref);
 				unregisterProcView(procId);
 			}
@@ -303,7 +344,8 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 		String instanceId = model.getProcId();
 		if (m_procViewList.containsKey(instanceId))
 		{
-			Shell shell = m_procViewList.get(instanceId).getSite().getShell();
+			ViewPart vpart = (ViewPart) m_procViewList.get(instanceId);
+			Shell shell = vpart.getSite().getShell();
 
 			switch (type)
 			{
@@ -316,6 +358,10 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 				        + "' has crashed. Please contact Software Engineering.");
 				// Do not close the view and leave it open for the user to see
 				return;
+			case CONTROLLED_OTHER_KILLED:
+				MessageDialog.openWarning(shell, "Procedure killed", "Procedure '" + instanceId
+				        + "' has been killed by another client");
+				break;
 			case CONTROLLED_KILLED:
 			case CONTROLLED_CLOSED:
 			case CONTROLLED_RELEASED:
@@ -339,7 +385,7 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 				// Nothing to do
 				break;
 			}
-			m_procViewList.get(instanceId).setCloseMode(ProcedureView.CloseMode.NONE);
+			m_procViewList.get(instanceId).setCloseMode(ProcedureViewCloseMode.NONE);
 			closeProcedureView(instanceId);
 		}
 	}
@@ -397,29 +443,49 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 		// Check wether the status is from a child of a shown proc
 		// If the status is a finished status, show the parent
 		ExecutorStatus st = data.getStatus();
+		IProcedureManager mgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
+		String parentId = null;
+		
+		// If the (child) procedure is visible, that is, locally loaded
+		if (mgr.isLocallyLoaded(instanceId))
+		{
+			IProcedure proc = mgr.getProcedure(instanceId);
+			// If there is parent proc, go back to it and show it
+			if (m_procViewList.containsKey(proc.getParent()))
+			{
+				parentId = proc.getParent();
+			}
+		}
+		
+		
 		switch (st)
 		{
 		case FINISHED:
-		case ERROR:
-		case ABORTED:
-			IProcedureManager mgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
-			// If the (child) procedure is visible, that is, locally loaded
-			if (mgr.isLocallyLoaded(instanceId))
+			// Auto close
+			if (!m_autoClose.equals("NO") && mgr.isLocallyLoaded(instanceId))
 			{
-				IProcedure proc = mgr.getProcedure(instanceId);
-				try
+				if (m_autoClose.equals("ALL"))
 				{
-					// If there is parent proc, go back to it and show it
-					if (m_procViewList.containsKey(proc.getParent()))
+					mgr.closeProcedure(instanceId, new NullProgressMonitor());
+				}
+				else // Children only
+				{
+					IProcedure procedure = mgr.getProcedure(instanceId);
+					String parent = procedure.getParent();
+					if (parent != null && !parent.trim().isEmpty())
 					{
-						IProcedure parentProc = mgr.getProcedure(proc.getParent());
-						openProcedureView(parentProc);
+						mgr.closeProcedure(instanceId, new NullProgressMonitor());
 					}
 				}
-				catch (NoSuchProcedure ex)
-				{
-				}
-				;
+			}
+			// Fall trhu
+		case ERROR:
+		case ABORTED:
+			// If the (child) procedure is visible, that is, locally loaded
+			if (parentId != null)
+			{
+				IProcedure parentProc = mgr.getProcedure(parentId);
+				openProcedureView(parentProc);
 			}
 		}
 	}
@@ -468,25 +534,26 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 	public void partActivated(IWorkbenchPartReference partRef)
 	{
 		IWorkbenchPart part = partRef.getPart(false);
-		if (part instanceof ProcedureView)
+		if (part instanceof IProcedureView)
 		{
-			ProcedureView view = (ProcedureView) part;
+			IProcedureView view = (IProcedureView) part;
 			view.updateDependentCommands();
 		}
+		CommandHelper.updateCommandEnabledState(EditDictionary.ID);
 	}
 
 	@Override
 	public void partClosed(IWorkbenchPartReference partRef)
 	{
 		IWorkbenchPart part = partRef.getPart(false);
-		if (part instanceof ProcedureView)
+		if (part instanceof IProcedureView)
 		{
-			ProcedureView view = (ProcedureView) part;
-			ProcedureView.CloseMode mode = view.getCloseMode();
-			CommandResult result = CommandResult.FAILED;
-			if (mode == ProcedureView.CloseMode.DETACH)
+			IProcedureView view = (IProcedureView) part;
+			ProcedureViewCloseMode mode = view.getCloseMode();
+			CommandResult result = CommandResult.SUCCESS;
+			if (mode == ProcedureViewCloseMode.DETACH)
 			{
-				ReleaseProcedureJob job = new ReleaseProcedureJob(view.getProcId());
+				ReleaseProcedureJob job = new ReleaseProcedureJob(view.getProcId(),false);
 				CommandHelper.executeInProgress(job, false, false);
 				if (job.result != CommandResult.SUCCESS)
 				{
@@ -494,7 +561,17 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 				}
 				result = job.result;
 			}
-			else if (mode == ProcedureView.CloseMode.KILL)
+			else if (mode == ProcedureViewCloseMode.BACKGROUND)
+			{
+				ReleaseProcedureJob job = new ReleaseProcedureJob(view.getProcId(),true);
+				CommandHelper.executeInProgress(job, false, false);
+				if (job.result != CommandResult.SUCCESS)
+				{
+					MessageDialog.openError(part.getSite().getShell(), "Detach error", job.message);
+				}
+				result = job.result;
+			}
+			else if (mode == ProcedureViewCloseMode.KILL)
 			{
 				KillProcedureJob job = new KillProcedureJob(view.getProcId());
 				CommandHelper.executeInProgress(job, false, false);
@@ -504,7 +581,7 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 				}
 				result = job.result;
 			}
-			else if (mode == ProcedureView.CloseMode.CLOSE)
+			else if (mode == ProcedureViewCloseMode.CLOSE)
 			{
 				CloseProcedureJob job = new CloseProcedureJob(view.getProcId());
 				CommandHelper.executeInProgress(job, false, false);
@@ -525,9 +602,9 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 	public void partOpened(IWorkbenchPartReference partRef)
 	{
 		IWorkbenchPart part = partRef.getPart(false);
-		if (part instanceof ProcedureView)
+		if (part instanceof IProcedureView)
 		{
-			ProcedureView view = (ProcedureView) part;
+			IProcedureView view = (IProcedureView) part;
 			Logger.debug("View " + view + " part open", Level.GUI, this);
 			registerProcView(view.getProcId(), view);
 			m_procViewList.get(view.getProcId()).notifyModelLoaded();
@@ -552,11 +629,27 @@ public class ViewManager extends BaseService implements IViewManager, IProcedure
 	@Override
 	public void partVisible(IWorkbenchPartReference partRef)
 	{
+		IWorkbenchPart part = partRef.getPart(false);
+		if (part instanceof MasterView)
+		{
+			IProcedureManager mgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
+			mgr.getOpenRemoteProcedures(true);
+		}
 	}
 
 	@Override
 	public void partInputChanged(IWorkbenchPartReference partRef)
 	{
 	}
+
+	@Override
+    public void propertyChange(PropertyChangeEvent event)
+    {
+		String property = event.getProperty();
+		if (property.equals(PropertyKey.AUTOMATIC_CLOSE.getPreferenceName()))
+		{
+			m_autoClose = (String) event.getNewValue();
+		}
+    }
 
 }

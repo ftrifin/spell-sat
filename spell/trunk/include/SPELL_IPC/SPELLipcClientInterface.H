@@ -5,7 +5,7 @@
 // DESCRIPTION: IPC - Interface for clients
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -125,6 +125,11 @@ public: //--------------------------------------------------------------------
 		int getKey() {
 			return m_clientKey;
 		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the server port
+		**////////////////////////////////////////////////////////////////////
+		int getServerPort() { return m_serverPort; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a message to the server.

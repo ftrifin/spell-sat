@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the display messages buffer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -182,7 +182,7 @@ void SPELLdisplayBuffer::flush()
 	{
 	    m_cif.completeMessage( m_message );
 
-	    std::string timeStr = m_cif.getTimestampUsec();
+	    std::string timeStr = SPELLutils::timestampUsec();
 
 	    m_message.set(MessageField::FIELD_TEXT,    m_text );
 	    std::string severity = (m_severity == "<PROMPT>") ? MessageValue::DATA_SEVERITY_INFO : m_severity;

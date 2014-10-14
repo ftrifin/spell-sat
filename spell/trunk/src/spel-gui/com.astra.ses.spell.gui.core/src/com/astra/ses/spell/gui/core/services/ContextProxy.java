@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,7 +48,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.services;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,12 +58,12 @@ import java.util.TreeMap;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
-import com.astra.ses.spell.gui.core.CoreExtensions;
-import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
+import com.astra.ses.spell.gui.core.CoreNotifications;
 import com.astra.ses.spell.gui.core.comm.messages.MessageException;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLlistenerLost;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessage;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageAttachExec;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageBackgroundExec;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageBreakpoint;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageClearBreakpoints;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageClientInfo;
@@ -73,15 +75,16 @@ import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDetachExec;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDisableUserAction;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDismissUserAction;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDisplay;
-import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDumpInterpreterInfo;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageEnableUserAction;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageError;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageExecConfigChanged;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageExecInfo;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageExecList;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageExecOperation;
-import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetDataContainer;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetCurrentTime;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetDictionary;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetExecConfig;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetExecutorDefaults;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetInputFile;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetInstance;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageKillExec;
@@ -98,10 +101,11 @@ import com.astra.ses.spell.gui.core.comm.messages.SPELLmessagePromptStart;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageRecoverExec;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageRemoveControl;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageResponse;
-import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageSaveState;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageSaveDictionary;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageSetExecConfig;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageSetExecutorDefaults;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageSetUserAction;
-import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageUpdateDataContainer;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageUpdateDictionary;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageViewNodeDepth;
 import com.astra.ses.spell.gui.core.exceptions.CommException;
 import com.astra.ses.spell.gui.core.exceptions.ContextError;
@@ -122,6 +126,7 @@ import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
 import com.astra.ses.spell.gui.core.model.server.ClientInfo;
 import com.astra.ses.spell.gui.core.model.server.ContextInfo;
 import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
+import com.astra.ses.spell.gui.core.model.server.ExecutorDefaults;
 import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.server.ProcedureRecoveryInfo;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
@@ -131,11 +136,11 @@ import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ClientOperation;
 import com.astra.ses.spell.gui.core.model.types.ContextStatus;
 import com.astra.ses.spell.gui.core.model.types.DataContainer;
-import com.astra.ses.spell.gui.core.model.types.ExecutorOperation;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.types.ExecutorCommand;
 
 /*******************************************************************************
  * @brief Provides access to the SPEL context services
@@ -143,31 +148,13 @@ import com.astra.ses.spell.gui.core.utils.Logger;
  ******************************************************************************/
 public class ContextProxy extends BaseProxy implements IContextProxy
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Service identifier */
 	public static final String	ID	         = "com.astra.ses.spell.gui.ContextProxy";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Currently used context */
 	private ContextInfo	       m_ctxInfo;
 	/** Timeout for opening processes */
 	private long	           m_openTimeout	= 0;
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -184,6 +171,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 	// SERVICE SETUP
 	// ##########################################################################
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void cleanup()
 	{
@@ -195,48 +185,27 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 	// CONTEXT SERVICES
 	// ##########################################################################
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#attach()
-	 */
+	 **************************************************************************/
 	@Override
 	public void attach(ContextInfo ctxInfo) throws Exception
 	{
-		if (isConnected())
-		{
-			detach();
-		}
+		// Disconnect if necessary
+		disconnect();
 		m_ctxInfo = ctxInfo;
 		getIPC().configure(ctxInfo);
 		connect();
 		if (m_ctxInfo != null)
 		{
 			Logger.info("Context is " + ctxInfo.getHost() + ":" + ctxInfo.getPort(), Level.COMM, this);
-			CoreExtensions.get().fireContextAttached(m_ctxInfo);
+			CoreNotifications.get().fireContextAttached(m_ctxInfo);
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#detach()
-	 */
-	@Override
-	public void detach() throws Exception
-	{
-		if (isConnected())
-		{
-			disconnect();
-			Logger.info("Context detached", Level.COMM, this);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#close()
-	 */
+	 **************************************************************************/
 	@Override
 	public void close()
 	{
@@ -244,7 +213,7 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		{
 			closeIt();
 			disconnect();
-			CoreExtensions.get().fireContextDetached();
+			CoreNotifications.get().fireContextDetached();
 			Logger.info("Context detached", Level.COMM, this);
 		}
 	}
@@ -258,12 +227,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		m_openTimeout = timeout;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getCurrentContext()
-	 */
+	 **************************************************************************/
 	@Override
 	public String getCurrentContext()
 	{
@@ -271,22 +237,18 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return m_ctxInfo.getName();
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#getClientKey()
-	 */
+	 **************************************************************************/
 	@Override
 	public String getClientKey()
 	{
 		return getIPC().getKey();
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#getInfo()
-	 */
+	 **************************************************************************/
 	@Override
 	public ContextInfo getInfo()
 	{
@@ -297,19 +259,43 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 	// CONTEXT OPERATIONS (EXTERNAL)
 	// ##########################################################################
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#openExecutor()
-	 */
+	 **************************************************************************/
 	@Override
-	public void openExecutor(String procedureId, String condition, Map<String, String> arguments) throws ContextError
+	public Date getCurrentTime()
+	{
+		Date date = null;
+		try
+		{
+			SPELLmessageGetCurrentTime msg = new SPELLmessageGetCurrentTime();
+			SPELLmessage response = performRequest(msg);
+			if (response != null && response instanceof SPELLmessageResponse)
+			{
+				String time = response.get(IMessageField.FIELD_DRIVER_TIME);
+				SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				date = fmt.parse(time); 
+			}
+		}
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+			throw new ContextError(ex.getLocalizedMessage());
+		}
+		return date;
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void openExecutor(String procedureId, String condition, Map<String, String> arguments, boolean background) throws ContextError
 	{
 		Logger.debug("Opening executor " + procedureId, Level.COMM, this);
 		try
 		{
 			// Build the request message
-			SPELLmessageOpenExec msg = new SPELLmessageOpenExec(procedureId);
+			SPELLmessageOpenExec msg = new SPELLmessageOpenExec(procedureId, background);
 			if (condition != null)
 			{
 				msg.setCondition(condition);
@@ -327,12 +313,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#recoverExecutor()
-	 */
+	 **************************************************************************/
 	@Override
 	public void recoverExecutor(ProcedureRecoveryInfo procedure) throws ContextError
 	{
@@ -350,13 +333,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getProcedureInstanceId
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public String getProcedureInstanceId(String procedureId)
 	{
@@ -380,12 +359,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return instanceId;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#closeExecutor()
-	 */
+	 **************************************************************************/
 	@Override
 	public boolean closeExecutor(String procedureId)
 	{
@@ -403,11 +379,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return false;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#killExecutor()
-	 */
+	 **************************************************************************/
 	@Override
 	public boolean killExecutor(String procedureId)
 	{
@@ -425,12 +399,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return false;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#attachToExecutor()
-	 */
+	 **************************************************************************/
 	@Override
 	public IExecutorInfo attachToExecutor(String procId, ClientMode mode)
 	{
@@ -453,20 +424,24 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return info;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#detachFromExecutor
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
-	public boolean detachFromExecutor(String procId)
+	public boolean detachFromExecutor(String procId, boolean background)
 	{
 		Logger.debug("Detaching from executor " + procId, Level.COMM, this);
 		try
 		{
-			SPELLmessage msg = new SPELLmessageDetachExec(procId);
+			SPELLmessage msg = null;
+			if (background)
+			{
+				msg = new SPELLmessageBackgroundExec(procId);
+			}
+			else
+			{
+				msg = new SPELLmessageDetachExec(procId);
+			}
 			SPELLmessage response = performRequest(msg);
 			if (response != null) { return true; }
 		}
@@ -477,12 +452,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return false;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#removeControl()
-	 */
+	 **************************************************************************/
 	@Override
 	public boolean removeControl(String procId)
 	{
@@ -500,13 +472,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return false;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getAvailableExecutors
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public ArrayList<String> getAvailableExecutors()
 	{
@@ -530,14 +498,11 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return executors;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getExecutorInfo()
-	 */
+	 **************************************************************************/
 	@Override
-	public IExecutorInfo getExecutorInfo(String procId)
+	public IExecutorInfo getExecutorInfo(String procId) throws Exception
 	{
 		IExecutorInfo info = null;
 		try
@@ -553,18 +518,23 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 		catch (Exception ex)
 		{
+			ex.printStackTrace();
 			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
 			info = null;
+			throw ex;
 		}
 		return info;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void updateDataContainer(String procId, DataContainer container, boolean mergeNew, IProgressMonitor monitor ) throws Exception
 	{
 		Logger.debug("Updating " + container.getName() + " data container in " + procId, Level.PROC, this);
 		List<String> modifiedVars = new ArrayList<String>();
-		for(TypedVariable var : container.getVariables())
+		for(DataVariable var : container.getVariables())
 		{
 			if (var.isModified()) modifiedVars.add(var.getName());
 		}
@@ -578,7 +548,7 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			try
 			{
 				monitor.subTask("Updating variable '" + varName + "'");
-				SPELLmessageUpdateDataContainer msg = new SPELLmessageUpdateDataContainer(procId, container, varName, mergeNew);
+				SPELLmessageUpdateDictionary msg = new SPELLmessageUpdateDictionary(procId, container, varName, mergeNew);
 				performRequest(msg);
 				monitor.worked(1);
 				container.getVariable(varName).save();
@@ -597,8 +567,31 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
-	public DataContainer getDataContainer(String procId, String name, IProgressMonitor monitor ) 
+	public void saveDataContainer(String procId, String name, String path ) throws ContextError
+	{
+		Logger.debug("Requesting save " + name + " data container in " + procId, Level.PROC, this);
+		SPELLmessage msg = new SPELLmessageSaveDictionary(procId, name, path);
+		// Perform the request
+		try
+		{
+			performRequest(msg);
+		}
+		catch(Exception ex)
+		{
+			Logger.error(ex.getLocalizedMessage(), Level.PROC, this);
+			throw new ContextError(ex.getLocalizedMessage());
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public DataContainer getDataContainer(String procId, String name, IProgressMonitor monitor ) throws ContextError
 	{
 		DataContainer container = new DataContainer(procId, name);
 		Logger.debug("Requesting " + name + " data container in " + procId, Level.PROC, this);
@@ -620,12 +613,12 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			// If chunkNo == 0, it is the initial request
 			if (chunkNo == 0)
 			{
-				msg = new SPELLmessageGetDataContainer(procId, name);
+				msg = new SPELLmessageGetDictionary(procId, name);
 			}
 			// Subsequent requests
 			else
 			{
-				msg = new SPELLmessageGetDataContainer(procId, name, chunkNo);
+				msg = new SPELLmessageGetDictionary(procId, name, chunkNo);
 			}
 			// Perform the request
 			try
@@ -640,11 +633,17 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 				// Process the response and obtain the transfer data
 				if (response != null)
 				{
-					chunk = SPELLmessageGetDataContainer.getDataChunk(response);
+					chunk = SPELLmessageGetDictionary.getDataChunk(response);
 				}
 				else
 				{
 					return container;
+				}
+				
+				// Check if data container exists in the this python code frame
+				if (chunk.getData().equalsIgnoreCase("None") )
+				{
+					throw new Exception(name + " data container in " + procId + " is not available");
 				}
 	
 				// If data is not chunked
@@ -694,16 +693,19 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			catch(Exception ex)
 			{
 				Logger.error(ex.getLocalizedMessage(), Level.PROC, this);
-				return container;
+				throw new ContextError(ex.getLocalizedMessage());
 			}
 		}
 		if (!valueList.trim().isEmpty())
 		{
-			SPELLmessageGetDataContainer.updateContainer( valueList, container, monitor );
+			SPELLmessageGetDictionary.updateContainer( valueList, container, monitor );
 		}
 		return container;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public DataContainer getInputFile( String path, IProgressMonitor monitor ) 
 	{
@@ -819,83 +821,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return container;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#
-	 * dumpInterpreterInformation()
-	 */
-	@Override
-	public void dumpInterpreterInformation(String instanceId)
-	{
-		try
-		{
-			Logger.debug("Dump interpreter information: " + instanceId, Level.COMM, this);
-			SPELLmessage msg = new SPELLmessageDumpInterpreterInfo(instanceId);
-			performRequest(msg);
-		}
-		catch (Exception ex)
-		{
-			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#
-	 * saveInterpreterInformation()
-	 */
-	@Override
-	public void saveInterpreterInformation(String instanceId)
-	{
-		try
-		{
-			Logger.debug("Save interpreter information: " + instanceId, Level.COMM, this);
-			SPELLmessage msg = new SPELLmessageSaveState(instanceId);
-			performRequest(msg);
-		}
-		catch (Exception ex)
-		{
-			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#updateExecutorInfo
-	 * ()
-	 */
-	@Override
-	public void updateExecutorInfo(String procId, IExecutorInfo info) throws Exception
-	{
-		try
-		{
-			Logger.debug("Retrieving executor information: " + procId, Level.COMM, this);
-			SPELLmessage msg = new SPELLmessageExecInfo(procId);
-			SPELLmessage response = performRequest(msg);
-			if (response != null)
-			{
-				SPELLmessageExecInfo.fillExecInfo(info, response);
-			}
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
-			info = null;
-			throw ex;
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getClientInfo()
-	 */
+	 **************************************************************************/
 	@Override
 	public ClientInfo getClientInfo(String clientKey)
 	{
@@ -921,22 +849,18 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return info;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getAvailableProcedures
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
-	public Map<String, String> getAvailableProcedures()
+	public Map<String, String> getAvailableProcedures( boolean refresh )
 	{
 		Map<String, String> procs = new HashMap<String, String>();
 		if (isConnected())
 		{
 			try
 			{
-				SPELLmessage msg = new SPELLmessageProcList();
+				SPELLmessage msg = new SPELLmessageProcList(refresh);
 				SPELLmessage response = performRequest(msg);
 
 				if (response != null)
@@ -958,12 +882,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return procs;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getProcedureCode()
-	 */
+	 **************************************************************************/
 	@Override
 	public ArrayList<String> getProcedureCode(String procedureId, IProgressMonitor monitor)
 	{
@@ -1051,13 +972,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return code;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#getProcedureProperties
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public TreeMap<ProcProperties, String> getProcedureProperties(String procedureId)
 	{
@@ -1080,11 +997,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return properties;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#command()
-	 */
+	 **************************************************************************/
 	@Override
 	public void command(ExecutorCommand cmd, String[] args)
 	{
@@ -1119,12 +1034,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		msg.fillCommandData(cmd, args);
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#
-	 * setExecutorConfiguration()
-	 */
+	 **************************************************************************/
 	@Override
 	public void setExecutorConfiguration(String procId, ExecutorConfig config)
 	{
@@ -1136,6 +1048,15 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 				req.set(key, config.getConfigMap().get(key));
 			}
 			SPELLmessage response = performRequest(req);
+			
+			Logger.debug("Executor " + procId + " SET configuration: ", Level.COMM, this);
+			Logger.debug("Execution Delay   : " + config.getExecDelay(), Level.COMM, this);
+			Logger.debug("Prompt Warn Delay : " + config.getPromptWarningDelay(), Level.COMM, this);
+			Logger.debug("Browsable lib     : " + config.getBrowsableLib(), Level.COMM, this);
+			Logger.debug("By Step           : " + config.getStepByStep(), Level.COMM, this);
+			Logger.debug("Force Tc Confirm  : " + config.getTcConfirmation(), Level.COMM, this);
+			Logger.debug("Run Into          : " + config.getRunInto(), Level.COMM, this);
+			
 			if (response == null || response instanceof SPELLmessageError)
 			{
 				Logger.error("Unable to set executor configuration", Level.PROC, this);
@@ -1148,13 +1069,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#updateExecutorConfig
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public void updateExecutorConfig(String procId, ExecutorConfig config) throws Exception
 	{
@@ -1165,13 +1082,15 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			SPELLmessage response = performRequest(msg);
 			if (response != null)
 			{
-				SPELLmessageGetExecConfig.fillExecConfig(config, response);
-				Logger.debug("Executor " + procId + " configuration: ", Level.COMM, this);
-				Logger.debug("    exec delay: " + config.getExecDelay(), Level.COMM, this);
-				Logger.debug("    blib      : " + config.getBrowsableLib(), Level.COMM, this);
-				Logger.debug("    by step   : " + config.getStepByStep(), Level.COMM, this);
-				Logger.debug("    tc confirm: " + config.getTcConfirmation(), Level.COMM, this);
-				Logger.debug("    run into  : " + config.getRunInto(), Level.COMM, this);
+				SPELLmessageGetExecConfig.fillExecConfig(config, response); // process received fields
+				Logger.debug("Executor " + procId + " UPDATE configuration: ", Level.COMM, this);
+				Logger.debug("Execution Delay   : " + config.getExecDelay(), Level.COMM, this);
+				Logger.debug("Prompt Warn Delay : " + config.getPromptWarningDelay(), Level.COMM, this);
+				Logger.debug("Browsable lib     : " + config.getBrowsableLib(), Level.COMM, this);
+				Logger.debug("By Step           : " + config.getStepByStep(), Level.COMM, this);
+				Logger.debug("Force Tc Confirm  : " + config.getTcConfirmation(), Level.COMM, this);
+				Logger.debug("Run Into          : " + config.getRunInto(), Level.COMM, this);
+				
 			}
 		}
 		catch (Exception ex)
@@ -1183,12 +1102,93 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#toggleBreakpoint()
-	 */
+	 **************************************************************************/
+	@Override
+	public void getExecutorDefaults(ExecutorDefaults defaults) throws Exception
+	{
+		SPELLmessage msg;
+		SPELLmessage response;
+		
+		try
+		{
+			Logger.debug("Retrieving executor defaults for Context: " + getCurrentContext(), Level.COMM, this);
+			msg = new SPELLmessageGetExecutorDefaults( getCurrentContext() ); //prepare message
+			response = performRequest(msg); //send message
+			
+			if ( response != null 
+				 && IMessageId.RSP_GET_CTX_EXEC_DFLT.equals(response.getId()) )
+			{
+				// Process received fields
+				SPELLmessageGetExecutorDefaults.fillDefaults(defaults, response);
+				Logger.debug( "Response message: " + response.getId() +"\nParams: " + defaults.getConfigMap().toString(), Level.COMM, this);
+			} //if response !=null and RSP_GET_CTX_EXEC_DFLT
+		} //try
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
+			defaults = null;
+			throw ex;
+		}  //catch
+	} // getExecutorDefaults	
+	
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void setExecutorDefaults(Map<String, String> defaults)
+	{
+		SPELLmessage msg;
+		SPELLmessage response = null;
+		
+		try
+		{
+			Logger.debug("Setting executor defaults for Context: " + getCurrentContext(), Level.COMM, this);
+
+			// When user has updated some values
+			if( !defaults.isEmpty() ) {
+				// Prepare message
+				msg = new SPELLmessageSetExecutorDefaults( getCurrentContext() );
+				//Add fields to message from executor defaults params
+				for (String key : defaults.keySet())
+				{
+					msg.set(key, defaults.get(key));
+				} //for
+				Logger.debug( "Parameters to be sent to the server: " + defaults.toString() , Level.COMM, this);
+				
+				//Send message
+				response = performRequest(msg);
+				
+				//Log response			
+				if ( response != null 
+					 && IMessageId.RSP_SET_CTX_EXEC_DFLT.equals(response.getId()) )
+				{
+					Logger.debug( "Values updated on server", Level.COMM, this);
+				} //if response !=null and RSP_GET_CTX_EXEC_DFLT
+				else
+				{
+					Logger.error( "Not possible to update defaults on server (" + response.getId() + ")", Level.COMM, this);
+				}
+			} //if defaults is not empty
+			else
+			{
+				Logger.debug("No default fields to be updated", Level.COMM, this);
+			} // else no fields
+		} //try
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
+			defaults = null;
+		}  //catch
+	} // setExecutorDefaults	
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void toggleBreakpoint(String procId, String codeId, int lineNo, BreakpointType type) throws Exception
 	{
@@ -1197,12 +1197,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		performRequest(msg);
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#clearBreakpoints()
-	 */
+	 **************************************************************************/
 	@Override
 	public void clearBreakpoints(String procId) throws Exception
 	{
@@ -1211,12 +1208,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		performRequest(msg);
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#viewNodeAtDepth()
-	 */
+	 **************************************************************************/
 	@Override
 	public void viewNodeAtDepth(String procId, int depth)
 	{
@@ -1225,11 +1219,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		getIPC().sendMessage(cmd);
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#connect()
-	 */
+	 **************************************************************************/
 	@Override
 	public void connect() throws Exception
 	{
@@ -1239,11 +1231,7 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			// Get password from listener proxy if any
 			IServerProxy lproxy = (IServerProxy) ServiceManager.get(IServerProxy.class);
 			ServerInfo sinfo = lproxy.getCurrentServer();
-			if (sinfo.getTunnelUser() != null)
-			{
-				m_ctxInfo.setTunnelUser(sinfo.getTunnelUser());
-				m_ctxInfo.setTunnelPassword(sinfo.getTunnelPassword());
-			}
+			m_ctxInfo.setAuthentication(sinfo.getAuthentication());
 			performConnect(m_ctxInfo);
 		}
 		catch (Exception e)
@@ -1257,26 +1245,21 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#disconnect()
-	 */
+	 **************************************************************************/
 	@Override
 	public void disconnect()
 	{
 		if (!isConnected()) { return; }
 		try
 		{
+			m_ctxInfo = null;
 			performDisconnect();
 		}
 		catch (CommException e)
 		{
 			return;
-		}
-		finally
-		{
-			m_ctxInfo = null;
 		}
 		// Create the local peer and obtain the SPELL peer
 		Logger.info("Connection closed", Level.COMM, this);
@@ -1298,12 +1281,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#connectionFailed()
-	 */
+	 **************************************************************************/
 	@Override
 	public void connectionFailed(ErrorData data)
 	{
@@ -1312,33 +1292,38 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		m_ctxInfo = null;
 		Logger.error("Fire context error", Level.PROC, this);
 		forceDisconnect();
-		CoreExtensions.get().fireContextError(data);
+		CoreNotifications.get().fireContextError(data);
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void connectionLost(ErrorData data)
 	{
-		Logger.error("Context proxy connection lost: " + data.getMessage(), Level.PROC, this);
-		m_ctxInfo = null;
-		forceDisconnect();
-		CoreExtensions.get().fireContextError(data);
+		if (m_ctxInfo != null)
+		{
+			Logger.error("Context proxy connection lost: " + data.getMessage(), Level.PROC, this);
+			m_ctxInfo = null;
+			forceDisconnect();
+			CoreNotifications.get().fireContextError(data);
+		}
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void connectionClosed()
 	{
 		Logger.info("Context proxy connection closed", Level.PROC, this);
 		m_ctxInfo = null;
-		CoreExtensions.get().fireContextDetached();
+		CoreNotifications.get().fireContextDetached();
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#listenerConnectionLost
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public boolean listenerConnectionLost(SPELLlistenerLost error)
 	{
@@ -1371,15 +1356,15 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		
 		if (data instanceof ItemNotification)
 		{
-			CoreExtensions.get().fireProcedureItem((ItemNotification) data);
+			CoreNotifications.get().fireProcedureItem((ItemNotification) data);
 		}
 		else if (data instanceof StatusNotification)
 		{
-			CoreExtensions.get().fireProcedureStatus((StatusNotification) data);
+			CoreNotifications.get().fireProcedureStatus((StatusNotification) data);
 		}
 		else if (data instanceof StackNotification)
 		{
-			CoreExtensions.get().fireProcedureStack((StackNotification) data);
+			CoreNotifications.get().fireProcedureStack((StackNotification) data);
 		}
 		else
 		{
@@ -1395,46 +1380,45 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 	protected void processExecutorOperationMessage(SPELLmessage msg)
 	{
 		SPELLmessageExecOperation op = (SPELLmessageExecOperation) msg;
-		if (op.getOperation() == ExecutorOperation.ATTACH)
+		
+		switch(op.getOperation())
 		{
+		case ATTACH:
 			ClientMode mode = op.getClientMode();
-			if (mode == ClientMode.CONTROLLING)
+			if (mode == ClientMode.CONTROL)
 			{
-				CoreExtensions.get().fireProcedureControlled(op.getProcId(), op.getClientKey());
+				CoreNotifications.get().fireProcedureControlled(op.getProcId(), op.getClientKey());
 			}
-			else if (mode == ClientMode.MONITORING)
+			else if (mode == ClientMode.MONITOR)
 			{
-				CoreExtensions.get().fireProcedureMonitored(op.getProcId(), op.getClientKey());
+				CoreNotifications.get().fireProcedureMonitored(op.getProcId(), op.getClientKey());
 			}
-		}
-		else if (op.getOperation() == ExecutorOperation.CLOSE)
-		{
-			CoreExtensions.get().fireProcedureClosed(op.getProcId(), op.getClientKey());
-		}
-		else if (op.getOperation() == ExecutorOperation.DETACH)
-		{
-			CoreExtensions.get().fireProcedureReleased(op.getProcId(), op.getClientKey());
-		}
-		else if (op.getOperation() == ExecutorOperation.KILL)
-		{
-			CoreExtensions.get().fireProcedureKilled(op.getProcId(), op.getClientKey());
-		}
-		else if (op.getOperation() == ExecutorOperation.CRASH)
-		{
-			CoreExtensions.get().fireProcedureCrashed(op.getProcId(), op.getClientKey());
-		}
-		else if (op.getOperation() == ExecutorOperation.OPEN)
-		{
-			CoreExtensions.get().fireProcedureOpen(op.getProcId(), op.getClientKey());
-		}
-		else if (op.getOperation() == ExecutorOperation.STATUS)
-		{
-			CoreExtensions.get().fireProcedureStatus(op.getProcId(), op.getProcStatus(), op.getClientKey());
-		}
-		else
-		{
+			break;
+		case CLOSE:
+			CoreNotifications.get().fireProcedureClosed(op.getProcId(), op.getClientKey());
+			break;
+		case CRASH:
+			CoreNotifications.get().fireProcedureCrashed(op.getProcId(), op.getClientKey());
+			break;
+		case DETACH:
+			CoreNotifications.get().fireProcedureReleased(op.getProcId(), op.getClientKey());
+			break;
+		case KILL:
+			CoreNotifications.get().fireProcedureKilled(op.getProcId(), op.getClientKey());
+			break;
+		case OPEN:
+			CoreNotifications.get().fireProcedureOpen(op.getProcId(), op.getClientKey());
+			break;
+		case SUMMARY:
+			CoreNotifications.get().fireProcedureSummary(op.getProcId(), op.getSummary(), op.getClientKey());
+			break;
+		case STATUS:
+			CoreNotifications.get().fireProcedureStatus(op.getProcId(), op.getStatus(), op.getClientKey());
+			break;
+		case UNKNOWN:
 			Logger.error("Unknown executor operation '" + op.getOperation() + "' for " + op.getProcId(), Level.COMM,
 			        this);
+			break;
 		}
 	}
 
@@ -1448,15 +1432,15 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		SPELLmessageCtxOperation ctxOp = (SPELLmessageCtxOperation) msg;
 		if (ctxOp.getStatus() == ContextStatus.RUNNING)
 		{
-			CoreExtensions.get().fireContextStarted(ctxOp.getContextInfo());
+			CoreNotifications.get().fireContextStarted(ctxOp.getContextInfo());
 		}
 		else if (ctxOp.getStatus() == ContextStatus.AVAILABLE)
 		{
-			CoreExtensions.get().fireContextStopped(ctxOp.getContextInfo());
+			CoreNotifications.get().fireContextStopped(ctxOp.getContextInfo());
 		}
 		else if (ctxOp.getStatus() == ContextStatus.ERROR)
 		{
-			CoreExtensions.get().fireContextError(ctxOp.getErrorData());
+			CoreNotifications.get().fireContextError(ctxOp.getErrorData());
 		}
 		else
 		{
@@ -1464,6 +1448,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		}
 	}
 	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void answerPrompt( InputData promptData )
 	{
@@ -1491,15 +1478,18 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		if (promptData.isCancelled())
 		{
 			Logger.debug("Procedure " + promptData.getProcId() + " cancelled prompt", Level.COMM, this);
-			CoreExtensions.get().fireCancelPrompt(promptData);
+			CoreNotifications.get().fireCancelPrompt(promptData);
 		}
 		else
 		{
 			Logger.debug("Obtained value: " + promptData.getReturnValue(), Level.COMM, this);
-			CoreExtensions.get().fireFinishPrompt(promptData);
+			CoreNotifications.get().fireFinishPrompt(promptData);
 		}
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	protected void sendAcknowledge( SPELLmessage msg )
 	{
 		//System.err.println("ACK " + msg.dataStr());
@@ -1527,9 +1517,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		sendMessage(ack);
 	}
 	
-	/* (non-Javadoc)
-     * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#processIncomingMessage(com.astra.ses.spell.gui.core.comm.messages.SPELLmessage)
-     */
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
     @Override
     public boolean processIncomingMessage(SPELLmessage msg)
     {
@@ -1540,13 +1530,13 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		else if (msg instanceof SPELLmessageDisplay)
 		{
 			SPELLmessageDisplay display = (SPELLmessageDisplay) msg;
-			CoreExtensions.get().fireProcedureDisplay(display.getData());
+			CoreNotifications.get().fireProcedureDisplay(display.getData());
 		}
 		else if (msg instanceof SPELLmessagePrompt)
 		{
 			SPELLmessagePrompt prompt = (SPELLmessagePrompt) msg;
 			InputData promptData = prompt.getData();
-			CoreExtensions.get().firePrompt(promptData);
+			CoreNotifications.get().firePrompt(promptData);
 		}
 		else if (msg instanceof SPELLmessageNotify)
 		{
@@ -1558,25 +1548,25 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			boolean notify = listenerConnectionLost((SPELLlistenerLost) msg);
 			if (notify)
 			{
-				CoreExtensions.get().fireListenerError(((SPELLlistenerLost) msg).getData());
+				CoreNotifications.get().fireListenerError(((SPELLlistenerLost) msg).getData());
 			}
 		}
 		else if (msg instanceof SPELLmessageError)
 		{
 			SPELLmessageError error = (SPELLmessageError) msg;
-			CoreExtensions.get().fireProcedureError(error.getData());
+			CoreNotifications.get().fireProcedureError(error.getData());
 		}
 		else if (msg instanceof SPELLmessagePromptStart)
 		{
 			SPELLmessagePromptStart prompt = (SPELLmessagePromptStart) msg;
 			InputData promptData = prompt.getData();
-			CoreExtensions.get().firePrompt(promptData);
+			CoreNotifications.get().firePrompt(promptData);
 		}
 		else if (msg instanceof SPELLmessagePromptEnd)
 		{
 			SPELLmessagePromptEnd prompt = (SPELLmessagePromptEnd) msg;
 			InputData promptData = prompt.getData();
-			CoreExtensions.get().fireCancelPrompt(promptData);
+			CoreNotifications.get().fireFinishPrompt(promptData);
 		}
 		else if (msg instanceof SPELLmessageExecOperation)
 		{
@@ -1591,11 +1581,11 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 			SPELLmessageClientOperation op = (SPELLmessageClientOperation) msg;
 			if (op.getOperation() == ClientOperation.LOGIN)
 			{
-				CoreExtensions.get().fireClientConnected(op.getHost(), op.getClientKey());
+				CoreNotifications.get().fireClientConnected(op.getHost(), op.getClientKey());
 			}
 			else if (op.getOperation() == ClientOperation.LOGOUT)
 			{
-				CoreExtensions.get().fireClientDisconnected(op.getHost(), op.getClientKey());
+				CoreNotifications.get().fireClientDisconnected(op.getHost(), op.getClientKey());
 			}
 			else
 			{
@@ -1606,33 +1596,32 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		else if (msg instanceof SPELLmessageSetUserAction)
 		{
 			SPELLmessageSetUserAction dmsg = (SPELLmessageSetUserAction) msg;
-			CoreExtensions.get().fireProcedureUserAction(dmsg.getData());
+			CoreNotifications.get().fireProcedureUserAction(dmsg.getData());
 		}
 		else if (msg instanceof SPELLmessageEnableUserAction)
 		{
 			SPELLmessageEnableUserAction dmsg = (SPELLmessageEnableUserAction) msg;
-			CoreExtensions.get().fireProcedureUserAction(dmsg.getData());
+			CoreNotifications.get().fireProcedureUserAction(dmsg.getData());
 		}
 		else if (msg instanceof SPELLmessageDisableUserAction)
 		{
 			SPELLmessageDisableUserAction dmsg = (SPELLmessageDisableUserAction) msg;
-			CoreExtensions.get().fireProcedureUserAction(dmsg.getData());
+			CoreNotifications.get().fireProcedureUserAction(dmsg.getData());
 		}
 		else if (msg instanceof SPELLmessageDismissUserAction)
 		{
 			SPELLmessageDismissUserAction dmsg = (SPELLmessageDismissUserAction) msg;
-			CoreExtensions.get().fireProcedureUserAction(dmsg.getData());
+			CoreNotifications.get().fireProcedureUserAction(dmsg.getData());
 		}
 		else if (msg instanceof SPELLmessageExecConfigChanged)
 		{
 			SPELLmessageExecConfigChanged ecfg = (SPELLmessageExecConfigChanged) msg;
 			ExecutorConfig config = new ExecutorConfig(ecfg.getProcId());
 			ecfg.fillExecConfig(config);
-			CoreExtensions.get().fireProcedureConfigured(config);
+			CoreNotifications.get().fireProcedureConfigured(config);
 		}
 		else if (msg instanceof SPELLmessageOneway)
 		{
-			Logger.error("Unknown oneway message: " + msg.dataStr(), Level.COMM, this);
 			return false;
 		}
 		else
@@ -1643,9 +1632,9 @@ public class ContextProxy extends BaseProxy implements IContextProxy
 		return true;
     }
 
-	/* (non-Javadoc)
-     * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#processIncomingRequest(com.astra.ses.spell.gui.core.comm.messages.SPELLmessage)
-     */
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
     @Override
     public SPELLmessageResponse processIncomingRequest(SPELLmessage msg)
     {

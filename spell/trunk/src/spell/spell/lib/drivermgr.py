@@ -5,7 +5,7 @@
 ## DESCRIPTION: Driver manager
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -55,8 +55,8 @@ import traceback,sys
 GENERIC_INTERFACES = [ 'DBMGR' ]
 INTERNAL_INTERFACES = [ 'CONFIG' ]
 HOME_TAG = "$SPELL_HOME$"
-IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'EV':'ev',
-                 'RSC':'resources', 'TASK':'task',
+IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'EV':'ev', 'MEM': 'memory',
+                 'RSC':'resources', 'TASK':'task', 'RNG':'ranging',
                  'USER':'usr', 'CONFIG':'config', 'TIME':'gcstime' }
 
 __all__ = [ 'DriverManager' ]
@@ -95,7 +95,7 @@ class DriverManagerClass(object):
         return __instance__
     
     #===========================================================================
-    def setup(self, contextName):
+    def setup(self, contextName, specificInterfaces=None):
 
         # Get the context information
         self.contextName = contextName
@@ -120,14 +120,15 @@ class DriverManagerClass(object):
         self.driverPackage = None
         
         # Get interfaces defined by the driver
-        for iif in INTERNAL_INTERFACES:
-            self.interfaces.append(iif)
-        driverInterfaces = self.driverConfig.getInterfaces()
-        
-        if len(driverInterfaces)>0:
-            driverInterfaces = driverInterfaces.split(",")
-            for iif in driverInterfaces:
-                self.interfaces.append(iif)
+        self.interfaces.extend(INTERNAL_INTERFACES)
+
+        if specificInterfaces is not None:
+            driverInterfaces = specificInterfaces
+        else:
+            driverInterfaces = self.driverConfig.getInterfaces()
+
+        if len(self.interfaces) > 0:
+            self.interfaces.extend(driverInterfaces.split(","))
 
         # Get extra libraries required by the driver
         libraries = self.driverConfig.getLibraries()
@@ -240,6 +241,14 @@ class DriverManagerClass(object):
         for ifc in self.interfaces:
             LOG("Initializing " + ifc)
             REGISTRY[ifc].setup(self.contextConfig,self.driverConfig)
+
+    #==========================================================================
+    def onCommand(self, commandId):
+        for ifc in self.interfaces:
+            obj = REGISTRY[ifc] 
+            if 'onCommand' in dir(obj):
+                obj.onCommand(commandId)
+        return
 
 ################################################################################
 DriverManager = DriverManagerClass

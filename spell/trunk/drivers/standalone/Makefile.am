@@ -5,7 +5,7 @@
 ## DESCRIPTION: Automake rules
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2010 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -25,21 +25,24 @@
 ###################################################################################
 
 DRIVER=standalone
-DRIVER_SRC=src
-DRIVER_CFG=config
+DRIVER_SRC=${top_srcdir}/drivers/${DRIVER}/src
+DRIVER_CFG=${top_srcdir}/drivers/${DRIVER}/config
+DRIVER_BUILD=${top_builddir}/drivers/${DRIVER}/build
 
 all-local:
-	if [[  -d ${DRIVER_SRC} ]] ;\
-	then \
-		rm -f ${DRIVER_SRC}/build.date ;\
-	fi  
-	cp -r ${top_srcdir}/drivers/${DRIVER}/${DRIVER_SRC} . > /dev/null ;\
-	${top_srcdir}/py-compiledir ${DRIVER_SRC}
+	if [[ -f ${DRIVER_BUILD} ]] ;\
+        then \
+                rm -rf ${DRIVER_BUILD} ;\
+        fi; \
+    mkdir -p ${DRIVER_BUILD}
+	cp -rap ${DRIVER_SRC}/* ${DRIVER_BUILD}/.
+	find ${DRIVER_BUILD} -name ".svn" | xargs rm -rf  
 
 clean-local:
-	find ${DRIVER_SRC} -name "*.pyc" | xargs rm -f
-	find ${DRIVER_SRC} -name "*.pyo" | xargs rm -f
-	rm -f ${DRIVER_SRC}/build.date
+	if [[ -f ${DRIVER_BUILD} ]] ;\
+        then \
+                rm -rf ${DRIVER_BUILD} ;\
+        fi
 
 install-exec-hook:
 	if [[ ! -d ${exec_prefix}/drivers ]] ;\
@@ -47,9 +50,8 @@ install-exec-hook:
                 mkdir ${exec_prefix}/drivers ;\
         fi
 	rm -rf ${exec_prefix}/drivers/${DRIVER}
-	cp -r ${DRIVER_SRC} ${exec_prefix}/drivers/${DRIVER}
-	find ${exec_prefix}/drivers/${DRIVER} -name ".svn" | xargs rm -rf
-	find ${exec_prefix}/drivers/${DRIVER} -name ".py" | xargs rm -f
+	mkdir -p ${exec_prefix}/drivers/${DRIVER}
+	cp -rap ${DRIVER_BUILD}/* ${exec_prefix}/drivers/${DRIVER}/.
 	mkdir -p ${exec_prefix}/config/spell
-	cp -f ${top_srcdir}/drivers/${DRIVER}/${DRIVER_CFG}/driver_${DRIVER}.xml ${exec_prefix}/config/spell/.
+	cp -f ${DRIVER_CFG}/driver_${DRIVER}.xml ${exec_prefix}/config/spell/.
 

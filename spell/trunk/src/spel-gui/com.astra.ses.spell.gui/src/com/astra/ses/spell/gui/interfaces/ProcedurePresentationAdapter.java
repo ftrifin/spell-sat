@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -68,6 +68,13 @@ public abstract class ProcedurePresentationAdapter implements
 	};
 
 	/**************************************************************************
+	 * Dispose the presentation resources
+	 *************************************************************************/
+	public void dispose() 
+	{
+	}
+
+	/**************************************************************************
 	 * Increase or decrease the presentation zoom
 	 *************************************************************************/
 	public void zoom(boolean zoomIn)
@@ -88,6 +95,20 @@ public abstract class ProcedurePresentationAdapter implements
 	{
 	};
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void showCurrentLine()
+	{
+	};
+
+	/**************************************************************************
+	 * Enable or disable the autoscroll
+	 *************************************************************************/
+	public void showLine( int lineNo )
+	{
+	};
+	
 	/**************************************************************************
 	 * Adapt the presentation to the given class
 	 *************************************************************************/

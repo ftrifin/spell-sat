@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,6 +48,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.preferences.keys;
 
+
 /***************************************************************************
  * 
  * General preferences keys
@@ -62,15 +63,33 @@ public enum PropertyKey
 	RESPONSE_TIMEOUT("ResponseTimeout", "8000"), 
 	OPEN_TIMEOUT("OpenTimeout", "10000"), 
 	PROCS_EDITOR("ProceduresEditor", ""),
-	SCP_CONNECTION_USER("ScpConnectionUser", "spell"),
-	SCP_CONNECTION_PWD("ScpConnectionPassword", "spell"),
+	ALTERNATE_PROCS_EDITOR("AlternateProceduresEditor",""),
 	LAST_SERVER_CONNECTED("LastServerConnected", ""), 
 	LAST_HOST_CONNECTED("LastHostConnected", ""), 
 	LAST_PORT_CONNECTED("LastPortConnected", ""), 
 	LAST_CONNECTION_MANUAL("LastConnectionManual", ""), 
 	PROMPT_SOUND_FILE("PromptSoundFile", "120"), 
-	PROMPT_SOUND_DELAY("PromptSoundDelay",""), 
-	PREFERENCES_ENABLED("PreferencesEnabled", "YES");
+	PREFERENCES_ENABLED("PreferencesEnabled", "YES"),
+	TDS_TIME_FORMAT("TdsTimeFormat", "-1"),
+	GUI_ANCHOR_WINDOW("AnchorWindow", "NO"),
+	/** ALL, NO, CHILDREN */
+	AUTOMATIC_CLOSE("AutomaticClose", "NO"),
+	/** YES, NO */
+	SHOW_DATE_LINE("ShowDateLine","NO"),
+	/** YES, NO */
+	TEXT_TIMESTAMP("ShowTextTimestamp","NO"),
+	/** NAME, VALUE, BOTH */
+	DISPLAY_DATA("DisplayData", "BOTH"),
+	LINE_HISTORY_ITEMS("LineHistoryItems", "-1"),
+	TEXT_HISTORY_ITEMS("TextHistoryItems", "-1"),
+	/** YES, NO */
+	CONFIRM_ABORT("ConfirmAbort", "NO"),
+	/** YES, NO, PROMPT */
+	MULTIPLE_ATTACH("MultipleAttach", "PROMPT"),
+	/** Use ASRUN when controlling: YES, NO, PROMPT */
+	ASRUN_CONTROL("AsRunControl", "PROMPT"),
+	/** Use ASRUN when monitoring: YES, NO, PROMPT */
+	ASRUN_MONITOR("AsRunMonitor", "NO");
 
 	/** Qualifier */
 	private String	m_qualifier;

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,8 +48,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.model.files;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
+import com.astra.ses.spell.gui.core.model.types.AsRunType;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
 
@@ -60,13 +62,14 @@ import com.astra.ses.spell.gui.core.utils.Logger;
 public class AsRunFile extends BasicServerFile
 {
 	private String m_procId;
+	private List<String> m_children;
 	
 	/***************************************************************************
 	 * Constructor
 	 * 
 	 * @param source
 	 **************************************************************************/
-	public AsRunFile(String procId, String path, ArrayList<String> lines)
+	public AsRunFile(String procId, String path, List<String> lines)
 	{
 		super(path,lines);
 		m_procId = procId;
@@ -77,16 +80,20 @@ public class AsRunFile extends BasicServerFile
 	 * 
 	 * @param source
 	 **************************************************************************/
-	public void parse(ArrayList<String> lines)
+	public void parse(List<String> lines)
 	{
+		m_children = new LinkedList<String>();
 		int count = 1;
 		for (String line : lines)
 		{
 			try
 			{
 				if (line.startsWith("#") || line.trim().isEmpty()) continue;
-				line = line.replaceFirst("%C%", "");
 				AsRunFileLine arLine = new AsRunFileLine(getProcId(), line);
+				if (arLine.getAsRunType().equals(AsRunType.CHILD))
+				{
+					m_children.add(arLine.getDataA());
+				}
 				addLine(arLine);
 			}
 			catch (Exception ex)
@@ -133,5 +140,13 @@ public class AsRunFile extends BasicServerFile
 	public String getProcId()
 	{
 		return m_procId;
+	}
+
+	/**************************************************************************
+	 * Get the children asruns if any
+	 *************************************************************************/
+	public List<String> getChildren()
+	{
+		return m_children;
 	}
 }

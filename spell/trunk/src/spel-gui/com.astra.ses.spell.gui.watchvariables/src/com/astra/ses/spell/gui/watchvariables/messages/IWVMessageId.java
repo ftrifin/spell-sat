@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,11 +48,11 @@ package com.astra.ses.spell.gui.watchvariables.messages;
 
 public interface IWVMessageId
 {
-	public final String	REQ_VARIABLE_NAMES	 = "REQ_VARIABLE_NAMES";
-	public final String	REQ_VARIABLE_WATCH	 = "REQ_VARIABLE_WATCH";
-	public final String	REQ_VARIABLE_NOWATCH	= "REQ_VARIABLE_NOWATCH";
-	public final String	REQ_WATCH_NOTHING	 = "REQ_WATCH_NOTHING";
-	public final String	REQ_CHANGE_VARIABLE	 = "REQ_CHANGE_VARIABLE";
-	public final String	MSG_VARIABLE_CHANGE	 = "MSG_VARIABLE_CHANGE";
-	public final String	MSG_SCOPE_CHANGE	 = "MSG_SCOPE_CHANGE";
+	public final String	REQ_WVARIABLES_ENABLED = "REQ_WVARIABLES_ENABLED";
+	public final String	REQ_GET_VARIABLES	   = "REQ_GET_VARIABLES";
+	public final String	REQ_CHANGE_VARIABLE	   = "REQ_CHANGE_VARIABLE";
+	public final String	MSG_VARIABLE_CHANGE	   = "MSG_VARIABLE_CHANGE";
+	public final String	MSG_SCOPE_CHANGE	   = "MSG_SCOPE_CHANGE";
+	public final String	MSG_WVARIABLES_ENABLE  = "MSG_WVARIABLES_ENABLE";
+	public final String	MSG_WVARIABLES_DISABLE = "MSG_WVARIABLES_DISABLE";
 }

@@ -5,7 +5,7 @@
 // DESCRIPTION: Standalone execution client interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -125,6 +125,13 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLcif::isBlocking(). Not used in this interface.
 		**////////////////////////////////////////////////////////////////////
 		bool isBlocking() {
+			return true;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLcif::isHeadless(). Not used in this interface.
+		**////////////////////////////////////////////////////////////////////
+		bool isHeadless() {
 			return true;
 		};
 

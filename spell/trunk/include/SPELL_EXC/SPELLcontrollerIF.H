@@ -5,7 +5,7 @@
 // DESCRIPTION: Defines the controller interface.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -172,15 +172,6 @@ public: //--------------------------------------------------------------------
 		 * to play mode as soon as it is ready.
 		**////////////////////////////////////////////////////////////////////
 		virtual void setAutoRun() = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Set the execution delay in msec. This is the time used by the
-		 * controller to wait between executed procedure lines. By default
-		 * is zero.
-		 *
-		 * \param delay IN: delay time in msec.
-		**////////////////////////////////////////////////////////////////////
-		virtual void setExecutionDelay( const long delay ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Set the run into flag. If this flag is true, the executor goes

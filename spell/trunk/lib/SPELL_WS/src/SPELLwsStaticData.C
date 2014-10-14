@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the static data manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -44,7 +44,7 @@ SPELLwsStaticData::SPELLwsStaticData( const SPELLwsStartupInfo& info, unsigned i
 	if (m_startup.persistentFile != "")
 	{
 		m_persistentFile = m_startup.persistentFile + "_" + ISTR(depth) + ".wss";
-		LOG_INFO("STC Using persistent file: '" + m_persistentFile + "'");
+		DEBUG("STC Using persistent file: '" + m_persistentFile + "'");
 	}
 	else
 	{
@@ -54,15 +54,15 @@ SPELLwsStaticData::SPELLwsStaticData( const SPELLwsStartupInfo& info, unsigned i
 	if (m_startup.recoveryFile != "")
 	{
 		m_recoveryFile = m_startup.recoveryFile + "_" + ISTR(depth) + ".wss";
-		LOG_INFO("STC Using recovery file: '" + m_recoveryFile + "'");
+		DEBUG("STC Using recovery file: '" + m_recoveryFile + "'");
 	}
 
 	// In recovery mode this is the previous frame in the stack, it shall be updated later.
 	m_frame = frame;
 
 	// Do not use static data for the top level frame
-	LOG_INFO("STC working mode: " + WorkingModeToString(m_startup.workingMode));
-	LOG_INFO("STC perform recovery: " + BSTR(m_startup.performRecovery));
+	DEBUG("STC working mode: " + WorkingModeToString(m_startup.workingMode));
+	DEBUG("STC perform recovery: " + BSTR(m_startup.performRecovery));
 
 	if (m_startup.performRecovery && m_recoveryFile != "")
 	{

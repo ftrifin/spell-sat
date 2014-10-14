@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -57,6 +57,10 @@ public interface IMessageValue
 	public static final String	LISTENER_RECEIVER	  = "LST";
 	public static final String	GENERIC_RECEIVER	  = "GEN";
 
+	// Basic data
+	public static final String  DATA_TRUE             = "True";
+	public static final String  DATA_FALSE            = "False";
+	
 	// ItemType messages / Field Data Type
 	public static final String	ITEM_DATA_TYPE_LINE	  = "CURRENT_LINE";
 	public static final String	ITEM_DATA_TYPE_ITEM	  = "ITEM";
@@ -77,11 +81,6 @@ public interface IMessageValue
 	public static final String	CTX_STATUS_AVAILABLE	= "AVAILABLE";
 	public static final String	CTX_STATUS_RUNNING	  = "RUNNING";
 
-	// Client mode
-	public static final String	CLIENT_MODE_CONTROL	  = "CONTROL";
-	public static final String	CLIENT_MODE_MONITOR	  = "MONITOR";
-	public static final String	CLIENT_MODE_SCHEDULE	= "SCHEDULE";
-
 	// Executor open mode
 	public static final String	OPEN_MODE_AUTOMATIC	  = "Automatic";
 	public static final String	OPEN_MODE_VISIBLE	  = "Visible";
@@ -98,9 +97,4 @@ public interface IMessageValue
 	public static final String	WRITE_TYPE_LOG	      = "LOG";
 	public static final String	WRITE_TYPE_DIALOG	  = "DIALOG";
 	public static final String	WRITE_TYPE_SCRIPT	  = "SCRIPT";
-
-	// Alignment
-	public static final String ALIGMENT_STATUS_PROGRESS = "ALIGNING";
-	public static final String ALIGMENT_STATUS_READY    = "READY";
-	public static final String ALIGMENT_STATUS_OFFLINE  = "OFFLINE";
 }

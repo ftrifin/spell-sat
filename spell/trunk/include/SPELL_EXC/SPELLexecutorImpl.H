@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Executor.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -126,7 +126,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorConfig& getConfiguration() const { return *m_config; };
+		SPELLexecutorConfig& getConfiguration() const { return m_cif->getExecutorConfig(); };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -201,6 +201,11 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void pause();
 
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void interrupt();
+
     // *******************************************************************
     // STATUS INFORMATION
     // *******************************************************************
@@ -219,6 +224,21 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
 		const std::string getInstanceId() const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void setControllingClient( const std::string& clientId );
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void setControllingHost( const std::string& hostName );
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getControllingHost() const;
 
     // *******************************************************************
     // EXECUTION CONFIGURATION PARAMETERS
@@ -253,6 +273,11 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
 		void setExecDelay( const int delay );
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void setPromptWarningDelay( const int delay );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -322,7 +347,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		void setUserAction( const std::string& functionName, const std::string& actionLabel, const unsigned int severity );
+		void setUserAction( const SPELLuserAction& action );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -337,12 +362,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		const std::string getUserActionLabel() const { return m_userActionLabel; };
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLexecutorIF.
-		**////////////////////////////////////////////////////////////////////
-		const bool getUserActionEnabled() const { return m_userActionEnabled; };
+		const SPELLuserAction getUserAction() const { return m_userAction; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -392,11 +412,6 @@ protected: //-----------------------------------------------------------------
 		/** Internal implementation of the execute() method
 		**////////////////////////////////////////////////////////////////////
 		void executeInternal( bool reset );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLexecutorIF.
-		**////////////////////////////////////////////////////////////////////
-		void setContextName( const std::string& ctxName ) { m_contextName = ctxName; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** By-Step implementation. If the feature is enabled and the current
@@ -528,26 +543,13 @@ private: //-------------------------------------------------------------------
 		/** Input directory location */
 		std::string                  m_inputDir;
 
-		/** Holds the context name */
-		std::string                  m_contextName;
-
-		/** Holds the key of the controlling client, if any */
-		std::string                  m_controllingClient;
-		/** Holds the list of monitoring clients, if any */
-		std::vector<std::string>     m_monitoringClients;
-
-		/** Holds the executor startup configuration */
-		SPELLexecutorConfig*      	 m_config;
 		/** True when the INIT step, if any, has been reached */
 		bool                         m_initStepDone;
-		/** Holds the user action function name if any */
-		std::string                  m_userActionFunction;
-		/** Holds the user action label if any */
-		std::string                  m_userActionLabel;
-		/** Holds the enable/disable status of the user action */
-		bool						 m_userActionEnabled;
-		/** Holds the severity of the action */
-		unsigned int                 m_userActionSeverity;
+		/** Holds the lines in the main procedure that are executed during INIT mode */
+		std::list<unsigned int>      m_initLines;
+
+		/** Holds the user action data if any */
+		SPELLuserAction				 m_userAction;
 
 		/** Holds the command controller */
 		SPELLcontrollerIF*           m_controller;

@@ -6,7 +6,7 @@
 //
 // DATE      : Mar 6, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -71,10 +71,10 @@ public class FormatVariableValueJob implements IRunnableWithProgress
 	{
 		try
 		{
-			monitor.setTaskName("Value of variable " + m_var.name);
+			monitor.setTaskName("Value of variable " + m_var.getName());
 			result = CommandResult.NO_EFFECT;
 
-			details = m_var.value;
+			details = m_var.getValue();
 			if (details.length() > 80)
 			{
 				String[] splitted = details.split(",");

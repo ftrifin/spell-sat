@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,72 +48,48 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.utils;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Properties;
-
-import com.astra.ses.spell.gui.core.model.types.ICoreConstants;
+import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import com.astra.ses.spell.gui.core.model.types.Level;
-import com.astra.ses.spell.gui.core.model.types.Severity;
+
+import org.slf4j.LoggerFactory;
+
 
 /*******************************************************************************
  * @brief This class provides tracing/logging support. If needed, transmits
  *        logged data to the MasterView.
+ *        
+ *        2014-04-03 (DVillegas) Added the SLF4J Facade to allow changing the logging framework without changing the code.
+ *        
  * @date 09/10/07
  ******************************************************************************/
 public class Logger
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	/** Singleton instance */
-	private static Logger s_instance = null;
-	/** Date format converter */
-	private static DateFormat s_df = DateFormat.getDateTimeInstance();
-	/** Log file path */
-	private static String s_logFileDir = ".";
-	/** Log file name */
-	private static String s_logFileName = "_spel-gui.log";
-	/** Log file handle */
-	private static PrintWriter s_logFile = null;
 	/** Length for class names */
 	private static final int CLASS_NAME_LEN = 22;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-	// PRIVATE -----------------------------------------------------------------
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
-
-	/***************************************************************************
-	 * Obtain the singleton instance
-	 * 
-	 * @return The singleton instance
-	 **************************************************************************/
-	protected static Logger instance()
-	{
-		if (s_instance == null)
-		{
-			s_instance = new Logger();
-		}
-		return s_instance;
+	/** Default Config directory for SPELL */
+	private static String DEFAULT_CONFIG_DIR = "config";
+	
+	
+	/* STATIC CONSTRUCTOR */
+	static {
+		//Find default directory separator
+		String sep = System.getProperty("file.separator");
+		
+		String sConfig = System.getenv("SPELL_CONFIG");
+		if(sConfig==null || sConfig.isEmpty()) sConfig = System.getenv("SPELL_HOME") + sep + DEFAULT_CONFIG_DIR;
+		if(sConfig==null || sConfig.isEmpty()) sConfig = ".";
+		
+		addClassPath( sConfig );
 	}
 
+
+	
+	/* LOG METHODS */
+	
 	/***************************************************************************
 	 * Log a debugging message specifying the level
 	 * 
@@ -126,8 +102,10 @@ public class Logger
 	 **************************************************************************/
 	public static void debug(String message, Level level, Object origin)
 	{
-		instance().log(message, level, Severity.DEBUG, origin);
-	}
+		org.slf4j.Logger logger = LoggerFactory.getLogger( level.name() + "." + getFormatedClassName(origin) );
+
+		logger.debug("{}: {}", level.log, message);
+	} //debug
 
 	/***************************************************************************
 	 * Log an information message specifying the level
@@ -141,8 +119,10 @@ public class Logger
 	 **************************************************************************/
 	public static void info(String message, Level level, Object origin)
 	{
-		instance().log(message, level, Severity.INFO, origin);
-	}
+		org.slf4j.Logger logger = LoggerFactory.getLogger( level.name() + "." + getFormatedClassName(origin) );
+
+		logger.info("{}: {}", level.log, message);
+	} //info
 
 	/***************************************************************************
 	 * Log a warning message specifying the level
@@ -156,8 +136,10 @@ public class Logger
 	 **************************************************************************/
 	public static void warning(String message, Level level, Object origin)
 	{
-		instance().log(message, level, Severity.WARN, origin);
-	}
+		org.slf4j.Logger logger = LoggerFactory.getLogger( level.name() + "." + getFormatedClassName(origin) );
+
+		logger.warn("{}: {}", level.log, message);
+	} //warning
 
 	/***************************************************************************
 	 * Log an error message specifying the level
@@ -171,157 +153,44 @@ public class Logger
 	 **************************************************************************/
 	public static void error(String message, Level level, Object origin)
 	{
-		if (message == null)
-			message = "Null pointer exception";
-		instance().log(message, level, Severity.ERROR, origin);
-	}
+		org.slf4j.Logger logger = LoggerFactory.getLogger( level.name() + "." + getFormatedClassName(origin) );
 
-	/***************************************************************************
-	 * Set the log file path.
+		logger.error("{}: {}", level.log, (message!=null?message:"Log message is null") );
+	} //error
+
+
+	/* HELPER METHODS */
+	
+	/*****
+	 * Get the simple name of a class and cut it in case its lengh is greater than CLASS_NAME_LEN constant.
 	 * 
-	 * @param filePath
-	 *            Absolute path to the log file
-	 **************************************************************************/
-	public static void setLogFile(String filePath)
-	{
-		s_logFileName = filePath;
-		createLogFile();
-	}
-
-	// =========================================================================
-	// # NON-ACCESSIBLE METHODS
-	// =========================================================================
-
-	/***************************************************************************
-	 * Constructor
-	 **************************************************************************/
-	protected Logger()
-	{
-		createLogFile();
-	}
-
-	/***************************************************************************
-	 * Create the log file
-	 **************************************************************************/
-	protected static void createLogFile()
-	{
-		String name = "";
-		try
-		{
-			if (s_logFile != null)
-				s_logFile.close();
-			Calendar c = Calendar.getInstance();
-			Properties props = System.getProperties();
-			String sep = props.get("file.separator").toString();
-
-			String home = System.getenv(ICoreConstants.CLIENT_LOG_ENV);
-			if (home != null)
-			{
-				name = home + sep + c.get(Calendar.YEAR) + "_" + c.get(Calendar.MONTH) + "_" + c.get(Calendar.DAY_OF_MONTH) + "_"
-				        + c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) + c.get(Calendar.SECOND) + s_logFileName;
-			}
-			else
-			{
-				name = s_logFileDir + sep + c.get(Calendar.YEAR) + "_" + c.get(Calendar.MONTH) + "_" + c.get(Calendar.DAY_OF_MONTH) + "_"
-				        + c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) + c.get(Calendar.SECOND) + s_logFileName;
-			}
-			System.out.println("Using log file " + name);
-			s_logFile = new PrintWriter(new OutputStreamWriter(new FileOutputStream(name)));
-		}
-		catch (IOException ex)
-		{
-			s_logFile = null;
-			error("Tracing to file disabled: could not open log file: " + name, Level.INIT, "LOG");
-		}
-	}
-
-	/***************************************************************************
-	 * Destructor
-	 **************************************************************************/
-	protected void finalize()
-	{
-		if (s_logFile != null)
-		{
-			s_logFile.flush();
-			s_logFile.close();
-		}
-	}
-
-	/***************************************************************************
-	 * Main logging method
-	 * 
-	 * @param message
-	 *            Log message
-	 * @param level
-	 *            Level of the message
-	 * @param severity
-	 *            Message severity
 	 * @param origin
-	 *            Originator class
-	 **************************************************************************/
-	protected void log(String message, Level level, Severity severity, Object origin)
+	 * @return class name of maximum length CLASS_NAME_LEN
+	 */
+	public static String getFormatedClassName(Object origin) 
 	{
-		// Obtain the message heading information
-		String head = "";
-		String originatorName = null;
-		// If we have an originator class, get the class name
-		if (origin != null)
-		{
-			if (origin instanceof String)
-			{
-				originatorName = (String) origin;
-			}
-			else
-			{
-				originatorName = origin.getClass().getSimpleName();
-			}
-			// There is a maximum length for the class name
-			// If needed, shorten it. Otherwise complete with spaces.
-			int after = CLASS_NAME_LEN - originatorName.length();
-			if (after < 0)
-			{
-				head = "[ " + originatorName.substring(0, CLASS_NAME_LEN - 1) + "..]";
-			}
-			else
-			{
-				head = "[ " + originatorName;
-				for (int c = 0; c < after; c++)
-					head += " ";
-				head += " ]";
-			}
-			// Add the severity string
-			head += severity.log;
-		}
-		else
-		{
-			// If there is not originator class, copy only the severity
-			head = "[?] " + severity.log;
-		}
-		// Add the level string
-		String lev = level.log;
-		// Add the message date
-		String msec = new Integer(Calendar.getInstance().get(Calendar.MILLISECOND)).toString();
-		int l = msec.length();
-		if (l < 3)
-		{
-			for (int i = 0; i < 3 - l; i++)
-				msec += "0";
-		}
-		String date = "[" + s_df.format(Calendar.getInstance().getTime()) + ":" + msec + "]";
-		// Build the entire message
-		String msg = head + date + lev + ": ";
-		msg += message;
-		
-		if (severity == Severity.ERROR || severity == Severity.WARN)
-		{
-			System.err.println(msg);
-		}
-		else
-		{
-			System.out.println(msg);
-		}
-
-		s_logFile.println(msg);
-		s_logFile.flush();
-	}
-}
+		String sClassName = origin.getClass().getSimpleName();
+		return (sClassName.length()>CLASS_NAME_LEN?sClassName.substring(0,CLASS_NAME_LEN-1)+"_":sClassName);
+	}	
+	
+	/***
+	 * Add a directory to the current java classpath.
+	 * 
+	 * @param path
+	 */
+	public static void addClassPath(String path) {
+	    try {
+			File f = new File(path);
+			if( f.exists() ) {
+			    URI u = f.toURI();
+			    URLClassLoader urlClassLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
+			    Class<URLClassLoader> urlClass = URLClassLoader.class;
+			    Method method = urlClass.getDeclaredMethod("addURL", new Class[]{URL.class});
+			    method.setAccessible(true);
+			    method.invoke(urlClassLoader, new Object[]{u.toURL()});
+			} else System.err.println("ERROR: SPELL Config directory does not exist. (Side effect: Logger configuration not available.)");
+	    } catch(Exception e){
+	    	System.err.println("ERROR: Loading SPELL Config directory into classpath (Side effect: Logger configuration not available.)\n" + e.getMessage());
+	    }
+	} //addDirectory2ClassPath
+} //Logger Class

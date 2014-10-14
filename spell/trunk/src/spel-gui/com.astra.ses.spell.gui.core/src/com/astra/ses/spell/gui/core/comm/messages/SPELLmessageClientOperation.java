@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -75,22 +75,23 @@ public class SPELLmessageClientOperation extends SPELLmessageOneway
 		m_key = "";
 		try
 		{
-			m_mode = ClientInfo
-			        .modeFromString(get(IMessageField.FIELD_GUI_MODE));
+			if (hasKey(IMessageField.FIELD_GUI_MODE))
+			m_mode = ClientInfo.modeFromString(get(IMessageField.FIELD_GUI_MODE));
 		}
 		catch (MessageException ex)
 		{
 		}
 		try
 		{
-			m_operation = ClientInfo
-			        .operationFromString(get(IMessageField.FIELD_CLIENT_OP));
+			if (hasKey(IMessageField.FIELD_CLIENT_OP))
+			m_operation = ClientInfo.operationFromString(get(IMessageField.FIELD_CLIENT_OP));
 		}
 		catch (MessageException ex)
 		{
 		}
 		try
 		{
+			if (hasKey(IMessageField.FIELD_GUI_KEY))
 			m_key = get(IMessageField.FIELD_GUI_KEY);
 		}
 		catch (MessageException ex)
@@ -98,6 +99,7 @@ public class SPELLmessageClientOperation extends SPELLmessageOneway
 		}
 		try
 		{
+			if (hasKey(IMessageField.FIELD_PROC_ID))
 			m_procId = get(IMessageField.FIELD_PROC_ID);
 		}
 		catch (MessageException ex)
@@ -105,6 +107,7 @@ public class SPELLmessageClientOperation extends SPELLmessageOneway
 		}
 		try
 		{
+			if (hasKey(IMessageField.FIELD_HOST))
 			m_host = get(IMessageField.FIELD_HOST);
 		}
 		catch (MessageException ex)

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -50,28 +50,44 @@ package com.astra.ses.spell.gui.procs.utils;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.core.model.types.ClientMode;
+import com.astra.ses.spell.gui.core.model.types.Level;
+import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class GrabProcedureTask extends Thread
 {
-	private IProcedureManager	m_mgr;
-	private String	         m_procId;
+	private IProcedureManager m_mgr;
+	private String m_procId;
+	private boolean m_downloadData;
+	private ClientMode m_mode;
 
-	public GrabProcedureTask(IProcedureManager mgr, String procId)
+	/************************************************************************************
+	 * Constructor
+	 * @param mgr
+	 * @param procId
+	 * @param downloadData
+	 ***********************************************************************************/
+	public GrabProcedureTask(IProcedureManager mgr, String procId, ClientMode mode, boolean downloadData)
 	{
 		m_procId = procId;
 		m_mgr = mgr;
+		m_downloadData = downloadData;
+		m_mode = mode;
 	}
 
+	/************************************************************************************
+	 *
+	 ***********************************************************************************/
 	public void run()
 	{
+		Logger.debug("Grab procedure " + m_procId + " task started (download: " + m_downloadData + ")", Level.PROC, this);
 		ExecutorStatus status = ExecutorStatus.UNINIT;
 		IProcedure proc = null;
-		while (status == ExecutorStatus.UNINIT
-		        || status == ExecutorStatus.LOADED)
+		while (status == ExecutorStatus.UNINIT || status == ExecutorStatus.LOADED)
 		{
 			try
 			{
@@ -90,13 +106,37 @@ public class GrabProcedureTask extends Thread
 				;
 			}
 		}
-		AsRunReplayResult result = new AsRunReplayResult();
-		m_mgr.controlProcedure(m_procId, result, new NullProgressMonitor());
+		Logger.debug("Procedure status is now " + status , Level.PROC, this);
+		
+		AsRunReplayResult result = null;
+		// A null instance given as ASRUN result will prevent the system from
+		// downloading and processing the ASRUN
+		if (m_downloadData)
+		{
+			result = new AsRunReplayResult();
+		}
+		
+		if (m_mode.equals(ClientMode.CONTROL))
+		{
+			Logger.debug("Start operation to control procedure", Level.PROC, this);
+			m_mgr.controlProcedure(m_procId, result, new NullProgressMonitor());
+		}
+		else
+		{
+			Logger.debug("Start operation to monitor procedure", Level.PROC, this);
+			m_mgr.monitorProcedure(m_procId, result, new NullProgressMonitor());
+		}
+			
+		Logger.debug("Client mode        : " + proc.getRuntimeInformation().getClientMode(), Level.PROC, this);
+		Logger.debug("Client info        : " + proc.getRuntimeInformation().getControllingClient().getKey(), Level.PROC, this);
+		Logger.debug("Automatic procedure: " + proc.getRuntimeInformation().isAutomatic(), Level.PROC, this);
+		Logger.debug("Visible            : " + proc.getRuntimeInformation().isVisible(), Level.PROC, this);
+
 		// Once it is controlled, run it if it is automatic and visible.
-		// IMPORTANT if it is not visible, the procedure is in background and
-		// will run by itself.
+		// IMPORTANT if it is not visible, the procedure will run by itself.
 		if (proc.getRuntimeInformation().isAutomatic() && proc.getRuntimeInformation().isVisible())
 		{
+			Logger.debug("Invoke run command", Level.PROC, this);
 			m_mgr.getProcedure(m_procId).getController().run();
 		}
 	}

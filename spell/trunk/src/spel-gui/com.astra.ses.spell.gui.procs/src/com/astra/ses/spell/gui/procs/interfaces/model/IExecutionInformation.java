@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-03
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,8 +58,8 @@ import com.astra.ses.spell.gui.core.model.notification.UserActionNotification.Us
 import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
 import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Severity;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * 
@@ -77,6 +77,11 @@ public interface IExecutionInformation
 	};
 
 	/***************************************************************************
+	 * Get maximum amount of display messages to store
+	 **************************************************************************/
+	public int getDisplayMessageCapacity();
+
+	/***************************************************************************
 	 * Get running condition
 	 * 
 	 * @return the running condition
@@ -89,6 +94,13 @@ public interface IExecutionInformation
 	 * @return
 	 **************************************************************************/
 	public IProcedureClient getControllingClient();
+
+	/***************************************************************************
+	 * Check if in background mode
+	 * 
+	 * @return
+	 **************************************************************************/
+	public boolean isBackground();
 
 	/***************************************************************************
 	 * Return the monitoring clients
@@ -130,6 +142,13 @@ public interface IExecutionInformation
 	 * @return
 	 **************************************************************************/
 	public int getExecutionDelay();
+	
+	/***************************************************************************
+	 * Return prompt warning Delay
+	 * 
+	 * @return
+	 **************************************************************************/
+	public int getPromptWarningDelay();
 
 	/***************************************************************************
 	 * Get parent procedure's id
@@ -137,6 +156,28 @@ public interface IExecutionInformation
 	 * @return the parent's id
 	 **************************************************************************/
 	public String getParent();
+
+	/***************************************************************************
+	 * Get parent procedure calling line if applicable
+	 * 
+	 * @return the parents calling line
+	 **************************************************************************/
+	public int getParentCallingLine();
+
+	/***************************************************************************
+	 * Get origin id
+	 * 
+	 * @return the id
+	 **************************************************************************/
+	public String getOriginId();
+
+	/***************************************************************************
+	 * Get group id
+	 * 
+	 * @return the id
+	 **************************************************************************/
+	public String getGroupId();
+
 
 	/***************************************************************************
 	 * Get the Display messages received from the server to perform a replay
@@ -246,4 +287,13 @@ public interface IExecutionInformation
 	 **************************************************************************/
 	public void visit(ExecutorConfig cfg);
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public String getAsRunName();
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public String getTimeId();
 }

@@ -41,6 +41,18 @@
         <modifier name="OnTrue">NOACTION</modifier>
         <modifier name="Time">""</modifier>
     </defaults>
+
+    <defaults interface="RNG">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="PromptUser">True</modifier>
+    </defaults>
+
+    <defaults interface="MEM">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="PromptUser">True</modifier>
+    </defaults>
     
     <defaults interface="RSC">
         <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
@@ -131,24 +143,76 @@
        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
     </defaults>
 
-    <defaults function="Open">
-       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    <defaults function="OpenFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
     </defaults>
 
-    <defaults function="Close">
-       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    <defaults function="CloseFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
     </defaults>
 
-    <defaults function="Write">
-       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    <defaults function="WriteFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
     </defaults>
 
-    <defaults function="Read">
-       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    <defaults function="ReadFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="DeleteFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="ReadDirectory">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
     </defaults>
 
     <defaults function="RestoreNormalLimits">
        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="AddSharedDataScope">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="GetSharedData">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="SetSharedData">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="GetSharedDataKeys">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="GetSharedDataScopes">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="ClearSharedData">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="ClearSharedDataScopes">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="GenerateMemoryReport">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="CompareMemoryImages">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="MemoryLookup">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="TMTCLookup">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
     </defaults>
 
 </language>

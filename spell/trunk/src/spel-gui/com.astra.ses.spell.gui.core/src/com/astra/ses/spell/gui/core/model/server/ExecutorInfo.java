@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -54,8 +54,8 @@ import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
 import com.astra.ses.spell.gui.core.interfaces.IProcedureClient;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Severity;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class ExecutorInfo implements IExecutorInfo
 {
@@ -63,10 +63,20 @@ public class ExecutorInfo implements IExecutorInfo
 	private String	       m_procId;
 	/** Holds the procedure name */
 	private String	       m_procName;
+	/** Holds the ASRUN name */
+	private String	       m_asrunName;
+	/** Holds the time identifier name */
+	private String	       m_timeId;
 	/** Holds the context name */
 	private String	       m_contextName;
 	/** Holds the parent procedure identifier, if any */
 	private String	       m_parentProcId;
+	/** Holds the group identifier, if any */
+	private String	       m_groupId;
+	/** Holds the origin identifier, if any */
+	private String	       m_originId;
+	/** Holds the parent procedure calling line, if any */
+	private int m_parentCallingLine;
 	/** Holds the execution status */
 	private ExecutorStatus	m_status;
 	/** Holds the error data if any */
@@ -83,6 +93,10 @@ public class ExecutorInfo implements IExecutorInfo
 	private String	       m_stageId;
 	/** Holds the current stage name if any */
 	private String	       m_stageTitle;
+	/** Holds the current stack string */
+	private String	       m_stack;
+	/** Holds the current code name */
+	private String	       m_codeName;
 	/** True if the procedure is started in visible mode */
 	private boolean	       m_visible;
 	/** True if the procedure is started in automatic mode */
@@ -95,6 +109,9 @@ public class ExecutorInfo implements IExecutorInfo
 	private boolean	       m_currentActionEnabled;
 	/** Holds the severity of the current action if any */
 	private Severity	   m_currentActionSeverity;
+	/** Background flag */
+	private boolean        m_inBackground;
+	
 
 	/***************************************************************************
 	 * Constructor
@@ -104,11 +121,17 @@ public class ExecutorInfo implements IExecutorInfo
 		m_controllingClient = null;
 		m_monitoringClients = null;
 		m_procId = procId;
+		m_groupId = "";
+		m_originId = "";
 		m_procName = procId;
 		m_contextName = "???";
 		m_parentProcId = null;
+		m_parentCallingLine = 0;
 		m_mode = ClientMode.UNKNOWN;
+		m_inBackground = false;
 		m_condition = null;
+		m_asrunName = null;
+		m_timeId = null;
 		reset();
 	}
 
@@ -120,6 +143,8 @@ public class ExecutorInfo implements IExecutorInfo
 	{
 		m_stageId = null;
 		m_stageTitle = null;
+		m_stack = null;
+		m_codeName = null;
 		m_status = ExecutorStatus.UNKNOWN;
 		m_visible = true;
 		m_automatic = true;
@@ -142,16 +167,23 @@ public class ExecutorInfo implements IExecutorInfo
 		m_monitoringClients = Arrays.copyOf( info.m_monitoringClients, info.m_monitoringClients.length );
 		m_mode = info.m_mode;
 		m_procId = info.m_procId;
+		m_groupId = info.m_groupId;
+		m_originId = info.m_originId;
 		m_parentProcId = info.m_parentProcId;
+		m_parentCallingLine = info.m_parentCallingLine;
 		m_condition = info.m_condition;
 		m_stageId = info.m_stageId;
 		m_stageTitle = info.m_stageTitle;
+		m_stack = info.m_stack;
+		m_codeName = info.m_codeName;
 		m_visible = info.m_visible;
 		m_automatic = info.m_automatic;
 		m_blocking = info.m_blocking;
 		m_currentAction = info.m_currentAction;
 		m_currentActionEnabled = info.m_currentActionEnabled;
 		m_currentActionSeverity = info.m_currentActionSeverity;
+		m_asrunName = info.m_asrunName;
+		m_timeId = info.m_timeId;
 	}
 	
 	/* (non-Javadoc)
@@ -208,13 +240,28 @@ public class ExecutorInfo implements IExecutorInfo
 		return m_mode;
 	}
 
-	/* (non-Javadoc)
-     * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#setParent(java.lang.String)
-     */
 	@Override
     public void setParent(String parentId)
 	{
 		m_parentProcId = parentId;
+	}
+
+	@Override
+    public void setOriginId(String originId)
+	{
+		m_originId = originId;
+	}
+
+	@Override
+    public void setGroupId(String groupId)
+	{
+		m_groupId = groupId;
+	}
+
+	@Override
+    public void setParentCallingLine( int line )
+	{
+		m_parentCallingLine = line;
 	}
 
 	/* (non-Javadoc)
@@ -224,6 +271,24 @@ public class ExecutorInfo implements IExecutorInfo
     public String getParent()
 	{
 		return m_parentProcId;
+	}
+
+	@Override
+    public String getGroupId()
+	{
+		return m_groupId;
+	}
+
+	@Override
+    public String getOriginId()
+	{
+		return m_originId;
+	}
+
+	@Override
+    public int getParentCallingLine()
+	{
+		return m_parentCallingLine;
 	}
 
 	/* (non-Javadoc)
@@ -313,6 +378,7 @@ public class ExecutorInfo implements IExecutorInfo
 	@Override
     public void setMonitoringClients( IProcedureClient[] clients)
 	{
+		if (clients != null)
 		m_monitoringClients = Arrays.copyOf(clients, clients.length);
 	}
 
@@ -342,6 +408,25 @@ public class ExecutorInfo implements IExecutorInfo
 	{
 		return m_controllingClient;
 	}
+
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#getControllingClient()
+     */
+	@Override
+    public boolean isBackground()
+	{
+		return m_inBackground;
+	}
+	
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#getControllingClient()
+     */
+	@Override
+    public void setBackground( boolean background )
+	{
+		m_inBackground = background;
+	}
+
 
 	/* (non-Javadoc)
      * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#getStatus()
@@ -399,6 +484,24 @@ public class ExecutorInfo implements IExecutorInfo
 	}
 
 	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#getStageId()
+     */
+	@Override
+    public String getStack()
+	{
+		return m_stack;
+	}
+
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#getStageTitle()
+     */
+	@Override
+    public String getCodeName()
+	{
+		return m_codeName;
+	}
+
+	/* (non-Javadoc)
      * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#setStage(java.lang.String, java.lang.String)
      */
 	@Override
@@ -406,6 +509,16 @@ public class ExecutorInfo implements IExecutorInfo
 	{
 		m_stageId = id;
 		m_stageTitle = title;
+	}
+
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.core.model.server.IExecutorInfo#setStage(java.lang.String, java.lang.String)
+     */
+	@Override
+    public void setStack(String csp, String codeName)
+	{
+		m_stack = csp;
+		m_codeName = codeName;
 	}
 
 	/* (non-Javadoc)
@@ -461,4 +574,28 @@ public class ExecutorInfo implements IExecutorInfo
 	{
 		m_currentActionSeverity = sev;
 	}
+
+	@Override
+    public String getAsRunName()
+    {
+	    return m_asrunName;
+    }
+
+	@Override
+    public String getTimeId()
+    {
+	    return m_timeId;
+    }
+
+	@Override
+    public void setAsRunName( String asrunName )
+    {
+	    m_asrunName = asrunName;
+    }
+
+	@Override
+    public void setTimeId( String timeId )
+    {
+	    m_timeId = timeId;
+    }
 }

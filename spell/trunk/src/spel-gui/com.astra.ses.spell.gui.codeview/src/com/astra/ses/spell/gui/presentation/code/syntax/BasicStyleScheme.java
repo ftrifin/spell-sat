@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -66,38 +66,24 @@ import com.astra.ses.spell.gui.core.utils.Logger;
  ******************************************************************************/
 public class BasicStyleScheme implements IStyleScheme
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Flag for default style usage warning */
 	private static boolean s_firstTimeWarningStyle = true;
-	// PROTECTED ---------------------------------------------------------------
 	/** Holds the colors associated for each token type */
 	protected static TreeMap<TokenTypes, Color> s_colors = new TreeMap<TokenTypes, Color>();
-	// PUBLIC ------------------------------------------------------------------
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Code-style font */
 	private Font m_codeFont = null;
 	/** Default style */
 	private TextStyle m_defaultStyle = null;
-	// PROTECTED ---------------------------------------------------------------
+	/** Default style */
+	private TextStyle m_selectedStyle = null;
+	/** Default style */
+	private TextStyle m_highlightedStyle = null;
 	/** Currently selected scheme */
 	protected SchemeType m_scheme = null;
 	/** Currently configured font size */
 	protected int m_fontSize = 0;
 
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -203,6 +189,8 @@ public class BasicStyleScheme implements IStyleScheme
 		}
 		m_codeFont = newFont;
 		m_defaultStyle = new TextStyle(m_codeFont, Display.getCurrent().getSystemColor(SWT.COLOR_BLACK), null);
+		m_selectedStyle = new TextStyle(m_codeFont, Display.getCurrent().getSystemColor(SWT.COLOR_WHITE), null);
+		m_highlightedStyle = new TextStyle(m_codeFont, Display.getCurrent().getSystemColor(SWT.COLOR_BLACK), null);
 	}
 
 	/***************************************************************************
@@ -227,9 +215,27 @@ public class BasicStyleScheme implements IStyleScheme
 		return m_defaultStyle;
 	}
 
-	// =========================================================================
-	// # NON-ACCESSIBLE METHODS
-	// =========================================================================
+	/***************************************************************************
+	 * Obtain the default style
+	 * 
+	 * @return The default text style
+	 **************************************************************************/
+	@Override
+	public TextStyle getSelectedStyle()
+	{
+		return m_selectedStyle;
+	}
+
+	/***************************************************************************
+	 * Obtain the default style
+	 * 
+	 * @return The default text style
+	 **************************************************************************/
+	@Override
+	public TextStyle getHighlightedStyle()
+	{
+		return m_highlightedStyle;
+	}
 
 	/***************************************************************************
 	 * Load colors depending on the configured scheme. Each scheme defines a

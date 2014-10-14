@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -63,6 +63,7 @@ public class SPELLmessageGetExecConfig extends SPELLmessageRequest
 		setReceiver(procId);
 	}
 
+	/** When getting the values from the Executor */
 	public static void fillExecConfig(ExecutorConfig config,
 	        SPELLmessage response)
 	{
@@ -72,6 +73,8 @@ public class SPELLmessageGetExecConfig extends SPELLmessageRequest
 		boolean showLib = false;
 		boolean forceTcConfirm = false;
 		int delay = 0;
+		int promptWarningDelay = 0;
+		
 		try
 		{
 			value = response.get(IMessageField.FIELD_RUN_INTO);
@@ -85,6 +88,16 @@ public class SPELLmessageGetExecConfig extends SPELLmessageRequest
 		{
 			value = response.get(IMessageField.FIELD_EXEC_DELAY);
 			delay = Integer.parseInt(value);
+		}
+		catch (MessageException ex)
+		{
+			ex.printStackTrace();
+		}
+		;
+		try
+		{
+			value = response.get(IMessageField.FIELD_PROMPT_DELAY);
+			promptWarningDelay = Integer.parseInt(value);
 		}
 		catch (MessageException ex)
 		{
@@ -118,8 +131,11 @@ public class SPELLmessageGetExecConfig extends SPELLmessageRequest
 		{
 			ex.printStackTrace();
 		}
+		
+		
 		config.setRunInto(runInto);
 		config.setExecDelay(delay);
+		config.setPromptWarningDelay(promptWarningDelay);
 		config.setStepByStep(byStep);
 		config.setBrowsableLib(showLib);
 		config.setTcConfirmation(forceTcConfirm);

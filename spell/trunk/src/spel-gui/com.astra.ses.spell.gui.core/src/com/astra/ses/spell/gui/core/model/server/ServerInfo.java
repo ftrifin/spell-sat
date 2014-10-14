@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -52,52 +52,40 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.astra.ses.spell.gui.core.model.types.Level;
+import com.astra.ses.spell.gui.core.utils.Logger;
+
 /*******************************************************************************
  * @brief Data structure holding the connection info for a SPELL server
  * @date 28/04/08
  ******************************************************************************/
 public class ServerInfo
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private static final String	SERVER_NAME	    = "name";
 	private static final String	SERVER_HOST	    = "host";
 	private static final String	SERVER_PORT	    = "port";
-	private static final String	SERVER_USER	    = "user";
-	private static final String	SERVER_PASSWORD	= "pwd";
 	private static final String	SERVER_ROLE	    = "role";
+	private static final String	SERVER_CONN     = "connectivity";
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	public static enum ServerRole
 	{
 		COMMANDING, MONITORING
 	}
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private static final String	SEPARATOR	= "<>";
 	/** Holds the server name */
 	private String	            m_name;
 	/** Holds the server hostname */
 	private String	            m_host;
-	/** Holds the username to be used when establishing SSH tunnels */
-	private String	            m_tunnelUser;
-	/** Holds the password to be used when establishing SSH tunnels */
-	private String	            m_tunnelPassword;
 	/** Holds the server port */
 	private int	                m_port;
 	/** Holds the server role */
 	private ServerRole	        m_role;
+	/** Holds the authentication settings (empty if using local file copies) */
+	private AuthenticationData  m_auth;
+	/** True if the authentication data is not specific to the server but it is using defaults */
+	private boolean m_defaultAuth;
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 
 	/**************************************************************************
 	 * Create a SPELLServer instance from a String
@@ -110,8 +98,25 @@ public class ServerInfo
 	public static ServerInfo valueOf(String stringifiedServer)
 	{
 		String[] s = stringifiedServer.split(SEPARATOR);
-		return new ServerInfo(s[0], s[1], Integer.valueOf(s[2]), s[3], s[4],
-		        ServerRole.valueOf(s[5]));
+		if (s.length==8)
+		{
+			AuthenticationData auth = new AuthenticationData(s[4], s[5], s[6], Boolean.valueOf(s[7]));
+			return new ServerInfo(s[0], s[1], Integer.valueOf(s[2]), ServerRole.valueOf(s[3]), auth);
+		}
+		if (s.length==7) // backwards compatibility
+		{
+			AuthenticationData auth = new AuthenticationData(s[4], s[5], s[6]);
+			return new ServerInfo(s[0], s[1], Integer.valueOf(s[2]), ServerRole.valueOf(s[3]), auth);
+		}
+		else if (s.length == 4)
+		{
+			return new ServerInfo(s[0], s[1], Integer.valueOf(s[2]), ServerRole.valueOf(s[3]), null);
+		}
+		else
+		{
+			Logger.error("Malformed server info serialized string", Level.CONFIG, ServerInfo.class);
+			return null;
+		}
 	}
 
 	/***************************************************************************
@@ -121,30 +126,29 @@ public class ServerInfo
 	{
 		m_name = null;
 		m_host = null;
-		m_tunnelUser = null;
-		m_tunnelPassword = null;
+		m_auth = null;
 		m_role = ServerRole.COMMANDING;
 		m_port = 0;
+		m_defaultAuth = false;
 	}
 
 	/**************************************************************************
 	 * Constructor
 	 *************************************************************************/
-	public ServerInfo(String name, String host, int port, String user,
-	        String password, ServerRole role)
+	public ServerInfo(String name, String host, int port, ServerRole role, AuthenticationData auth)
 	{
 		m_name = name;
 		m_host = host;
 		m_port = port;
-		m_tunnelUser = (user.equals("null")) ? null : user;
-		m_tunnelPassword = (password.equals("null")) ? null : password;
+		m_auth = auth;
 		m_role = role;
+		m_defaultAuth = false;
 	}
 
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
-	public ServerInfo(Element xmlElement)
+	public ServerInfo(Element xmlElement, AuthenticationData defaultAuthentication )
 	{
 		this();
 
@@ -165,17 +169,14 @@ public class ServerInfo
 					{
 						m_port = Integer.parseInt(node.getTextContent());
 					}
-					else if (name.equals(SERVER_USER))
-					{
-						m_tunnelUser = node.getTextContent();
-					}
-					else if (name.equals(SERVER_PASSWORD))
-					{
-						m_tunnelPassword = node.getTextContent();
-					}
 					else if (name.equals(SERVER_NAME))
 					{
 						m_name = node.getTextContent();
+					}
+					else if (name.equals(SERVER_CONN))
+					{
+						m_auth = new AuthenticationData( node );
+						m_defaultAuth = false;
 					}
 					else if (name.equals(SERVER_ROLE))
 					{
@@ -191,95 +192,112 @@ public class ServerInfo
 					}
 				}
 			}
+			if (m_auth == null)
+			{
+				Logger.info("Server " + m_name + " inheriting default connectivity settings", Level.CONFIG, this);
+				m_auth = defaultAuthentication;
+				m_defaultAuth = true;
+			}
+			else
+			{
+				Logger.info("Server " + m_name + " using specific connectivity settings", Level.CONFIG, this);
+			}
 		}
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public boolean validate()
 	{
 		return (m_name != null) && (m_host != null) && (m_port != 0);
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public void setName(String name)
 	{
 		m_name = name;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public String getName()
 	{
 		return m_name;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public void setHost(String host)
 	{
 		m_host = host;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public String getHost()
 	{
 		return m_host;
 	}
 
 	/***************************************************************************
-	 * Obtain the user name for tunneled connection
 	 * 
-	 * @return The user name
 	 **************************************************************************/
-	public String getTunnelUser()
+	public AuthenticationData getAuthentication()
 	{
-		return m_tunnelUser;
+		return m_auth;
 	}
 
 	/***************************************************************************
-	 * Set the user name for tunneled connections
 	 * 
-	 * @param user
-	 *            The user name
 	 **************************************************************************/
-	public void setTunnelUser(String user)
+	public void setAuthentication( AuthenticationData auth )
 	{
-		m_tunnelUser = user;
+		m_auth = auth;
 	}
 
 	/***************************************************************************
-	 * Obtain the password for tunneled connections
 	 * 
-	 * @return The password
 	 **************************************************************************/
-	public String getTunnelPassword()
-	{
-		return m_tunnelPassword;
-	}
-
-	/***************************************************************************
-	 * Set the password for tunneled connections
-	 * 
-	 * @param pwd
-	 *            The password
-	 **************************************************************************/
-	public void setTunnelPassword(String pwd)
-	{
-		m_tunnelPassword = pwd;
-	}
-
 	public void setPort(int port)
 	{
 		m_port = port;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public int getPort()
 	{
 		return m_port;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public ServerRole getRole()
 	{
 		return m_role;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public String toString()
 	{
-		return m_name + SEPARATOR + m_host + SEPARATOR + m_port + SEPARATOR
-		        + m_tunnelUser + SEPARATOR + m_tunnelPassword + SEPARATOR + m_role.toString();
+		if (m_auth != null && !m_defaultAuth)
+		{
+			return m_name + SEPARATOR + m_host + SEPARATOR + m_port + SEPARATOR + m_role.toString() + SEPARATOR + m_auth.toString();
+		}
+		else
+		{
+			return m_name + SEPARATOR + m_host + SEPARATOR + m_port + SEPARATOR + m_role.toString();
+		}
 	}
 }

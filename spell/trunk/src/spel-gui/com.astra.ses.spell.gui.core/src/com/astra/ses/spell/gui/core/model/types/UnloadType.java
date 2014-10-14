@@ -6,7 +6,7 @@
 //
 // DATE      : Jan 18, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -50,6 +50,7 @@ public enum UnloadType
 {
 	CONTROLLED_CLOSED,
 	CONTROLLED_KILLED,
+	CONTROLLED_OTHER_KILLED,
 	CONTROLLED_CRASHED,
 	CONTROLLED_RELEASED,
 	MONITORED_CLOSED,

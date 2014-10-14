@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,9 +58,9 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.ProcColorKey;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class ProcedureColorsPreferencePage extends BasicPreferencesPage
 {

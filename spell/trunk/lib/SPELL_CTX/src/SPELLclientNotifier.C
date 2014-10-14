@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the client notifier
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -48,8 +48,9 @@ SPELLclientNotifier::SPELLclientNotifier( SPELLclient* client, SPELLexecutor* ex
   m_exec(exec),
   m_requests(300)
 {
-	DEBUG("[NOTIF] Created notifier");
-	m_exec->registerNotifier(this);
+	m_id = "notifier-" + ISTR(client->getClientKey()) + "-" + exec->getModel().getInstanceId();
+	LOG_INFO("[NOTIF] Created notifier");
+	m_exec->registerNotifier( m_id, this );
 	m_currentRequest = VOID_MESSAGE;
 }
 
@@ -58,8 +59,8 @@ SPELLclientNotifier::SPELLclientNotifier( SPELLclient* client, SPELLexecutor* ex
 //=============================================================================
 SPELLclientNotifier::~SPELLclientNotifier()
 {
-	DEBUG("[NOTIF] De-register notifier");
-	m_exec->deregisterNotifier( this );
+	LOG_INFO("[NOTIF] De-register notifier");
+	m_exec->deregisterNotifier( m_id );
 	m_requests.clear();
 }
 

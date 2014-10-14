@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,6 +58,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.VerifyEvent;
@@ -72,6 +73,7 @@ import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -82,11 +84,12 @@ import org.eclipse.swt.widgets.Text;
 
 import com.astra.ses.spell.gui.Activator;
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
-import com.astra.ses.spell.gui.core.interfaces.ICoreContextOperationListener;
-import com.astra.ses.spell.gui.core.interfaces.ICoreServerOperationListener;
 import com.astra.ses.spell.gui.core.interfaces.IServerProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreContextOperationListener;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreServerOperationListener;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.core.model.server.ContextInfo;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
 import com.astra.ses.spell.gui.core.model.types.ContextStatus;
@@ -95,7 +98,7 @@ import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.dialogs.controls.ContextTable;
 import com.astra.ses.spell.gui.dialogs.controls.ContextTableColumn;
-import com.astra.ses.spell.gui.extensions.ServerBridge;
+import com.astra.ses.spell.gui.extensions.GuiNotifications;
 import com.astra.ses.spell.gui.model.commands.AttachContext;
 import com.astra.ses.spell.gui.model.commands.CommandResult;
 import com.astra.ses.spell.gui.model.commands.ConnectServer;
@@ -117,11 +120,6 @@ import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
  ******************************************************************************/
 public class ConnectionDialog extends TitleAreaDialog implements SelectionListener, VerifyListener, ICoreServerOperationListener, ICoreContextOperationListener
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the configuration manager handle */
 	private static IConfigurationManager s_cfg = null;
 	/** Holds the listener proxy handle */
@@ -141,15 +139,9 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 	private static final String SRV_DISC_LOST = "LISTENER CONNECTION FAILURE";
 	private static final String CTX_NONE = "NONE";
 	private static final String CTX_NONE_LOST = "CONTEXT CONNECTION FAILURE";
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
+
 	public static final String ID = "com.astra.ses.spell.gui.dialogs.ConnectionDialog";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Runtime settings service */
 	private IRuntimeSettings m_runtimeService = null;
 	/** Holds the dialog image icon */
@@ -193,18 +185,16 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 	/** Predefined/manual connection tab folder */
 	private TabFolder m_serversFolder;
 	/** Tunneling button */
-	private Button m_tunneling;
-	/** Tunnel user */
-	private Text m_tunnelUser;
-	/** Tunnel passwrod */
-	private Text m_tunnelPwd;
+	private Button m_withAuthentication;
+	/** Server user */
+	private Text m_authUser;
+	/** Server password */
+	private Text m_authPwd;
+	/** Server key */
+	private Text m_authKey;
+	/** Browse button for key */
+	private Button m_browseKey;
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -233,8 +223,8 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 		{
 			s_ctxProxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 		}
-		ServerBridge.get().addServerListener(this);
-		ServerBridge.get().addContextListener(this);
+		GuiNotifications.get().addListener(this, ICoreServerOperationListener.class);
+		GuiNotifications.get().addListener(this, ICoreContextOperationListener.class);
 	}
 
 	/***************************************************************************
@@ -244,8 +234,7 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 	 **************************************************************************/
 	public boolean close()
 	{
-		ServerBridge.get().removeServerListener(this);
-		ServerBridge.get().removeContextListener(this);
+		GuiNotifications.get().removeListener(this);
 		m_image.dispose();
 		return super.close();
 	}
@@ -328,11 +317,13 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 		else if (e.widget instanceof Button)
 		{
 			Button b = (Button) e.widget;
-			if (b == m_tunneling)
+			if (b == m_withAuthentication)
 			{
 				boolean selected = b.getSelection();
-				m_tunnelUser.setEnabled(selected);
-				m_tunnelPwd.setEnabled(selected);
+				m_authUser.setEnabled(selected);
+				m_authPwd.setEnabled(selected);
+				m_authKey.setEnabled(selected);
+				m_browseKey.setEnabled(selected);
 				updateServer(false);
 			}
 			else
@@ -392,9 +383,6 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 		}
 	}
 
-	// =========================================================================
-	// # NON-ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Creates the dialog contents.
@@ -778,27 +766,58 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 			
 		});
 
-		m_tunneling = new Button(manualWidgets, SWT.CHECK);
-		m_tunneling.setText("Requires user authentication for SSH tunnel");
+		m_withAuthentication = new Button(manualWidgets, SWT.CHECK);
+		m_withAuthentication.setText("Requires user authentication");
 		GridData tunnelData = new GridData();
 		tunnelData.horizontalSpan = 4;
-		m_tunneling.setLayoutData(tunnelData);
+		m_withAuthentication.setLayoutData(tunnelData);
 
-		Label tunnelUsrLabel = new Label(manualWidgets, SWT.NONE);
-		tunnelUsrLabel.setText("Username");
+		Label authUsrLabel = new Label(manualWidgets, SWT.NONE);
+		authUsrLabel.setText("Username");
 
-		m_tunnelUser = new Text(manualWidgets, SWT.BORDER);
-		m_tunnelUser.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-		m_tunnelUser.setEnabled(m_tunneling.getSelection());
+		m_authUser = new Text(manualWidgets, SWT.BORDER);
+		m_authUser.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		m_authUser.setEnabled(m_withAuthentication.getSelection());
 
-		Label tunnelPwdLabel = new Label(manualWidgets, SWT.NONE);
-		tunnelPwdLabel.setText("Password");
+		Label authPwdLabel = new Label(manualWidgets, SWT.NONE);
+		authPwdLabel.setText("Password");
 
-		m_tunnelPwd = new Text(manualWidgets, SWT.BORDER | SWT.PASSWORD);
-		m_tunnelPwd.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-		m_tunnelPwd.setEnabled(m_tunneling.getSelection());
+		m_authPwd = new Text(manualWidgets, SWT.BORDER | SWT.PASSWORD);
+		m_authPwd.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		m_authPwd.setEnabled(m_withAuthentication.getSelection());
 
-		m_tunneling.addSelectionListener(this);
+		Label authKeyLabel = new Label(manualWidgets, SWT.NONE);
+		authKeyLabel.setText("Key file");
+
+		Composite two = new Composite(manualWidgets, SWT.NONE);
+		two.setLayout( new GridLayout(2,false));
+		GridData tData = new GridData( GridData.FILL_HORIZONTAL );
+		tData.horizontalSpan = 3;
+		two.setLayoutData( tData );
+		
+		m_authKey = new Text(two, SWT.BORDER);
+		m_authKey.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		m_authKey.setEnabled(m_withAuthentication.getSelection());
+
+		// Browse
+		m_browseKey = new Button(two,SWT.PUSH);
+		m_browseKey.setText("Browse");
+		m_browseKey.addSelectionListener( new SelectionAdapter()
+		{
+			public void widgetSelected( SelectionEvent event )
+			{
+				FileDialog dialog = new FileDialog(ConnectionDialog.this.getShell(),SWT.OPEN);
+				dialog.setText("Select a SSH private key file");
+				String file = dialog.open();
+				if (file != null && !file.trim().isEmpty())
+				{
+					m_authKey.setText(file);
+				}
+			}
+		});
+		m_browseKey.setEnabled(m_withAuthentication.getSelection());
+
+		m_withAuthentication.addSelectionListener(this);
 
 		// set control
 		manualTab.setControl(manualWidgets);
@@ -827,8 +846,9 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 		};
 		m_txtHost.addModifyListener(manualModificationListener);
 		m_txtPort.addModifyListener(manualModificationListener);
-		m_tunnelUser.addModifyListener(manualModificationListener);
-		m_tunnelPwd.addModifyListener(manualModificationListener);
+		m_authUser.addModifyListener(manualModificationListener);
+		m_authPwd.addModifyListener(manualModificationListener);
+		m_authKey.addModifyListener(manualModificationListener);
 
 		// ----------------------------------------------------------------------
 		// Composite for combo and manual selection
@@ -1258,10 +1278,10 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 			server.setHost(manualServer);
 			server.setPort(Integer.parseInt(manualPort));
 			server.setName(manualServer + ":" + manualPort);
-			if (m_tunneling.getSelection())
+			if (m_withAuthentication.getSelection())
 			{
-				server.setTunnelUser(m_tunnelUser.getText());
-				server.setTunnelPassword(m_tunnelPwd.getText());
+				AuthenticationData auth = new AuthenticationData(m_authUser.getText(),m_authPwd.getText(),m_authKey.getText());
+				server.setAuthentication(auth);
 			}
 			Logger.debug("Using manual server", Level.GUI, this);
 		}
@@ -1374,9 +1394,9 @@ public class ConnectionDialog extends TitleAreaDialog implements SelectionListen
 		}
 		else
 		{
-			if (m_tunneling.getSelection())
+			if (m_withAuthentication.getSelection())
 			{
-				if (m_tunnelUser.getText().isEmpty() || m_tunnelPwd.getText().isEmpty())
+				if (m_authUser.getText().trim().isEmpty() || (m_authPwd.getText().trim().isEmpty() && m_authKey.getText().trim().isEmpty()))
 				{
 					result = false;
 				}

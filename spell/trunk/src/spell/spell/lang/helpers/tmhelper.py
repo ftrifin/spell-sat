@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for telemetry functions
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -59,17 +59,16 @@ class GetTM_Helper(WrapperHelper):
 
         # Check correctness
         param = args[0]
-        if type(param) != str:
-            if not isinstance(param,TmItemClass):
-                raise SyntaxException("Expected a TM item or name")
-            # It is a TmItemClass, store it
-            self.__parameter = param
-        else:
-            # Create the parameter and store it
-            self.__parameter = REGISTRY['TM'][param]
+        if type(param) != str and not isinstance(param,TmItemClass):
+            raise SyntaxException("Expected a TM item or name")
+
+        self.__parameter = param
 
         # Store the extended flag if any
         self.__extended = (self.getConfig(Extended) == True)
+        
+        # Store information for possible failures
+        self.setFailureInfo("TM", self.__parameter)
         
             
     #===========================================================================
@@ -79,10 +78,16 @@ class GetTM_Helper(WrapperHelper):
         self._setActionString( ACTION_SKIP   , "Skip the acquisition of telemetry parameter " + repr(self.__pname()) + " and return None")
         self._setActionString( ACTION_CANCEL , "Skip the acquisition of telemetry parameter " + repr(self.__pname()) + " and return None")
 
-        if self.getConfig(ValueFormat)==ENG:
-            self._write("Retrieving engineering value of " + repr(self.__pname()))
-        else:
-            self._write("Retrieving raw value of " + repr(self.__pname()))
+        if type(self.__parameter)==str:
+            # Create the parameter item and store it
+            self.__parameter = REGISTRY['TM'][self.__parameter]
+        # otherwise it is already a TM item model    
+
+        if self.getConfig(Wait)==True:
+            if self.getConfig(ValueFormat)==ENG:
+                self._write("Retrieving engineering value of " + repr(self.__pname()))
+            else:
+                self._write("Retrieving raw value of " + repr(self.__pname()))
 
         value = None
         # Refresh the object and return it
@@ -100,8 +105,6 @@ class GetTM_Helper(WrapperHelper):
                 self._write("Last updated value of " + repr(self.__pname()) + ": " + str(value))
             else:
                 self._write("Last recorded value of " + repr(self.__pname()) + ": " + str(value))
-
-            self._notifyValue( self.__pname(), str(value), NOTIF_STATUS_OK, "")
 
         return [False, value,None,None]
 
@@ -125,6 +128,8 @@ class GetTM_Helper(WrapperHelper):
 
     #===========================================================================
     def __pname(self):
+        if type(self.__parameter)==str:
+            return self.__parameter
         return self.__parameter.fullName() 
                     
 ################################################################################
@@ -158,6 +163,9 @@ class SetGroundParameter_Helper(WrapperHelper):
         else:
             # Givin an inject list
             self.__toInject = args[0]
+        
+        # Store information for possible failures
+        self.setFailureInfo("TM", self.__toInject)
         
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
@@ -233,6 +241,9 @@ class Verify_Helper(WrapperHelper):
         else:
             # Givin a step or a step list
             self.__vrfDefinition = args[0]
+
+        # Store information for possible failures
+        self.setFailureInfo("TM", self.__vrfDefinition)
 
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
@@ -376,6 +387,9 @@ class SetLimits_Helper(WrapperHelper):
         if len(self.__limits)==0:
             raise SyntaxException("No limits given")
     
+            # Store information for possible failures
+        self.setFailureInfo("TM", self.__limits)
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -416,8 +430,10 @@ class RestoreNormalLimits_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
-        pass
     
+        # Store information for possible failures
+        self.setFailureInfo("TM", None)
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -472,10 +488,13 @@ class GetLimits_Helper(WrapperHelper):
 
         self.__parameter = args[0]
         if (len(args) == 2):
-          self.__property = args[1]
+            self.__property = args[1]
         else:
-          self.__property = "ALL"
+            self.__property = "ALL"
     
+            # Store information for possible failures
+        self.setFailureInfo("TM", self.__parameter)
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -542,6 +561,9 @@ class LoadLimits_Helper(WrapperHelper):
         
         self.__limitsFile = args[0]
         
+                # Store information for possible failures
+        self.setFailureInfo("TM", self.__limitsFile)
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -594,3 +616,160 @@ class LoadLimits_Helper(WrapperHelper):
     def _doCancel(self):
         self._write("Skip load limits file", {Severity:WARNING} )
         return [False, False]
+
+
+################################################################################
+class GetTMparam_Helper(WrapperHelper):
+    """
+    DESCRIPTION:
+        Helper for the GetTMparam wrapper function.
+    """    
+    
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "TM")
+        self.__parameter = None
+        self.__property = None
+        self._opName = "" 
+
+        #TODO Add all props and clarify which are allowed
+        self.__properties = [None, LoRed, LoYel, HiRed, HiYel,
+                             LoBoth, HiBoth, "Applicable", "All",
+                             "Description", "Units", "Calibration",
+                             "LIMIT_EN", "LIMIT_EVENT"]
+
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs ):
+        if len(args) == 0:
+            raise SyntaxException("No parameters given")
+
+        self.__parameter = args[0]
+        self.__property = args[1] if (len(args) == 2) else None
+
+        if self.__property not in self.__properties:
+            raise SyntaxException("No valid property")
+    
+            # Store information for possible failures
+        self.setFailureInfo("TM", self.__parameter)
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        self._setActionString(ACTION_SKIP, "Skip the parameter property acquisition and return None")
+        self._setActionString(ACTION_CANCEL, "Skip the parameter property acquisition and return None")
+        self._setActionString(ACTION_REPEAT, "Repeat the parameter property acquisition")
+
+        result = REGISTRY['TM'].getTMparam(self.__parameter,
+                                           self.__property,
+                                           config=self.getConfig())
+        return [False, result, NOTIF_STATUS_OK, ""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry get property", {Severity:WARNING} )
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip get property", {Severity:WARNING} )
+        self._write("CAUTION: the procedure logic may become invalid!", {Severity:WARNING} )
+        return [False, None]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Cancel get property", {Severity:WARNING} )
+        self._write("CAUTION: the procedure logic may become invalid!", {Severity:WARNING} )
+        return [False, None]
+
+################################################################################
+class SetTMparam_Helper(WrapperHelper):
+    """
+    DESCRIPTION:
+        Helper for the SetTMparam wrapper function.
+    """    
+    
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "TM")
+        self.__parameter = None
+        self.__limits = None
+        self.__properties = {}
+        self._opName = "" 
+
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs ):
+        if len(args)==0:
+            raise SyntaxException("No parameters given")
+
+        self.__parameter = args[0]
+        
+        self.__limits = {}
+        if self.hasConfig(Limits):
+            llist = self.getConfig(Limits)
+            if type(llist)==list:
+                if len(llist)==2:
+                    self.__limits[LoRed] = llist[0]
+                    self.__limits[LoYel] = llist[0]
+                    self.__limits[HiRed] = llist[1]
+                    self.__limits[HiYel] = llist[1]
+                elif len(llist)==4:
+                    self.__limits[LoRed] = llist[0]
+                    self.__limits[LoYel] = llist[1]
+                    self.__limits[HiRed] = llist[2]
+                    self.__limits[HiYel] = llist[3]
+                else:
+                    raise SyntaxException("Malformed limit definition")
+            elif type(llist)==dict:
+                self.__limits = llist       
+            else:
+                raise SyntaxException("Expected list or dictionary")
+        else:
+            if self.hasConfig(LoRed): self.__limits[LoRed] = self.getConfig(LoRed)
+            if self.hasConfig(LoYel): self.__limits[LoYel] = self.getConfig(LoYel)
+            if self.hasConfig(HiRed): self.__limits[HiRed] = self.getConfig(HiRed)
+            if self.hasConfig(HiYel): self.__limits[HiYel] = self.getConfig(HiYel)
+
+            if self.hasConfig(LoBoth):
+                self.__limits[LoYel] = self.getConfig(LoBoth)
+                self.__limits[LoRed] = self.getConfig(LoBoth)
+            if self.hasConfig(HiBoth):
+                self.__limits[HiYel] = self.getConfig(HiBoth)
+                self.__limits[HiRed] = self.getConfig(HiBoth)
+
+        for prop in ["LIMIT_EN", "LIMIT_EVENT"]:
+            if self.hasConfig(prop):
+                self.__properties[prop] = self.getConfig(prop)
+
+        if len(self.__limits) > 0:
+            self.__properties[Limits] = self.__limits
+    
+            # Store information for possible failures
+        self.setFailureInfo("TM", self.__parameter)
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+
+        self._setActionString( ACTION_SKIP   ,  "Skip the parameter property setting and return success (True)")
+        self._setActionString( ACTION_CANCEL ,  "Skip the parameter property setting and return failure (False)")
+        self._setActionString( ACTION_REPEAT ,  "Repeat the parameter property setting")
+
+        result = REGISTRY['TM'].setTMparam(self.__parameter,
+                                           self.__properties,
+                                           config=self.getConfig())
+        
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry set property", {Severity:WARNING} )
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip set property", {Severity:WARNING} )
+        return [False, True]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Cancel set property", {Severity:WARNING} )
+        return [False, False]
+

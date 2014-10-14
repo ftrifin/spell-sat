@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,6 +59,12 @@ import com.astra.ses.spell.gui.core.model.types.ServerFileType;
 
 public interface IFileManager extends IService
 {
+	class ProcessingLimits
+	{
+		public int fileLineCount;
+		public int processLineCount;
+	}
+	
 	/***************************************************************************
 	 * Obtain a server file absolute path
 	 * 
@@ -68,6 +74,11 @@ public interface IFileManager extends IService
 	public String getServerFilePath(String procId, ServerFileType typeId, IProgressMonitor monitor );
 
 	/***************************************************************************
+	 * Obtain the parent directory of server files by type
+	 **************************************************************************/
+	public String getServerFilePath( ServerFileType typeId, IProgressMonitor monitor );
+
+	/***************************************************************************
 	 * Obtain a server file
 	 * 
 	 * @param path
@@ -75,8 +86,9 @@ public interface IFileManager extends IService
 	 * @param file type
 	 *            type of file
 	 * @return log file data
+	 * @throws Exception 
 	 **************************************************************************/
-	public IServerFile getServerFile(String path, ServerFileType typeId, IProgressMonitor monitor );
+	public IServerFile getServerFile(String path, ServerFileType typeId, ProcessingLimits limits, IProgressMonitor monitor ) throws Exception;
 
 	/***************************************************************************
 	 * Delete a server file
@@ -92,7 +104,13 @@ public interface IFileManager extends IService
 	 * Obtain the list of available recovery files
 	 * @return list of filenames
 	 **************************************************************************/
-	public List<String> getFileRecoveryList();
+	public List<String> getRecoveryFileList();
+
+	/***************************************************************************
+	 * Obtain the list of available ASRUN files
+	 * @return list of filenames
+	 **************************************************************************/
+	public List<String> getAsRunFileList();
 
 	/***************************************************************************
 	 * Obtain the list of available recovery files

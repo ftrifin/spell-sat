@@ -5,7 +5,7 @@
 // DESCRIPTION: Information of a given executor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -32,9 +32,10 @@
 // Project includes ----------------------------------------------------------
 #include "SPELL_UTIL/SPELLbase.H"
 #include "SPELL_EXC/SPELLexecutorStatus.H"
+#include "SPELL_EXC/SPELLuserAction.H"
 #include "SPELL_SYN/SPELLmutex.H"
 // Local includes ------------------------------------------------------------
-#include "SPELL_CTX/SPELLexecutorConfiguration.H"
+#include "SPELL_CTX/SPELLexecutorStartupParams.H"
 #include "SPELL_CTX/SPELLopenMode.H"
 
 /** \addtogroup SPELL_CTX */
@@ -70,7 +71,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Constructor.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorModel( const SPELLexecutorConfiguration& config );
+		SPELLexecutorModel( const SPELLexecutorStartupParams& config );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
@@ -87,9 +88,12 @@ public: //--------------------------------------------------------------------
 		pid_t getPID() { return m_PID; };
 
 		std::string getProcId() { return m_procId; };
+		std::string getOriginId() { return m_originId; };
+		std::string getGroupId() { return m_groupId; };
 		std::string getInstanceId() { return m_instanceId; };
 		unsigned int getInstanceNum() { return m_instanceNum; };
 		std::string getParentInstanceId() { return m_parentProcId; };
+		int getParentCallingLine() { return m_parentCallingLine; };
 		std::string getArguments() { return m_arguments; };
 		std::string getCondition() { return m_condition; };
 		SPELLopenMode getOpenMode() { return m_openMode; };
@@ -114,8 +118,44 @@ public: //--------------------------------------------------------------------
 		std::string getErrorMessage() { return m_errorMsg; };
 		std::string getErrorReason() { return m_errorReason; };
 
-		//int getControllingClient TODO
-		//Add controlling client
+	    //////////////////////////////////////////////////////////////////////
+	    /** Get the current step of the executor
+	     *
+	     * \returns The current step if defined
+	    **////////////////////////////////////////////////////////////////////
+	    std::string getStageId() const
+	    {
+	    	return m_currentStageId;
+	    }
+	    std::string getStageTitle() const
+	    {
+	    	return m_currentStageTitle;
+	    }
+	    void setStage( const std::string& stageId, const std::string& stageTitle )
+	    {
+	    	m_currentStageId = stageId;
+	    	m_currentStageTitle = stageTitle;
+	    }
+	    void setStack( const std::string& csp, const std::string& codeName )
+	    {
+	    	m_currentStack = csp;
+	    	m_currentCode  = codeName;
+	    }
+	    //////////////////////////////////////////////////////////////////////
+	    /** Get the current stack of the executor
+	     *
+	     * \returns The current stack
+	    **////////////////////////////////////////////////////////////////////
+	    std::string getStack() const
+	    {
+	    	return m_currentStack;
+	    }
+	    std::string getCode() const
+	    {
+	    	return m_currentCode;
+	    }
+
+	    SPELLuserAction& getUserAction() { return m_userAction; };
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -149,9 +189,12 @@ private: //-------------------------------------------------------------------
 		std::string         m_procId;
 		std::string         m_instanceId;
 		std::string         m_timeId;
+		std::string         m_groupId;
+		std::string         m_originId;
 		unsigned int        m_instanceNum;
 		SPELLexecutorStatus m_status;
 		std::string         m_parentProcId;
+		int                 m_parentCallingLine;
 		std::string         m_arguments;
 		SPELLopenMode		m_openMode;
 		std::string         m_condition;
@@ -163,6 +206,14 @@ private: //-------------------------------------------------------------------
 		std::string			m_errorMsg;
 		std::string			m_errorReason;
 		std::string         m_contextName;
+		/** Holds the current executor step if any*/
+		std::string         m_currentStageId;
+		std::string         m_currentStageTitle;
+		/** Holds the current executor stack */
+		std::string         m_currentStack;
+		std::string         m_currentCode;
+		/** User action information */
+		SPELLuserAction     m_userAction;
 };
 
 /*@}*/

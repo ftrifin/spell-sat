@@ -14,7 +14,7 @@ Authoring
 
 @organization: SES ENGINEERING
 
-@copyright: Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+@copyright: Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
             
 @license:  This file is part of SPELL.
 
@@ -135,6 +135,10 @@ PROMPT   = 128
 #: directly choosen. It is expected that OnFailure contains a single behavior
 #: constant when using NOPROMPT.
 NOPROMPT = 256# Do not prompt the user
+#: Resume execution in the middle of a group send
+RESUME = 512
+#: Let the procedure handle a customized exception
+HANDLE = 1024
 
 ###############################################################################
 #: 'Equal-To' comparison identifier.
@@ -271,13 +275,6 @@ TIME_MODE_FWD = 'forwards retrieval mode'
 #: Access mode retrieval (backwards) when retrieving telemetry, commands or events information.
 TIME_MODE_BWD = 'backwards retrieval mode'
 
-###############################################################################
-# Alignment modes
-ALIGNMENT_MODE_NONE  = 'none'
-ALIGNMENT_MODE_LINE  = 'line mode'
-ALIGNMENT_MODE_STEP  = 'step mode'
-ALIGNMENT_MODE_TIMER = 'timer mode'
-
 ################################################################################
 # User action identifiers.
 ACTION_ABORT = 'A'
@@ -288,6 +285,7 @@ ACTION_SKIP = 'K'
 ACTION_NOACTION = 'N'
 ACTION_CANCEL = 'Q'
 ACTION_CANCEL_PMT = 'P'
+ACTION_HANDLE = 'H'
 
 ################################################################################
 # File constants
@@ -295,3 +293,17 @@ APPEND = 'append'
 WRITE = 'write'
 READ = 'read'
 READ_WRITE = 'read write'
+
+################################################################################
+# Shared variable constants
+GLOBAL = "__NONE__"
+
+################################################################################
+# Memory management constants
+ONBOARD = 'ONBOARD'
+# Physical address
+PHYSICAL = 'Physical_Address'
+# Logical address
+LOGICAL = 'Logical_Address'
+#: ACTIVE limit set
+ACTIVE = 'ACTIVE'

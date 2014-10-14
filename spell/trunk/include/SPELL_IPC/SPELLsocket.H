@@ -5,7 +5,7 @@
 // DESCRIPTION: Socket wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -115,11 +115,6 @@ public: //--------------------------------------------------------------------
 		* \return True if there is a timeout.
 		*/////////////////////////////////////////////////////////////////////
 		bool waitData( int timeout );
-
-		/*////////////////////////////////////////////////////////////////////
-		* Disconnect the socket.
-		*/////////////////////////////////////////////////////////////////////
-		void disconnect();
 
 		/*////////////////////////////////////////////////////////////////////
 		* Shutdown the socket input.

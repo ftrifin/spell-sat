@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for generic features
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -108,14 +108,19 @@ class Prompt_Helper(WrapperHelper):
             
         #Check prompt type   
         ptype = self.getConfig(Type)
-        if any(ptype == x for x in [LIST, LIST|ALPHA, LIST|NUM, LIST|COMBO, LIST|COMBO|ALPHA, LIST|COMBO|NUM]):
+        if ptype in [LIST, LIST|ALPHA, LIST|NUM, LIST|COMBO, LIST|COMBO|ALPHA, LIST|COMBO|NUM]:
             options = self.__options
             if type(options) == list and len(options)>0:
                 self.addConfig(Type,ptype)
             else:
                 raise SyntaxException("Expected a list of options")
-        elif not any( (ptype & x > 0) for x in [OK,CANCEL,YES,NO,YES_NO,OK_CANCEL,NUM,ALPHA,DATE]):
-                raise SyntaxException("Unknown prompt type")    
+        elif not ptype in [OK,CANCEL,YES,NO,YES_NO,OK_CANCEL,NUM,ALPHA,DATE]:
+                raise SyntaxException("Unknown prompt type")
+
+        if self.hasConfig(ValueType):
+            vtype = self.getConfig(ValueType)
+            if not vtype in [LONG,FLOAT,STRING,DATETIME,RELTIME]: 
+                raise SyntaxException("Unknown cast value type: " + repr(vtype))
             
         # Check timeout value
         defaultTimeout = 0
@@ -136,8 +141,16 @@ class Prompt_Helper(WrapperHelper):
         # Mark procedure prompts
         self.addConfig(Scope,SCOPE_PROC)
 
+        # Store information for possible failures
+        self.setFailureInfo("CIF", "prompt")
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
+        
+        self._setActionString( ACTION_REPEAT , "Retry prompt")
+        self._setActionString( ACTION_SKIP   , "Skip the prompt and return None")
+        # Force prompt configuration
+        self.addConfig(OnFailure, REPEAT|SKIP)
         
         answer = self._prompt( self.__msg, self.__options, self.getConfig() )
         if answer is None or str(answer) == "<CANCEL>":
@@ -169,7 +182,12 @@ class Prompt_Helper(WrapperHelper):
     #===========================================================================
     def _doRepeat(self):
         self._write("Repeating prompt", {Severity:WARNING} )
-        return [True,False]
+        return [True,None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip prompt", {Severity:WARNING} )
+        return [False,None]
 
 ################################################################################
 class Display_Helper(WrapperHelper):
@@ -306,6 +324,9 @@ class WaitFor_Helper(WrapperHelper):
         self._setActionString( ACTION_CANCEL ,  "Skip the wait statement and return failure (False)")
         self._setActionString( ACTION_REPEAT ,  "Repeat and wait for the condition to be fulfilled again")
 
+        # Store information for possible failures
+        self.setFailureInfo("WAIT", self.__args)
+
         # Start the wait state
         LOG("Starting wait state")
         REGISTRY['EXEC'].startWait( self.__args, self.__config )
@@ -413,3 +434,142 @@ class ChangeLanguageConfig_Helper(WrapperHelper):
         self._write("Retry configuration change", {Severity:WARNING} )
         return [True,None]
 
+################################################################################
+class GetLanguageConfig_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+        Helper for the GetLanguageConfig wrapper.
+    """    
+
+    __configurable = None
+    __isInterface = None
+    
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self)
+        self.__configurable = None
+        self.__isInterface = None
+        self._opName = "" 
+
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs ):
+        
+        if len(args)==0:
+            raise SyntaxError("No arguments given")
+        
+        self.__configurable = args[0]
+        
+        if len(args)==2:
+            self.__ifcName = args[1]
+
+        if isinstance(self.__configurable, Interface):
+            self.__isInterface = True
+        elif inspect.isfunction(self.__configurable):
+            self.__isInterface = False
+        else:
+            raise SyntaxError("Expected a driver interface or a language function")
+        
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+
+        # We need to reparse configuration
+        self.setConfig(kargs)
+        
+        self._setActionString( ACTION_SKIP   ,  "Skip getting configuration and return None")
+        self._setActionString( ACTION_REPEAT ,  "Try to get the configuration again")
+        
+        if self.__isInterface:
+            ifcName = self.__configurable.getInterfaceName()
+            result = REGISTRY['CTX'].getInterfaceConfig( ifcName )
+        else:
+            funName = self.__configurable.__name__
+            ifcName = self.__ifcName
+            result = REGISTRY['CTX'].getInterfaceConfig( ifcName )
+            result.update(REGISTRY['CTX'].getFunctionConfig( funName ))
+
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Configuration get skipped", {Severity:WARNING} )
+        return [False,None]        
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry configuration get", {Severity:WARNING} )
+        return [True,None]
+
+################################################################################
+class TMTCLookup_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+    """    
+    __name = None
+    __type = None
+    __source = None
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "TMTCDB")
+        self._opName = ""
+        self.__name = None
+        self.__type = None
+        self.__source = None
+
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs):
+        
+        if len(args) != 0 and len(args)!=1:
+            raise SyntaxException("This function does not support so many positional arguments")
+
+        # Syntax: MemoryLookup( Name=, Source=, Type= others )
+        # Syntax: MemoryLookup( 'NAME', Source=, Type= others )
+
+        if len(args)==1:
+            self.__name = args[0]
+        else:
+            if not self.hasConfig(Name):
+                raise SyntaxException("Expected a 'Name' modifier indicating the resource name")
+            self.__name = self.getConfig(Name)
+
+        if type(self.__name) != str:
+            raise SyntaxException("Expected a string for the resource name")
+            
+        if not self.hasConfig(Type):
+            raise SyntaxException("Expected a 'Type' modifier indicating the type of reports")
+        self.__type = self.getConfig(Type)
+        
+        if self.hasConfig(Source):
+            self.__source = self.getConfig(Source)
+        else:
+            self.__source = None
+        
+        if self.hasConfig(ValueFormat):
+            format = self.getConfig(ValueFormat)
+            if not format in [RAW,ENG]:
+                raise SyntaxException("Invalid format specified: '" + str(format) + "'")
+            
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+
+        self._setActionString( ACTION_SKIP   ,  "Skip TMTC lookup and return None")
+        self._setActionString( ACTION_REPEAT ,  "Repeat TMTC lookup")
+
+        # Store information for possible failures
+        self.setFailureInfo("TMTCDB", "Lookup")
+
+        result = REGISTRY['TM'].databaseLookup( self.__name, self.__type, self.__source, config = self.getConfig() )
+                
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry TMTC lookup", {Severity:WARNING} )
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip TMTC lookup", {Severity:WARNING} )
+        return [False, True]

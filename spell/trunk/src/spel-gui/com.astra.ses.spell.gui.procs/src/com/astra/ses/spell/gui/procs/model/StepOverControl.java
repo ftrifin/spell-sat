@@ -1,12 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
+
 // PACKAGE   : com.astra.ses.spell.gui.procs.model
 // 
 // FILE      : StepOverControl.java
 //
 // DATE      : Nov 8, 2012
 //
-// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -46,120 +47,317 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.model;
 
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
 
-public class StepOverControl implements IStepOverControl
+class StepOverControl implements IStepOverControl
 {
-	private StepOverMode m_mode;
-	private int m_currentDepth;
-	private int m_tempMaxDepth;
-	private int m_maxDepth;
-	private boolean m_intoOne;
-
-	public StepOverControl()
+	private class StackElement
 	{
-		m_mode = null;
+		String code;
+		String function;
+		int lineNo;
+		
+		public String toString()
+		{
+			return code + "::" + function + " [" + lineNo + "]";
+		}
+	}
+	
+	private StepOverModeState m_state;
+	private List<StackElement> m_stack;
+	private String m_instanceId;
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public StepOverControl( String instanceId )
+	{
+		m_instanceId = instanceId;
+		m_state = new StepOverModeState();
+		//TODO this needs to come from the procedure
+		m_state.setMode(StepOverMode.STEP_INTO_ALWAYS);
+		m_stack = new LinkedList<StackElement>();
 		reset();
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public StepOverMode getMode()
     {
-	    return m_mode;
+	    return m_state.getMode();
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void setMode(StepOverMode mode)
     {
-		Logger.debug("Set mode " + mode + ", current " + m_mode, Level.PROC, this);
-		switch(mode)
-		{
-		case STEP_OVER_ALWAYS:
-			// If this mode is set, we need to stick to the current level or above. This means that
-			// any level above this maximum shall not be notified.
-			m_maxDepth = m_currentDepth;
-			m_tempMaxDepth = -1;
-			break;
-		case STEP_OVER_ONCE:
-			// There is a temporary maximum level. This level will be reset when the current level
-			// is back equal to this temporary max.
-			m_tempMaxDepth = m_currentDepth;
-			// Do not modify the absolute maximum level: a click on STEP OVER button shall not affect
-			// the fact that we are still in step over always
-			break;
-		case STEP_INTO_ONCE:
-			// Modify the absolute maximum level: a click on STEP INTO button will change the
-			// step over always mode, in a way that now the maximum level is updated to the current one
-			if ((m_mode != null) && (m_mode.equals(StepOverMode.STEP_OVER_ALWAYS))) m_intoOne = true;
-			break;
-		case STEP_INTO_ALWAYS:
-			// There is no maximum level
-			m_maxDepth = -1;
-			m_tempMaxDepth = -1;
-			break;
-		default:
-			break;
-		}
-		m_mode = mode;
+		m_state.setMode(mode);
     }
-
+	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void onExecutionCall()
-    {
-		m_currentDepth++;
-		if (m_intoOne) 
+	public List<String> getStackCodeNames()
+	{
+		List<String> desc = new LinkedList<String>();
+		for(StackElement element : m_stack)
 		{
-			m_maxDepth++;
-			m_intoOne = false;
+			desc.add(element.code);
 		}
+		return desc;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public List<Integer> getStackLines()
+	{
+		List<Integer> desc = new LinkedList<Integer>();
+		for(StackElement element : m_stack)
+		{
+			desc.add(element.lineNo);
+		}
+		return desc;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public List<String> getStackFunctions()
+	{
+		List<String> desc = new LinkedList<String>();
+		for(StackElement element : m_stack)
+		{
+			desc.add(element.function);
+		}
+		return desc;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public int getStackDepth()
+	{
+		return m_stack.size()-1;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public int getViewDepth()
+	{
+		return m_state.getVisibleDepth();
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public boolean stackUp()
+	{
+		return m_state.increaseReferenceDepth();
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public boolean  stackDown()
+	{
+		return m_state.decreaseReferenceDepth();
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public boolean stackTop()
+	{
+		return m_state.removeReferenceDepth();
+	}
+	
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public boolean stackTo(int pos)
+	{
+		return m_state.goToReferenceDepth(pos);
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public void preInitialize( List<String> stack, boolean fullStack )
+    {
+		Logger.debug("Preinitialize SO control", Level.PROC, this);
+		int limit = stack.size();
+		if (!fullStack) limit -= 2;
+		for(int idx=0; idx<limit; idx=idx+2)
+		{
+			Logger.debug("   - add to stack " + stack.get(idx) + ":" + stack.get(idx+1), Level.PROC, this);
+			onExecutionCall( stack.get(idx), "<no info>", Integer.parseInt(stack.get(idx+1)));
+		}
+		Logger.debug("After preinitialization stack is " + Arrays.toString(m_stack.toArray()), Level.PROC, this);
+		Logger.debug("Stepping over: " + isSteppingOver(), Level.PROC, this);
+		Logger.debug("Current code : " + getCodeId(), Level.PROC, this);
+		Logger.debug("Current depth: " + getViewDepth(), Level.PROC, this);
+		Logger.debug("Current line : " + getLineNo(), Level.PROC, this);
+		Logger.debug("Stack depth  : " + m_stack.size(), Level.PROC, this);
+		Logger.debug("", Level.PROC, this);
+    }
+	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public void onExecutionCall( String code, String function, int lineNo )
+    {
+		StackElement se = new StackElement();
+		se.code = code;
+		se.lineNo = lineNo;
+		se.function = function;
+		m_stack.add(se);
+		m_state.onExecutionCall();
+//		Logger.debug("After call event stack is " + Arrays.toString(m_stack.toArray()), Level.PROC, this);
+//		Logger.debug("Stepping over: " + isSteppingOver(), Level.PROC, this);
+//		Logger.debug("Current code: " + getCodeId(), Level.PROC, this);
+//		Logger.debug("Current depth: " + getViewDepth(), Level.PROC, this);
+//		Logger.debug("Current line : " + getLineNo(), Level.PROC, this);
+//		Logger.debug("", Level.PROC, this);
+//		Logger.debug("", Level.PROC, this);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void onExecutionLine()
     {
+		m_state.onExecutionLine();
+//		Logger.debug("After line event stack is " + Arrays.toString(m_stack.toArray()), Level.PROC, this);
+//		Logger.debug("Stepping over: " + isSteppingOver(), Level.PROC, this);
+//		Logger.debug("Current code: " + getCodeId(), Level.PROC, this);
+//		Logger.debug("Current depth: " + getViewDepth(), Level.PROC, this);
+//		Logger.debug("Current line : " + getLineNo(), Level.PROC, this);
+//		Logger.debug("", Level.PROC, this);
+//		Logger.debug("", Level.PROC, this);
     }
-
+	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void onExecutionReturn()
     {
-		m_currentDepth--;
-		// If we started the SO in a level 3 but we return to level 2, now
-		// the maximum level shall be 2 as well
-		if (m_currentDepth < m_maxDepth)
-		{
-			m_maxDepth = m_currentDepth;
-		}
-		// Reset the temporary max level if we come back to the level were it was set
-		if (m_currentDepth == m_tempMaxDepth)
-		{
-			m_tempMaxDepth = -1;
-		}
+		m_stack.remove( m_stack.size()-1 );
+		m_state.onExecutionReturn();
+//		Logger.debug("After return event stack is " + Arrays.toString(m_stack.toArray()), Level.PROC, this);
+//		Logger.debug("Stepping over: " + isSteppingOver(), Level.PROC, this);
+//		Logger.debug("Current code : " + getCodeId(), Level.PROC, this);
+//		Logger.debug("Current depth: " + getViewDepth(), Level.PROC, this);
+//		Logger.debug("Current line : " + getLineNo(), Level.PROC, this);
+//		Logger.debug("", Level.PROC, this);
+//		Logger.debug("", Level.PROC, this);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public void onProcedureReady()
+    {
+		m_state.initialState();
+    }
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public void updateCurrentLine( int stackElement, int lineNo )
+	{
+		int stackIndex = m_stack.size()-stackElement-1;
+		if (stackIndex>=0 && m_stack.size()>stackIndex)
+		{
+			m_stack.get(stackIndex).lineNo = lineNo;
+		}
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public boolean isSteppingOver()
     {
-		if ( (m_tempMaxDepth != -1) && (m_tempMaxDepth < m_currentDepth))
-		{
-			return true;
-		}
-		if ( (m_maxDepth != -1) && (m_maxDepth < m_currentDepth))
-		{
-			return true;
-		}
-		return false;
+		return m_state.isSteppingOver();
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public String getCodeId()
+    {
+		// For the initialization phase we do not really care about the line
+		if (m_stack.isEmpty()) return m_instanceId;
+		int depth = m_state.getVisibleDepth();
+		if (depth>=m_stack.size()) depth = m_stack.size()-1;
+		if (depth<0) depth = 0;
+		return m_stack.get(depth).code;
+    }
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public String getFunctionName()
+    {
+		// For the initialization phase we do not really care about the line
+		if (m_stack.isEmpty()) return "";
+		int depth = m_state.getVisibleDepth();
+		if (depth>=m_stack.size()) depth = m_stack.size()-1;
+		return m_stack.get(depth).function;
+    }
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public int getLineNo()
+    {
+		// For the initialization phase we do not really care about the line
+		if (m_stack.isEmpty()) return 0;
+		int depth = m_state.getVisibleDepth();
+		if (depth>=m_stack.size()) depth = m_stack.size()-1;
+		if (depth==-1) return 0;
+		return m_stack.get(depth).lineNo;
+    }
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void reset()
 	{
-		m_intoOne = false;
-		m_mode = null;
-		m_currentDepth = 0;
-		m_tempMaxDepth = -1;
-		m_maxDepth = -1;
+		m_stack.clear();
+		m_state.reset();
 	}
 }

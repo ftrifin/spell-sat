@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -92,16 +92,17 @@ public class ConnectServerJob implements IRunnableWithProgress
 				if (info != null)
 				{
 					monitor.setTaskName("Connecting to server");
-					if (info.getTunnelUser() != null)
+					if (info.getAuthentication() != null && info.getAuthentication().getUsername() != null && !info.getAuthentication().getUsername().trim().isEmpty())
 					{
-						String pwd = info.getTunnelPassword();
-						if ((pwd == null) || pwd.isEmpty())
+						String pwd = info.getAuthentication().getPassword();
+						String key = info.getAuthentication().getKeyFile();
+						if ( ((pwd == null) || pwd.trim().isEmpty()) && (key == null || key.trim().isEmpty()))
 						{
 							promptPassword = true;
 							// Ask the user for password
-							StringDialog dialog = new StringDialog(m_window.getShell(), "Tunneled connection to "
-							        + info.getName(), "Secure access", "Access to this server requires secure access\n"
-							        + "please enter password for user '" + info.getTunnelUser() + "'", true);
+							StringDialog dialog = new StringDialog(m_window.getShell(), "Connection to "
+							        + info.getName(), "Secure access", "Access to this server requires authentication and there is no user key available\n"
+							        + "please enter password for user '" + info.getAuthentication().getUsername() + "'", true);
 							int dresult = dialog.open();
 							if (dresult == StringDialog.CANCEL)
 							{
@@ -112,7 +113,7 @@ public class ConnectServerJob implements IRunnableWithProgress
 								return;
 							}
 							String password = dialog.getAnswer();
-							info.setTunnelPassword(password);
+							info.getAuthentication().setPassword(password);
 						}
 					}
 					proxy.changeServer(info);
@@ -127,9 +128,8 @@ public class ConnectServerJob implements IRunnableWithProgress
 			}
 			catch (ServerError err)
 			{
-				MessageDialog.openError(m_window.getShell(), "Connect to server",
-				        "Cannot connect to server:\n\n" + err.getLocalizedMessage());
-				if (promptPassword) info.setTunnelPassword(null);
+				MessageDialog.openError(m_window.getShell(), "Connect to server", "Cannot connect to server:\n\n" + err.getLocalizedMessage());
+				if (promptPassword) info.getAuthentication().setPassword(null);
 				result = CommandResult.FAILED;
 			}
 			catch (Exception e)

@@ -9,6 +9,7 @@ import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 public interface ICodeLine
 {
 	public int getLineNo();
+	public String getParentCodeId();
 	public String getSource();
 	public int getNumExecutions();
 	public boolean isExecutable();

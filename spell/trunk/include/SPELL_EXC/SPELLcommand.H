@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor command definition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -70,6 +70,8 @@ ExecutorCommand;
 #define CMD_GOTO        "CMD_GOTO"
 /** Identifier for the PAUSE command */
 #define CMD_PAUSE       "CMD_PAUSE"
+/** Identifier for the INTERRUPT command */
+#define CMD_INTERRUPT   "CMD_INTERRUPT"
 /** Identifier for the SCRIPT command */
 #define CMD_SCRIPT      "CMD_SCRIPT"
 /** Identifier for the RELOAD command */

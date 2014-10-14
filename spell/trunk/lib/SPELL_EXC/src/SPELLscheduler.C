@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor scheduler
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -58,6 +58,7 @@ SPELLscheduler::SPELLscheduler( bool useSafeCalls )
     m_condition.reset();
     m_result.reset();
     m_silentCheck = false;
+    m_defaultPromptWarningDelay = 30;
 
     DEBUG("[SCH] Scheduler created");
 }
@@ -88,6 +89,7 @@ void SPELLscheduler::startWait( const SPELLscheduleCondition& condition )
     m_condition = condition;
 
     DEBUG("		Condition type: " + ISTR(m_condition.type));
+    DEBUG("     Target time   : " + m_condition.targetTime.toString());
     DEBUG("		Expression    : " + m_condition.expression);
     DEBUG("		Message       : " + m_condition.message);
     DEBUG("		Period        : " + m_condition.period.toString());
@@ -186,9 +188,9 @@ void SPELLscheduler::startWait( const SPELLscheduleCondition& condition )
 //=============================================================================
 // METHOD    : SPELLscheduler::startPrompt
 //=============================================================================
-void SPELLscheduler::startPrompt()
+void SPELLscheduler::startPrompt( const SPELLtime& timeout, bool headless )
 {
-    DEBUG("[SCH] Starting prompt");
+    DEBUG("[SCH] Starting prompt (to: " + timeout.toString() + ")");
 
 	// If there is a condition already ongoing, cancel it
 	if (m_condition.type != SPELLscheduleCondition::SCH_NONE)
@@ -199,6 +201,22 @@ void SPELLscheduler::startPrompt()
     // Store the condition data
 	m_condition.reset();
     m_condition.type = SPELLscheduleCondition::SCH_PROMPT;
+    // Set no period. This will ensure a check of 1 second once the prompt starts
+    m_condition.period.set(0,0);
+    // Timeout of the prompt
+    if ( timeout.getSeconds() == 0 )
+    {
+        DEBUG("[SCH] No timeout given from the adapter");
+        DEBUG("[SCH] Will use the default: " + ISTR(m_defaultPromptWarningDelay) + " seconds.");
+    	// Set the default delay if not given by the adapter
+    	m_condition.timeout.set(m_defaultPromptWarningDelay,0);
+    }
+    else
+    {
+        DEBUG("[SCH] Timeout given from the adapter");
+    	m_condition.timeout = timeout;
+    }
+    DEBUG("[SCH] Prompt timeout: " + m_condition.timeout.toString());
 
 	// Reset filters
 	m_lastNotifiedItem.name = "";
@@ -215,6 +233,15 @@ void SPELLscheduler::startPrompt()
     m_lastNotificationTime.setCurrent();
 	m_notificationPeriod = SPELLtime(0,0,true);
 	m_result.type = SPELLscheduleResult::SCH_SUCCESS;
+
+	// If the procedure is headless raise a warning right away
+	if (headless)
+	{
+		raiseEvent("Background procedure " + SPELLexecutor::instance().getInstanceId() + " awaiting prompt answer");
+	}
+
+	// Start the timer to check a prompt timeout
+	startTimer();
     DEBUG("[SCH] Prompt started");
 }
 
@@ -224,8 +251,23 @@ void SPELLscheduler::startPrompt()
 void SPELLscheduler::startTimer()
 {
 	DEBUG("Starting timer");
+    if (m_timer != NULL)
+    {
+    	DEBUG("Deleting previous timer");
+    	m_abortTimer = true;
+    	{
+    		SPELLsafeThreadOperations tops("SPELLscheduler::startTimer()");
+    		if (m_timer->isCounting())
+    		{
+    			m_timer->cancel();
+    		}
+    		m_timer->join();
+    	}
+    	delete m_timer;
+    	m_timer = NULL;
+    	DEBUG("Previous timer deleted");
+    }
     m_abortTimer = false;
-    delete m_timer;
     // Start a timer to check the condition
     // If a period is given, use it. Otherwise use a default
     if (m_condition.period>0)
@@ -262,6 +304,7 @@ bool SPELLscheduler::timerCallback( unsigned long elapsed )
         switch(m_condition.type)
         {
         case SPELLscheduleCondition::SCH_TIME:
+        case SPELLscheduleCondition::SCH_PROMPT:
         {
             abortCheck = checkTime();
             break;
@@ -375,24 +418,71 @@ bool SPELLscheduler::checkTime()
 	SPELLmonitor m(m_checkLock);
     bool abortCheck = false;
 
-    // Get the current time and compare it against the target time
-    SPELLtime currentTime;
-    if ( currentTime >= m_checkTargetTime )
+	// Get the current time and compare it against the target time
+	SPELLtime currentTime;
+
+	if (m_condition.type == SPELLscheduleCondition::SCH_NONE)
     {
-        DEBUG("[SCH] Timer callback: condition fullfilled");
-        // Notify that the countdown has finished successfully
-        notifyTime(true,true);
-        // Cancel the timer loop
-        abortCheck = true;
-        // Set the result
-        m_result.type = SPELLscheduleResult::SCH_SUCCESS;
+		abortCheck = true;
+    }
+	else if (m_condition.type == SPELLscheduleCondition::SCH_PROMPT)
+    {
+		SPELLtime diff = currentTime - m_checkStartTime;
+		if (diff>m_condition.timeout)
+		{
+			raiseEvent("Procedure awaiting prompt answer");
+			// Reset the start time
+			m_checkStartTime = currentTime;
+		}
     }
     else
     {
-        // Time evolution notification
-        notifyTime(false,false);
+		if ( currentTime >= m_checkTargetTime )
+		{
+			DEBUG("[SCH] Timer callback: condition fullfilled");
+			// Notify that the countdown has finished successfully
+			notifyTime(true,true);
+			// Cancel the timer loop
+			abortCheck = true;
+			// Set the result
+			m_result.type = SPELLscheduleResult::SCH_SUCCESS;
+		}
+		else
+		{
+			// Time evolution notification
+			notifyTime(false,false);
+		}
     }
     return abortCheck;
+}
+
+//=============================================================================
+// METHOD    : SPELLscheduler::raiseEvent
+//=============================================================================
+void SPELLscheduler::raiseEvent( const std::string& message )
+{
+	// Raise event
+	try
+	{
+		PyObject* evIfc = SPELLregistry::instance().get("EV");
+		if (evIfc != NULL)
+		{
+			PyObject* evMsg = SSTRPY(message);
+			PyObject* severity = PyLong_FromLong(LanguageConstants::WARNING);
+			PyObject* scope = PyLong_FromLong(LanguageConstants::SCOPE_SYS);
+			PyObject* config = PyDict_New();
+		    PyDict_SetItemString( config, LanguageModifiers::Severity.c_str(), severity );
+		    PyDict_SetItemString( config, LanguageModifiers::Scope.c_str(), scope );
+			SPELLpythonHelper::instance().callMethod(evIfc,"raiseEvent",evMsg,config,NULL);
+			SPELLpythonHelper::instance().checkError();
+			Py_XDECREF(config);
+			Py_XDECREF(evMsg);
+		}
+	}
+	catch(SPELLcoreException& ex)
+	{
+		LOG_ERROR("Unable to inject event: " + ex.what());
+	}
 }
 
 //=============================================================================
@@ -555,6 +645,7 @@ bool SPELLscheduler::checkVerification()
     PyDict_SetItemString( verifyConfig, LanguageModifiers::PromptUser.c_str(), pyPromptUser );
     PyDict_SetItemString( verifyConfig, LanguageModifiers::OnFalse.c_str(), pyOnFalse );
     PyDict_SetItemString( verifyConfig, LanguageModifiers::Retries.c_str(), pyRetries );
+    PyDict_SetItemString( verifyConfig, LanguageModifiers::InWaitFor.c_str(), Py_True);
 
     // Perform the actual TM verification with the driver interface
     DEBUG("[SCH] Calling verify");
@@ -664,6 +755,7 @@ bool SPELLscheduler::abortWait( bool setStatus )
         if (m_condition.type != SPELLscheduleCondition::SCH_FIXED && m_condition.type != SPELLscheduleCondition::SCH_PROMPT)
         {
             DEBUG("[SCH] Check aborted, cancelling timer");
+            if (m_timer) m_timer->cancel();
             m_abortTimer = true;
             SPELLexecutor::instance().getCIF().resetVerbosity();
             m_result.type = SPELLscheduleResult::SCH_ABORTED;
@@ -712,10 +804,6 @@ bool SPELLscheduler::interruptWait()
             SPELLexecutor::instance().getController().setStatus(STATUS_INTERRUPTED);
         	SPELLexecutor::instance().getCIF().warning("Wait condition interrupted", LanguageConstants::SCOPE_SYS );
 		}
-        else
-        {
-        	SPELLexecutor::instance().getCIF().warning("Procedure will pause", LanguageConstants::SCOPE_SYS );
-        }
         interrupted = true;
         DEBUG("[SCH] Wait interrupted");
     }
@@ -732,6 +820,7 @@ void SPELLscheduler::finishWait( bool setStatus, bool keepLock )
     {
         DEBUG("[SCH] Finish wait status");
         m_condition.reset();
+    	if (m_timer) m_timer->stop();
         SPELLexecutor::instance().getCIF().resetVerbosity();
         if (setStatus) resetControllerStatus( keepLock );
         // Releasing language lock shall be the last thing done
@@ -747,6 +836,8 @@ void SPELLscheduler::finishPrompt()
 	SPELLmonitor m(m_checkLock);
 	DEBUG("[SCH] Finish prompt wait status");
 	m_condition.reset();
+	// Abort the timer that is checking the prompt timeouts
+    m_abortTimer = true;
 	SPELLexecutor::instance().getCIF().resetVerbosity();
 	resetControllerStatus( false );
 	// Releasing language lock shall be the last thing done
@@ -761,7 +852,9 @@ void SPELLscheduler::cancelPrompt()
 	SPELLmonitor m(m_checkLock);
 	DEBUG("[SCH] Cancel prompt wait status");
 	m_condition.reset();
-	SPELLexecutor::instance().getCIF().resetVerbosity();
+	// Abort the timer that is checking the prompt timeouts
+    m_abortTimer = true;
+	SPELLexecutor::instance().abort("Prompt cancelled by user", true);
 	// Releasing language lock shall be the last thing done
 	releaseLanguageLock();
 }
@@ -990,4 +1083,13 @@ void SPELLscheduler::message( const std::string& message )
 {
     if (m_silentCheck) return;
     SPELLexecutor::instance().getCIF().write(message, LanguageConstants::SCOPE_SYS );
+}
+
+//=============================================================================
+// METHOD    : SPELLscheduler::setPromptWarningDelay()
+//=============================================================================
+void SPELLscheduler::setPromptWarningDelay( unsigned int secs )
+{
+	LOG_INFO("[SCH] Update prompt warning default delay to " + ISTR(secs) + " seconds");
+	m_defaultPromptWarningDelay = secs;
 }

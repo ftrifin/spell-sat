@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the client
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -203,17 +203,21 @@ SPELLipcMessage SPELLclient::processRequestFromClient( const SPELLipcMessage& ms
 		{
 			resp = SPELLcontext::instance().getProcedureRecoveryList( msg );
 		}
+		else if (msg.getId() == ContextMessages::REQ_ASRUN_LIST)
+		{
+			resp = SPELLcontext::instance().getProcedureAsRunList( msg );
+		}
 		else if (msg.getId() == ContextMessages::REQ_DELETE_RECOVERY )
 		{
 			resp = SPELLcontext::instance().deleteRecoveryFiles(msg);
 		}
-		else if (msg.getId() == ContextMessages::REQ_DUMP_INTERPRETER )
-		{
-			resp = SPELLcontext::instance().dumpInterpreterInfo(msg);
-		}
 		else if (msg.getId() == ContextMessages::REQ_REMOVE_CONTROL )
 		{
 			resp = SPELLcontext::instance().removeControl(msg);
+		}
+		else if (msg.getId() == ContextMessages::REQ_SET_BACKGROUND )
+		{
+			resp = SPELLcontext::instance().setExecutorInBackground(msg);
 		}
 		else if (msg.getId() == ContextMessages::REQ_LIST_FILES )
 		{
@@ -227,6 +231,47 @@ SPELLipcMessage SPELLclient::processRequestFromClient( const SPELLipcMessage& ms
 		{
 			resp = SPELLcontext::instance().getInputFile(msg);
 		}
+		else if (msg.getId() == ContextMessages::REQ_CURRENT_TIME )
+		{
+			resp = SPELLcontext::instance().getCurrentTime(msg);
+		}
+	    else if ( requestId == ContextMessages::REQ_DEL_SHARED_DATA )
+	    {
+	    	resp = SPELLcontext::instance().clearSharedData(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_SET_SHARED_DATA )
+	    {
+	    	resp = SPELLcontext::instance().setSharedData(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA )
+	    {
+	    	resp = SPELLcontext::instance().getSharedData(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA_KEYS )
+	    {
+	    	resp = SPELLcontext::instance().getSharedDataKeys(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA_SCOPES )
+	    {
+	    	resp = SPELLcontext::instance().getSharedDataScopes(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_DEL_SHARED_DATA_SCOPE )
+	    {
+	    	resp = SPELLcontext::instance().removeSharedDataScope(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_ADD_SHARED_DATA_SCOPE )
+	    {
+	    	resp = SPELLcontext::instance().addSharedDataScope(msg);
+	    }
+	    else if ( requestId == ContextMessages::REQ_GET_CTX_EXEC_DFLT )
+		{
+			resp = SPELLcontext::instance().getExecutorDefaults(msg);
+		}
+	    else if ( requestId == ContextMessages::REQ_SET_CTX_EXEC_DFLT )
+		{
+			resp = SPELLcontext::instance().setExecutorDefaults(msg);
+		}
+
 		else
 		{
 			// Forward the request to the executor

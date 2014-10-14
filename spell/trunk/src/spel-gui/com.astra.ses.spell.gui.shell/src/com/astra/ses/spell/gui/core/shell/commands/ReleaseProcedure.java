@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,26 +61,6 @@ import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
  ******************************************************************************/
 public class ReleaseProcedure extends ShellCommand
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
-
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
@@ -110,7 +90,7 @@ public class ReleaseProcedure extends ShellCommand
 			        "Not a local procedure: " + procId); }
 
 			display("Detaching from procedure " + procId, Severity.INFO);
-			pmgr.releaseProcedure(procId, new ShellProgressMonitor());
+			pmgr.releaseProcedure(procId, false, new ShellProgressMonitor());
 			display("Procedure detached.");
 		}
 		catch (CommandFailed ex)

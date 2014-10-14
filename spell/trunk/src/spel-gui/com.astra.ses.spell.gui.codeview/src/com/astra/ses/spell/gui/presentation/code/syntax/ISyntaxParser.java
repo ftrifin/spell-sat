@@ -6,7 +6,7 @@
 //
 // DATE      : Oct 28, 2010
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -64,7 +64,7 @@ public interface ISyntaxParser
 	 *            Text layout containing the text to be parsed. Styles are
 	 *            applied to this layout as well.
 	 **************************************************************************/
-	public void parseSyntax(TextLayout layout, int rowIndex, boolean highlighted);
+	public void parseSyntax(TextLayout layout, int rowIndex, boolean selected, boolean highlighted);
 
 	/***************************************************************************
 	 * Parse the source given to detect special areas.

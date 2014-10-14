@@ -5,7 +5,7 @@
 // DESCRIPTION: IPC interface for executors
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,7 +29,7 @@
 
 // FILES TO INCLUDE //////////////////////////////////////////////////////////
 // Local includes ------------------------------------------------------------
-#include "SPELL_CTX/SPELLexecutorConfiguration.H"
+#include "SPELL_CTX/SPELLexecutorStartupParams.H"
 // Project includes ----------------------------------------------------------
 #include "SPELL_IPC/SPELLipcServerInterfaceSingle.H"
 #include "SPELL_SYN/SPELLmutex.H"
@@ -61,7 +61,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Constructor.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorIPC( SPELLexecutor& controller, const SPELLexecutorConfiguration& config );
+		SPELLexecutorIPC( SPELLexecutor& controller, const SPELLexecutorStartupParams& config );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
@@ -106,12 +106,12 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Add a given notifier
 		**////////////////////////////////////////////////////////////////////
-		void registerExecutorNotifier( SPELLexecutorListener* notifier );
+		void registerExecutorNotifier( std::string id, SPELLexecutorListener* notifier );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Remove a given notifier
 		**////////////////////////////////////////////////////////////////////
-		void deregisterExecutorNotifier( SPELLexecutorListener* notifier );
+		void deregisterExecutorNotifier( std::string id );
 
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -158,13 +158,15 @@ protected: //-----------------------------------------------------------------
 	    void notifyMessage( const SPELLipcMessage& msg );
 	    void notifyRequest( const SPELLipcMessage& msg );
 
+	    bool shouldForwardToMonitoring( const SPELLipcMessage& msg );
+
 private: //-------------------------------------------------------------------
 
 	// EXCEPTIONS ////////////////////////////////////////////////////////////
 	// ENUMS /////////////////////////////////////////////////////////////////
 	// TYPES /////////////////////////////////////////////////////////////////
 
-	    typedef std::list<SPELLexecutorListener*> NotifierList;
+	    typedef std::map<std::string,SPELLexecutorListener*> NotifierMap;
 
 	// STATIC ////////////////////////////////////////////////////////////////
 	// LIFECYCLE /////////////////////////////////////////////////////////////
@@ -180,7 +182,7 @@ private: //-------------------------------------------------------------------
 		/** Holds the controller listener */
 		SPELLexecutor& m_controller;
 		/** Holds the notifier listener */
-		NotifierList m_notifiers;
+		NotifierMap m_notifiers;
 		/** Synchronization for notifications */
 		SPELLmutex m_notifyLock;
 		/** Connected flag */

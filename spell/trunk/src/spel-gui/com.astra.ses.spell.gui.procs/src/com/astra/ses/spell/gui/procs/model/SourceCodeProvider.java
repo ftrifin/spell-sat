@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-06
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -133,7 +133,7 @@ public class SourceCodeProvider implements ISourceCodeProvider
 	 **************************************************************************/
 	private String[] retrieveCode(String codeId, IProgressMonitor monitor)
 	{
-		List<String> lines = s_proxy.getProcedureCode(codeId,monitor); 
+		List<String> lines = s_proxy.getProcedureCode(codeId,monitor);
 		if (!monitor.isCanceled())
 		{
 			return lines.toArray(new String[0]);

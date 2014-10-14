@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -84,7 +84,7 @@ public class UpdateDataContainerJob implements IRunnableWithProgress
 		{
 			result = CommandResult.NO_EFFECT;
 			
-			monitor.setTaskName("Updating data container " + m_container.getName() + " for procedure " + m_instanceId);
+			monitor.setTaskName("Updating data dictionary " + m_container.getName() + " for procedure " + m_instanceId);
 			
 			IContextProxy proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 			
@@ -103,7 +103,7 @@ public class UpdateDataContainerJob implements IRunnableWithProgress
 		{
 			error = e.getLocalizedMessage();
 			e.printStackTrace();
-			Logger.error("Failed to update data container:" + e.getLocalizedMessage(),Level.PROC, this);
+			Logger.error("Failed to update data dictionary:" + e.getLocalizedMessage(),Level.PROC, this);
 			result = CommandResult.FAILED;
 		}
 		monitor.done();

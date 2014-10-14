@@ -5,7 +5,7 @@
 ## DESCRIPTION: TC item for simulated model
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -49,18 +49,31 @@ __all__ = ['TcItemSimClass']
 ################################################################################
 class TcItemSimClass(TcItemClass):
 
-    tmItemName = None
-    changeDef = None
+    tmItemNames = None
+    updateExpression = None
+    execTime = None
 
-    def __init__(self, model, name, tmItemName, change):
-        TcItemClass.__init__(self,model.tcClass,name)
-        self.tmItemName = tmItemName
-        self.changeDef = change
+    #==========================================================================    
+    def __init__(self, model, name, description, tmItemNames, updateExpression, execTime):
+        TcItemClass.__init__(self,model.tcClass,name,description)
+        self.tmItemNames = tmItemNames
+        self.updateExpression = updateExpression
+        self.execTime = execTime
         
-    def getTmItemName(self):
-        return self.tmItemName
+    #==========================================================================    
+    def getTmItemNames(self):
+        return self.tmItemNames
     
+    #==========================================================================    
     def getTmChange(self):
-        return self.changeDef
+        return self.updateExpression
+
+    #==========================================================================    
+    def getExecTime(self):
+        return self.execTime
+
+    #==========================================================================
+    def __str__(self):
+        return "[TC=" + repr(self.name()) + ", DESC=" + repr(self.desc()) + ", TM=" + repr(self.tmItemNames) + ", UPD=" + repr(self.updateExpression) + ", EXC=" + repr(self.execTime) + "]"    
 
 ################################################################################

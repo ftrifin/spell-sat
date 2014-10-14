@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the automatic (non-interactive) CIF
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -48,9 +48,9 @@
 //=============================================================================
 SPELLautomaticCif::SPELLautomaticCif( const std::string& promptFile, const std::string& procArguments )
 : SPELLcif(),
-  m_promptFilename(promptFile),
-  m_procArguments(procArguments)
+  m_promptFilename(promptFile)
 {
+	getExecutorConfig().setArguments(procArguments);
 	loadPromptAnswers();
 }
 
@@ -62,108 +62,132 @@ SPELLautomaticCif::~SPELLautomaticCif()
 }
 
 //=============================================================================
-// METHOD: SPELLautomaticCif::setup
+// METHOD: SPELLautomaticCif::specificSetup
 //=============================================================================
-void SPELLautomaticCif::setup( const SPELLcifStartupInfo& info )
+void SPELLautomaticCif::specificSetup( const SPELLcifStartupInfo& info )
 {
-    SPELLcif::setup(info);
+
     DEBUG("[CIF] Installed automatic CIF")
+
+	const SPELLcontextConfig& ctx = SPELLconfiguration::instance().getContext(m_ctxName);
+
+	// Obtain the verbosity value
+	std::string max = ctx.getExecutorParameter( ExecutorConstants::MaxVerbosity );
+	if (max == PythonConstants::None)
+	{
+		// Default value
+		setVerbosityFilter(10);
+		getExecutorConfig().setMaxVerbosity(10);
+	}
+	else
+	{
+		setVerbosityFilter(STRI(max));
+		getExecutorConfig().setMaxVerbosity(STRI(max));
+	}
+
+	std::string browsable = ctx.getExecutorParameter( ExecutorConstants::BrowsableLib );
+	getExecutorConfig().setBrowsableLib( (browsable == PythonConstants::True ) );
+
+	getExecutorConfig().setVisible(true);
+	getExecutorConfig().setBlocking(true);
+	getExecutorConfig().setAutomatic(true);
+	getExecutorConfig().setHeadless(true);
+	getExecutorConfig().setBrowsableLib(false);
+
+
+	getExecutorConfig().setRunInto( (ctx.getExecutorParameter(ExecutorConstants::RunInto) == PythonConstants::True) );
+	getExecutorConfig().setByStep( (ctx.getExecutorParameter(ExecutorConstants::ByStep) == PythonConstants::True) );
+	getExecutorConfig().setExecDelay( STRI((ctx.getExecutorParameter(ExecutorConstants::ExecDelay))) );
+	getExecutorConfig().setPromptWarningDelay( STRI((ctx.getExecutorParameter(ExecutorConstants::PromptDelay))) );
+	getExecutorConfig().setBrowsableLib( (ctx.getExecutorParameter(ExecutorConstants::BrowsableLib) == PythonConstants::True) );
+	getExecutorConfig().setForceTcConfirm( (ctx.getExecutorParameter(ExecutorConstants::ForceTcConfirm) == PythonConstants::True) );
+	std::string saveMode = ctx.getExecutorParameter(ExecutorConstants::SaveStateMode);
+	getExecutorConfig().setSaveStateMode( saveMode );
+
+	std::string wvMode = ctx.getExecutorParameter(ExecutorConstants::WatchVariables);
+	bool wvEnabled = wvMode == ExecutorConstants::ENABLED;
+	getExecutorConfig().setWatchEnabled( wvEnabled );
 }
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::cleanup
 //=============================================================================
-void SPELLautomaticCif::cleanup( bool force )
+void SPELLautomaticCif::specificCleanup( bool force )
 {
-    SPELLcif::cleanup(force);
+    //Nothing to do
 }
 
-//=============================================================================
-// METHOD: SPELLautomaticCif::getArguments
-//=============================================================================
-std::string SPELLautomaticCif::getArguments()
-{
-    return m_procArguments;
-}
 
 //=============================================================================
-// METHOD: SPELLautomaticCif::getCondition
+// METHOD: SPELLautomaticCif::specificNotifyLine
 //=============================================================================
-std::string SPELLautomaticCif::getCondition()
+void SPELLautomaticCif::specificNotifyLine()
 {
-    return "";
-}
-
-//=============================================================================
-// METHOD: SPELLautomaticCif::notifyLine
-//=============================================================================
-void SPELLautomaticCif::notifyLine()
-{
+	std::cout << "[  LINE  ] " << getStack() << std::endl;
 }
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::notifyCall
 //=============================================================================
-void SPELLautomaticCif::notifyCall()
+void SPELLautomaticCif::specificNotifyCall()
 {
+	std::cout << "[  CALL  ] " << getStack() << std::endl;
 }
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::notifyReturn
 //=============================================================================
-void SPELLautomaticCif::notifyReturn()
+void SPELLautomaticCif::specificNotifyReturn()
 {
+	std::cout << "[ RETURN  ] " << getStack() << std::endl;
 }
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::notifyStatus
 //=============================================================================
-void SPELLautomaticCif::notifyStatus( const SPELLstatusInfo& st )
+void SPELLautomaticCif::specificNotifyStatus( const SPELLstatusInfo& st )
 {
-    std::cout << "STATUS: " << SPELLexecutorUtils::statusToString(st.status) << std::endl;
+    std::cout << "[ STATUS  ] " << SPELLexecutorUtils::statusToString(st.status) << std::endl;
+
     if (st.status == STATUS_PAUSED)
     {
     	ExecutorCommand cmd;
     	cmd.id = CMD_RUN;
     	SPELLexecutor::instance().command(cmd,false);
     }
+
 }
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::notifyError
 //=============================================================================
-void SPELLautomaticCif::notifyError( const std::string& error, const std::string& reason, bool fatal )
+void SPELLautomaticCif::specificNotifyError( const std::string& error, const std::string& reason, bool fatal )
 {
-    std::string fatalStr = "(Fatal:no)";
-    if (fatal)
-    {
-        fatalStr = "(Fatal:yes)";
-    }
-    std::cout << "ERROR: " << error << ": " << reason  << " " << fatalStr << std::endl;
+    std::cout << "[  ERROR  ]" << error << ": " << reason  << " (fatal:" << BSTR(fatal) << ")" << std::endl;
 }
 
 //=============================================================================
-// METHOD: SPELLautomaticCif::write
+// METHOD: SPELLautomaticCif::specificWrite
 //=============================================================================
-void SPELLautomaticCif::write( const std::string& msg, unsigned int scope  )
+void SPELLautomaticCif::specificWrite( const std::string& msg, unsigned int scope  )
 {
-    std::cout << msg << std::endl;
+    std::cout << "[ DISPLAY ] " << msg << " (scope:" << scope << ")" << std::endl;
 }
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::warning
 //=============================================================================
-void SPELLautomaticCif::warning( const std::string& msg, unsigned int scope  )
+void SPELLautomaticCif::specificWarning( const std::string& msg, unsigned int scope  )
 {
-    std::cout << "WARNING: " << msg << std::endl;
+    std::cout << "[ WARNING ] " << msg << " (scope:" << scope << ")" << std::endl;
 }
 
 //=============================================================================
-// METHOD: SPELLautomaticCif::error
+// METHOD: SPELLautomaticCif::specificError
 //=============================================================================
-void SPELLautomaticCif::error( const std::string& msg, unsigned int scope  )
+void SPELLautomaticCif::specificError( const std::string& msg, unsigned int scope  )
 {
-    std::cout << "ERROR: " << msg << std::endl;
+    std::cout << "[  ERROR  ] " << msg << " (scope:" << scope << ")"  << std::endl;
 }
 
 //=============================================================================
@@ -174,11 +198,15 @@ void SPELLautomaticCif::log( const std::string& msg )
 }
 
 //=============================================================================
-// METHOD: SPELLautomaticCif::prompt
+// METHOD: SPELLautomaticCif::specificPrompt
 //=============================================================================
-std::string SPELLautomaticCif::prompt( const SPELLpromptDefinition& def )
+void SPELLautomaticCif::specificPrompt( const SPELLpromptDefinition& def, std::string& rawAnswer, std::string& answerToShow )
 {
 	std::string answer = "";
+    //std::cout << "[ PROMPT ] " << def.message << " (type:" << def.typecode << ", scope:" << def.scope << ")" << std::endl;
+	std::cout << "[ PROMPT ] ";
+    SPELLcifHelper::displayPrompt( def );
+
 	if (m_promptAnswers.size()>0)
 	{
 		try
@@ -188,15 +216,19 @@ std::string SPELLautomaticCif::prompt( const SPELLpromptDefinition& def )
 		catch( SPELLcoreException& ex )
 		{
 			error("Unable to answer the prompt automatically: " + std::string(ex.what()), -1);
-			answer = SPELLcifHelper::commandLinePrompt(def);
+			answer = SPELLcifHelper::commandLinePrompt(def,true);
 		}
 	}
 	else
 	{
-		answer = SPELLcifHelper::commandLinePrompt(def);
+		answer = SPELLcifHelper::commandLinePrompt(def,true);
 	}
-	return answer;
-}
+
+	//rawAnser is the index of the available options. For numeric or text is the answer introduced by the user, answerToShow.
+	//answerToShow is the value obtained from the method getResult from the rawAnswer. It is not the same as the answer introduced by the user.
+	rawAnswer = SPELLcifHelper::getRawAnswer( answer, def );
+	answerToShow = SPELLcifHelper::getResult( rawAnswer, def );;
+} //specificPrompt
 
 //=============================================================================
 // METHOD: SPELLautomaticCif::loadPromptAnswers()
@@ -205,8 +237,10 @@ void SPELLautomaticCif::loadPromptAnswers()
 {
 	if (m_promptFilename == "") return;
 	std::ifstream file;
+	std::cout << "File: " << m_promptFilename << std::endl;
 	if (!SPELLutils::pathExists(m_promptFilename))
 	{
+		std::cerr << "File not found: " << m_promptFilename << std::endl;
 		THROW_EXCEPTION("Unable to load prompt answers", "File not found: '" + m_promptFilename + "'", SPELL_ERROR_FILESYSTEM);
 	}
 	file.open( m_promptFilename.c_str() );
@@ -241,6 +275,100 @@ std::string SPELLautomaticCif::automaticPrompt( const SPELLpromptDefinition& def
 		THROW_EXCEPTION("Cannot perform automatic prompt", "No more answers available", SPELL_ERROR_EXECUTION);
 	}
 	std::string answer = m_promptAnswers[m_promptAnswerIndex];
+    std::cout << "[ ANSWER  ] " << answer << " (item " << m_promptAnswerIndex << ")" << std::endl;
 	m_promptAnswerIndex++;
 	return answer;
+}
+
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyUserActionSet
+//=============================================================================
+void SPELLautomaticCif::specificNotifyUserActionSet( const std::string& label, const unsigned int severity )
+{
+	std::cout << "[ USER ACTION SET ] " << label << "(Severity: " << severity << ")" << std::endl;
+}
+
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyUserActionUnset
+//=============================================================================
+void SPELLautomaticCif::specificNotifyUserActionUnset()
+{
+	std::cout << "[ USER ACTION UNSET ] " << std::endl;
+}
+
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyUserActionEnable
+//=============================================================================
+void SPELLautomaticCif::specificNotifyUserActionEnable( bool enable )
+{
+	std::cout << "[ USER ACTION ENABLE ] " << "(Enable: " << enable << ")" << std::endl;
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyVariableChange()
+//=============================================================================
+void SPELLautomaticCif::specificNotifyVariableChange( const std::vector<SPELLvarInfo>& added,
+										   const std::vector<SPELLvarInfo>& changed,
+		                                   const std::vector<SPELLvarInfo>& deleted )
+{
+	std::cout << "[  NOTIFY VARIABLE CHANGE  ] " << "Variable Change" << std::endl;
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyVariableScopeChange()
+//=============================================================================
+void SPELLautomaticCif::specificNotifyVariableScopeChange( const std::string& scopeName,
+		                                        const std::vector<SPELLvarInfo>& globals,
+		                                        const std::vector<SPELLvarInfo>& locals )
+{
+	std::cout << "[  NOTIFY VARIABLE SCOPE CHANGE  ] " << "Variable Scope Change" << std::endl;
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotify
+//=============================================================================
+void SPELLautomaticCif::specificNotify( ItemNotification notification )
+{
+	std::cout 	<< "[  ITEM  ] " 	<< notification.name
+				<< "<" 				<< NOTIF_TYPE_STR[notification.type]
+				<< ">: " 			<< notification.value
+				<< " ("				<< notification.status
+				<< ") Comment: "	<< notification.getTokenizedComment()
+				<< " Time: "		<< notification.getTokenizedTime()
+				<< " Count: "		<< notification.getSuccessfulCount()
+				<< std::endl;
+
+    // Update message
+    /*std::stringstream buffer;
+    buffer << notification.getSuccessfulCount();
+    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_SCOUNT, buffer.str());
+    */
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificOpenSubprocedure
+//=============================================================================
+std::string SPELLautomaticCif::specificOpenSubprocedure( const std::string& procId, int callingLine, const std::string& args, bool automatic, bool blocking, bool visible )
+{
+	std::cout << "[  SUBPROCEDURE  ] " << "Open" << std::endl;
+	return "";
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificCloseSubprocedure
+//=============================================================================
+void SPELLautomaticCif::specificCloseSubprocedure( const std::string& procId )
+{
+	std::cout << "[  SUBPROCEDURE  ] " << "Close" << std::endl;
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificKillSubprocedure
+//=============================================================================
+void SPELLautomaticCif::specificKillSubprocedure( const std::string& procId )
+{
+	std::cout << "[  SUBPROCEDURE  ] " << "Kill" << std::endl;
 }

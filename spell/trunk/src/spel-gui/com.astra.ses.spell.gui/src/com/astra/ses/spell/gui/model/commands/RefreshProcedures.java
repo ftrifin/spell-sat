@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -99,7 +99,7 @@ public class RefreshProcedures extends AbstractHandler
 		try
 		{
 			Logger.debug("Triggering procedure list refresh", Level.PROC, this);
-			navView.getModel().update(true,false);
+			navView.getModel().update(true,false,true);
 		}
 		catch (ServerError ex)
 		{

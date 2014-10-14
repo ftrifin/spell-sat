@@ -95,6 +95,13 @@
                   style="push"
                   tooltip="Open input file viewer">
             </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenMasterShell"
+                  icon="icons/cog.png"
+                  id="com.astra.ses.spell.gui.menu.system.OpenMasterShell"
+                  style="push"
+                  tooltip="Open master shell dialog">
+            </command>
             <separator
                   name="com.astra.ses.spell.gui.menu.system.sep2"
                   visible="true">
@@ -121,7 +128,14 @@
                   icon="icons/16x16/open.png"
                   id="com.astra.ses.spell.gui.menu.procedures.OpenSelectedProcedure"
                   style="push"
-                  tooltip="Opens the procedure currently selected in the navigation view">
+                  tooltip="Opens the procedure currently selected">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenProcedureBackground"
+                  icon="icons/16x16/open.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.OpenSelectedProcedureBackground"
+                  style="push"
+                  tooltip="Opens the procedure in background">
             </command>
             <command
                   commandId="com.astra.ses.spell.gui.commands.OpenProcedureArgs"
@@ -188,6 +202,13 @@
                   tooltip="Save procedure log file">
             </command>
             <command
+                  commandId="com.astra.ses.spell.gui.commands.ExportAsRunFile"
+                  icon="icons/16x16/log_save.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.ExportAsRunFile"
+                  style="push"
+                  tooltip="Save procedure ASRUN file">
+            </command>
+            <command
                   commandId="com.astra.ses.spell.gui.commands.ShowProperties"
                   icon="icons/16x16/asrun.png"
                   id="com.astra.ses.spell.gui.menu.procedures.ShowProperties"
@@ -204,49 +225,13 @@
                   id="com.astra.ses.spell.gui.menu.procedures.OpenProceduresEditor"
                   style="push"
                   tooltip="Open the procedures editor">
-            </command>
-            <menu
-                  icon="icons/printer.png"
-                  id="com.astra.ses.spell.gui.menu.printProcedure"
-                  label="Print Active Procedure"
-                  mnemonic="Print Active Procedure">
-               <visibleWhen>
+               <visibleWhen
+                     checkEnabled="false">
                   <test
-                        forcePluginActivation="false"
-                        property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+                        property="com.astra.ses.spell.gui.properties.ProcedureEditorAvailable">
                   </test>
                </visibleWhen>
-               <command
-                     commandId="com.astra.ses.spell.gui.commands.print"
-                     id="com.astra.ses.spell.gui.commands.printAsRun"
-                     label="Print As Run"
-                     mnemonic="Print As Run"
-                     style="push">
-                  <parameter
-                        name="com.astra.ses.spell.gui.print.printableProvider"
-                        value="com.astra.ses.spell.gui.commands.GetActiveAsRunPrintable">
-                  </parameter>
-                  <parameter
-                        name="com.astra.ses.spell.gui.commands.procPrintable.mode"
-                        value="asrun">
-                  </parameter>
-               </command>
-               <command
-                     commandId="com.astra.ses.spell.gui.commands.print"
-                     id="com.astra.ses.spell.gui.commands.printLog"
-                     label="Print Log file"
-                     mnemonic="Print Log file"
-                     style="push">
-                  <parameter
-                        name="com.astra.ses.spell.gui.print.printableProvider"
-                        value="com.astra.ses.spell.gui.commands.GetActiveLogPrintable">
-                  </parameter>
-                  <parameter
-                        name="com.astra.ses.spell.gui.commands.procPrintable.mode"
-                        value="log">
-                  </parameter>
-               </command>
-            </menu>
+            </command>
          </menu>
          <menu
                id="com.astra.ses.spell.gui.menu.execution"
@@ -281,37 +266,49 @@
                   label="Configure execution..."
                   tooltip="Configure the procedure execution">
             </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ConfigureDefaults"
+                  id="com.astra.ses.spell.gui.menu.execution.ConfigureDefaults"
+                  label="Configure defaults..."
+                  tooltip="Configure the context execution defaults">
+            </command>
             <separator
                   name="com.astra.ses.spell.gui.menu.execution.Separator2"
                   visible="true">
             </separator>
             <command
-                  commandId="com.astra.ses.spell.gui.commands.EditDataContainer"
+                  commandId="com.astra.ses.spell.gui.commands.EditDictionary"
                   id="com.astra.ses.spell.gui.menu.execution.EditARGS"
                   label="Edit Calling Arguments"
                   tooltip="Edit the calling arguments data container">
                <parameter
-                     name="com.astra.ses.spell.gui.commands.EditDataContainer.dict"
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.dict"
                      value="ARGS">
                </parameter>
                <parameter
-                     name="com.astra.ses.spell.gui.commands.EditDataContainer.canmerge"
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.canmerge"
                      value="true">
                </parameter>
             </command>
             <command
-                  commandId="com.astra.ses.spell.gui.commands.EditDataContainer"
+                  commandId="com.astra.ses.spell.gui.commands.EditDictionary"
                   id="com.astra.ses.spell.gui.menu.execution.EditIVARS"
                   label="Edit Internal Variables"
                   tooltip="Edit the internal variables">
                <parameter
-                     name="com.astra.ses.spell.gui.commands.EditDataContainer.dict"
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.dict"
                      value="IVARS">
                </parameter>
                <parameter
-                     name="com.astra.ses.spell.gui.commands.EditDataContainer.canmerge"
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.canmerge"
                      value="false">
                </parameter>
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.EditDictionary"
+                  id="com.astra.ses.spell.gui.menu.execution.EditNoName"
+                  label="Edit dictionary..."
+                  tooltip="Edit other dictionaries or data containers">
             </command>
          </menu>
          <menu
@@ -378,6 +375,10 @@
             name="Show connection dialog">
       </command>
       <command
+            id="com.astra.ses.spell.gui.commands.OpenMasterShell"
+            name="Open master shell dialog">
+      </command>
+      <command
             id="com.astra.ses.spell.gui.commands.RefreshProcedures"
             name="Refresh procedure list">
       </command>
@@ -434,6 +435,10 @@
             name="Open selected procedure">
       </command>
       <command
+            id="com.astra.ses.spell.gui.commands.OpenProcedureBackground"
+            name="Open selected procedure in background">
+      </command>
+      <command
             id="com.astra.ses.spell.gui.commands.ScheduleProcedure"
             name="Schedule selected procedure">
       </command>
@@ -469,38 +474,8 @@
          </state>
       </command>
       <command
-            defaultHandler="com.astra.ses.spell.gui.model.commands.PartPrintableHandler"
-            id="com.astra.ses.spell.gui.commands.GetPartPrintable"
-            name="Get Part Printable">
-         <commandParameter
-               id="com.astra.ses.spell.gui.commands.partPrintable.name"
-               name="part"
-               optional="false">
-         </commandParameter>
-      </command>
-      <command
-            defaultHandler="com.astra.ses.spell.gui.model.commands.ActiveProcedurePrintableHandler"
-            id="com.astra.ses.spell.gui.commands.GetActiveProcPrintable"
-            name="Get Active Procedure Printable">
-         <commandParameter
-               id="com.astra.ses.spell.gui.commands.procPrintable.mode"
-               name="mode"
-               optional="false">
-         </commandParameter>
-      </command>
-      <command
-            defaultHandler="com.astra.ses.spell.gui.model.commands.GetActiveAsRunPrintable"
-            id="com.astra.ses.spell.gui.commands.GetActiveAsRunPrintable"
-            name="Get Active AsRun Printable">
-      </command>
-      <command
             id="com.astra.ses.spell.gui.commands.OpenProcedureArgs"
             name="Open with arguments...">
-      </command>
-      <command
-            defaultHandler="com.astra.ses.spell.gui.model.commands.GetActiveLogPrintable"
-            id="com.astra.ses.spell.gui.commands.GetActiveLogPrintable"
-            name="Get Active Log Printable">
       </command>
       <command
             id="com.astra.ses.spell.gui.commands.DestroyContext"
@@ -558,6 +533,11 @@
             categoryId="com.astra.ses.spell.gui.commands.control"
             id="com.astra.ses.spell.gui.commands.ConfigureExecution"
             name="Configure Execution">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ConfigureDefaults"
+            name="Configure Defaults">
       </command>
       <command
             categoryId="com.astra.ses.spell.gui.commands.control"
@@ -648,6 +628,17 @@
       </command>
       <command
             categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Interrupt driver operation"
+            id="com.astra.ses.spell.gui.commands.Interrupt"
+            name="Interrupt">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
             description="Abort execution"
             id="com.astra.ses.spell.gui.commands.Abort"
             name="Abort">
@@ -695,22 +686,56 @@
             name="Show release info dialog">
       </command>
       <command
+            id="com.astra.ses.spell.gui.commands.DumpInterpreterInformation"
+            name="Dump interpreter information">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.SaveInterpreterInfo"
+            name="Save state">
+      </command>
+      <command
             id="com.astra.ses.spell.gui.commands.ExportLogFile"
             name="Export procedure log file">
       </command>
       <command
+            id="com.astra.ses.spell.gui.commands.ExportAsRunFile"
+            name="Export procedure ASRUN file">
+      </command>
+      <command
             categoryId="com.astra.ses.spell.gui.commands.control"
             description="Edit a given data container in the procedure execution"
-            id="com.astra.ses.spell.gui.commands.EditDataContainer"
+            id="com.astra.ses.spell.gui.commands.EditDictionary"
             name="Edit data container">
          <commandParameter
-               id="com.astra.ses.spell.gui.commands.EditDataContainer.dict"
+               id="com.astra.ses.spell.gui.commands.EditDictionary.dict"
                name="Container name"
                optional="false">
          </commandParameter>
          <commandParameter
-               id="com.astra.ses.spell.gui.commands.EditDataContainer.canmerge"
+               id="com.astra.ses.spell.gui.commands.EditDictionary.canmerge"
                name="Can Merge Files"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Save a given data container in the procedure execution"
+            id="com.astra.ses.spell.gui.commands.SaveDictionary"
+            name="Save data container">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SaveDictionary.dict"
+               name="Container name"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SaveDictionary.procId"
+               name="Procedure identifier"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SaveDictionary.path"
+               name="Path to save"
                optional="false">
          </commandParameter>
       </command>
@@ -762,6 +787,10 @@
       <handler
             class="com.astra.ses.spell.gui.model.commands.ShowConnectionDialog"
             commandId="com.astra.ses.spell.gui.commands.ShowConnectionDialog">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenMasterShell"
+            commandId="com.astra.ses.spell.gui.commands.OpenMasterShell">
       </handler>
       <handler
             class="com.astra.ses.spell.gui.model.commands.RefreshProcedures"
@@ -844,6 +873,15 @@
       <handler
             class="com.astra.ses.spell.gui.model.commands.OpenProcedure"
             commandId="com.astra.ses.spell.gui.commands.OpenProcedure">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureOpenable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenProcedureBackground"
+            commandId="com.astra.ses.spell.gui.commands.OpenProcedureBackground">
          <enabledWhen>
             <test
                   property="com.astra.ses.spell.gui.properties.ProcedureOpenable">
@@ -953,6 +991,10 @@
             commandId="com.astra.ses.spell.gui.commands.Pause">
       </handler>
       <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdInterrupt"
+            commandId="com.astra.ses.spell.gui.commands.Interrupt">
+      </handler>
+      <handler
             class="com.astra.ses.spell.gui.model.commands.CmdAbort"
             commandId="com.astra.ses.spell.gui.commands.Abort">
       </handler>
@@ -978,6 +1020,15 @@
          </enabledWhen>
       </handler>
       <handler
+            class="com.astra.ses.spell.gui.model.commands.ConfigureDefaults"
+            commandId="com.astra.ses.spell.gui.commands.ConfigureDefaults">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ContextDefaults">
+            </test>
+         </enabledWhen>
+      </handler>      
+      <handler
             class="com.astra.ses.spell.gui.model.commands.ShowReleaseInfo"
             commandId="com.astra.ses.spell.gui.commands.ShowReleaseInfo">
       </handler>
@@ -991,11 +1042,29 @@
          </enabledWhen>
       </handler>
       <handler
-            class="com.astra.ses.spell.gui.model.commands.EditDataContainer"
-            commandId="com.astra.ses.spell.gui.commands.EditDataContainer">
+            class="com.astra.ses.spell.gui.model.commands.ExportAsRunFile"
+            commandId="com.astra.ses.spell.gui.commands.ExportAsRunFile">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.EditDictionary"
+            commandId="com.astra.ses.spell.gui.commands.EditDictionary">
          <enabledWhen>
             <test
                   property="com.astra.ses.spell.gui.properties.ProcedureConfigurableMon">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.SaveDictionary"
+            commandId="com.astra.ses.spell.gui.commands.SaveDictionary">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
             </test>
          </enabledWhen>
       </handler>
@@ -1079,6 +1148,13 @@
             type="java.lang.Object">
       </propertyTester>
       <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ContextDefaultsTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ContextDefaultsTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ContextDefaults"
+            type="java.lang.Object">
+      </propertyTester>      
+      <propertyTester
             class="com.astra.ses.spell.gui.model.properties.ProcedureOpenTester"
             id="com.astra.ses.spell.gui.propertyTesters.ProcedureOpenTester"
             namespace="com.astra.ses.spell.gui.properties"
@@ -1120,56 +1196,13 @@
             properties="ProcedureConfigurableMon"
             type="java.lang.Object">
       </propertyTester>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ClientOperations"
-         name="GUI Client Operations monitor"
-         point="com.astra.ses.spell.gui.extensions.ClientOperations">
-      <listener
-            class="com.astra.ses.spell.gui.extensions.GuiClientOperations"
-            description="Client operations monitor for GUI client"
-            name="Client Operations">
-      </listener>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ServerOperations"
-         name="GUI Server Operations monitor"
-         point="com.astra.ses.spell.gui.extensions.ServerOperations">
-      <listener
-            class="com.astra.ses.spell.gui.extensions.GuiServerOperations"
-            description="Server operations monitor for GUI client"
-            name="Server Operations">
-      </listener>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ContextOperations"
-         name="GUI Context Operations monitor"
-         point="com.astra.ses.spell.gui.extensions.ContextOperations">
-      <listener
-            class="com.astra.ses.spell.gui.extensions.GuiContextOperations"
-            description="Context operations monitor for GUI client"
-            name="Context Operations">
-      </listener>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ProcedureOperations"
-         name="GUI Procedure Operations monitor"
-         point="com.astra.ses.spell.gui.extensions.ProcedureOperations">
-      <listener
-            class="com.astra.ses.spell.gui.extensions.GuiProcedureOperations"
-            description="Entry point for procedure status updates"
-            name="Procedure Status Monitor">
-      </listener>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ProcedureView"
-         name="Procedure Views Input Proxy"
-         point="com.astra.ses.spell.gui.extensions.ProcedureView">
-      <listener
-            class="com.astra.ses.spell.gui.extensions.GuiProcedureViewProxy"
-            description="Entry point for procedure model updates"
-            name="Procedure View Support">
-      </listener>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedureEditorAvailableTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedureEditorAvailableTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureEditorAvailable"
+            type="java.lang.Object">
+      </propertyTester>
    </extension>
    <extension
          point="org.eclipse.ui.activities">

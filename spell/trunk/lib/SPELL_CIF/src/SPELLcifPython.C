@@ -5,7 +5,7 @@
 // DESCRIPTION: Python bindings for CIF object
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -101,6 +101,47 @@ static PyObject* ClientIF_Notify( PyObject* self, PyObject* args, PyObject* kwds
 // DESCRIPTION    : Send a prompt
 //============================================================================
 static PyObject* ClientIF_Prompt( PyObject* self, PyObject* args, PyObject* kwds );
+//============================================================================
+// FUNCTION        : ClientIF_GetSharedData
+// DESCRIPTION     : Get shared variables
+//============================================================================
+static PyObject* ClientIF_GetSharedData( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_SetSharedData
+// DESCRIPTION     : Set shared variables
+//============================================================================
+static PyObject* ClientIF_SetSharedData( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_GetSharedDataKeys
+// DESCRIPTION     : Get shared variables names
+//============================================================================
+static PyObject* ClientIF_GetSharedDataKeys( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_ClearSharedData
+// DESCRIPTION     : Remove shared variables
+//============================================================================
+static PyObject* ClientIF_ClearSharedData( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_AddSharedDataScope
+// DESCRIPTION     : Add shared variable scope
+//============================================================================
+static PyObject* ClientIF_AddSharedDataScope( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_RemoveSharedDataScope
+// DESCRIPTION     : Remove shared variables scope
+//============================================================================
+static PyObject* ClientIF_RemoveSharedDataScope( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_GetSharedDataScopes
+// DESCRIPTION     : Get shared variable scopes
+//============================================================================
+static PyObject* ClientIF_GetSharedDataScopes( PyObject* self, PyObject* args, PyObject* kwds  );
+//============================================================================
+// FUNCTION        : ClientIF_RemoveSharedDataScopes
+// DESCRIPTION     : Remove ALL shared variables scopes
+//============================================================================
+static PyObject* ClientIF_RemoveSharedDataScopes( PyObject* self, PyObject* args, PyObject* kwds  );
+
 
 
 
@@ -122,6 +163,14 @@ static PyMethodDef ClientIF_Methods[] =
     {"write",                  ClientIF_Write,                  METH_VARARGS, "Write a message"},
     {"notify",                 (PyCFunction)ClientIF_Notify,    METH_VARARGS | METH_KEYWORDS,"Send a notification"},
     {"prompt",                 (PyCFunction)ClientIF_Prompt,    METH_VARARGS | METH_KEYWORDS,"Send a prompt"},
+    {"clearSharedData",        (PyCFunction)ClientIF_ClearSharedData,    METH_VARARGS | METH_KEYWORDS, "Remove shared variables"},
+    {"setSharedData",          (PyCFunction)ClientIF_SetSharedData,      METH_VARARGS | METH_KEYWORDS, "Set shared variable values"},
+    {"getSharedData",          (PyCFunction)ClientIF_GetSharedData,      METH_VARARGS | METH_KEYWORDS, "Get shared variable values"},
+    {"getSharedDataKeys",      (PyCFunction)ClientIF_GetSharedDataKeys,  METH_VARARGS | METH_KEYWORDS, "Get shared variable names"},
+    {"getSharedDataScopes",    (PyCFunction)ClientIF_GetSharedDataScopes,  METH_VARARGS | METH_KEYWORDS, "Get shared variable scopes"},
+    {"addSharedDataScope",     (PyCFunction)ClientIF_AddSharedDataScope,  METH_VARARGS | METH_KEYWORDS, "Add shared variable scope"},
+    {"removeSharedDataScope",  (PyCFunction)ClientIF_RemoveSharedDataScope,  METH_VARARGS | METH_KEYWORDS, "Remove shared variable scope"},
+    {"removeSharedDataScopes", (PyCFunction)ClientIF_RemoveSharedDataScopes,  METH_VARARGS | METH_KEYWORDS, "Remove ALL shared variable scopes"},
     {NULL, NULL, 0, NULL} /* Sentinel */
 };
 
@@ -415,6 +464,10 @@ static PyObject* ClientIF_Prompt( PyObject* self, PyObject* args, PyObject* kwds
     {
     	def.typecode = argumentsC.getModifier_Type();
     }
+    if (argumentsC.hasModifier(LanguageModifiers::Timeout))
+    {
+    	def.timeout = argumentsC.getModifier_Timeout();
+    }
     // The prompt scope
 	def.scope = argumentsC.getModifier_Scope();
 	// The prompt options and expected list
@@ -434,4 +487,502 @@ static PyObject* ClientIF_Prompt( PyObject* self, PyObject* args, PyObject* kwds
     }
 
     return SPELLcifHelper::getPythonResult( result, def );
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_SetSharedData
+//============================================================================
+static PyObject* ClientIF_SetSharedData( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] SetSharedData args : " + PYREPR(args))
+    DEBUG("[CIF PY] SetSharedData kargs: " + PYREPR(kwds))
+
+    if (PyTuple_Size(args)==0)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot set shared data", "No arguments given");
+    }
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()!=4)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot set shared data", "Malformed arguments: expected a variable name, value, expected value and scope");
+    }
+
+    PyObject* nameObj = argumentsA[0];
+    PyObject* valueObj = argumentsA[1];
+    PyObject* expectedObj = argumentsA[2];
+    PyObject* scopeObj = argumentsA[3];
+    std::string result = "";
+    int numItems = 0;
+    try
+    {
+    	std::string name = "";
+    	std::string value = "";
+    	std::string expected = "";
+    	if (PyList_Check(nameObj))
+    	{
+    		numItems = PyList_Size(nameObj);
+    		for(int idx =0; idx<numItems; idx++)
+    		{
+    			std::string itemName = PYSTR(PyList_GetItem(nameObj,idx));
+    			std::string itemValue = PYREPR(PyList_GetItem(valueObj,idx));
+    			std::string itemExpected = "";
+    			PyObject* itemExpectedObj = PyList_GetItem(expectedObj,idx);
+    			if (PyString_Check(itemExpectedObj))
+    			{
+    				itemExpected = PYSTR(itemExpectedObj);
+					if (itemExpected != "__NONE__")
+					{
+						itemExpected = PYREPR(itemExpectedObj);
+					}
+    			}
+    			else
+    			{
+    				itemExpected = PYREPR(itemExpectedObj);
+    			}
+
+    			if (name != "") name += LIST_SEPARATOR;
+    			if (value != "") value += LIST_SEPARATOR;
+    			if (expected != "") expected += LIST_SEPARATOR;
+    			name += itemName;
+    			value += itemValue;
+    			expected += itemExpected;
+    		}
+    	}
+    	else
+    	{
+        	name = PYSTR(nameObj);
+        	value = PYREPR(valueObj);
+			if (PyString_Check(expectedObj))
+			{
+				expected = PYSTR(expectedObj);
+				if (expected != "__NONE__")
+				{
+					expected = PYREPR(expectedObj);
+				}
+			}
+			else
+			{
+				expected = PYREPR(expectedObj);
+			}
+    	}
+    	std::string scope = PYSTR(scopeObj);
+
+    	result = SPELLexecutor::instance().getCIF().setSharedData(name,value,expected,scope);
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to set shared data: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+
+    if (numItems>0)
+    {
+    	PyObject* list = PyList_New(numItems);
+    	std::vector<std::string> items = SPELLutils::tokenize(result,LIST_SEPARATOR_STR);
+    	std::vector<std::string>::iterator it;
+    	int idx = 0;
+    	for( it = items.begin(); it != items.end(); it++  )
+    	{
+    		if (*it == "True")
+    		{
+    			PyList_SetItem(list,idx,Py_True);
+    		}
+    		else
+    		{
+    			PyList_SetItem(list,idx,Py_False);
+    		}
+    		idx++;
+    	}
+    	Py_INCREF(list);
+    	return list;
+    }
+    else
+    {
+    	if (result == "True")
+    	{
+        	Py_RETURN_TRUE;
+    	}
+    	else
+    	{
+        	Py_RETURN_FALSE;
+    	}
+    }
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_ClearSharedData
+//============================================================================
+static PyObject* ClientIF_ClearSharedData( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] ClearSharedData args : " + PYREPR(args))
+    DEBUG("[CIF PY] ClearSharedData kargs: " + PYREPR(kwds))
+
+    if (PyTuple_Size(args)==0)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot clear shared data", "No arguments given");
+    }
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()>2)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot clear shared data", "Malformed arguments");
+    }
+
+	PyObject* nameObj = NULL;
+	PyObject* scopeObj = NULL;
+	int numItems = 0;
+	std::string result = "";
+
+    if (argumentsA.size()==2)
+    {
+    	nameObj = argumentsA[0];
+    	scopeObj = argumentsA[1];
+    }
+    else
+    {
+    	scopeObj = argumentsA[0];
+    }
+
+    try
+    {
+    	std::string scope = PYSTR(scopeObj);
+
+    	if (nameObj != NULL)
+    	{
+			std::string name = "";
+			if (PyList_Check(nameObj))
+			{
+				numItems = PyList_Size(nameObj);
+				for(int idx =0; idx<numItems; idx++)
+				{
+					std::string itemName = PYSTR(PyList_GetItem(nameObj,idx));
+					if (name != "") name += LIST_SEPARATOR;
+					name += itemName;
+				}
+			}
+			else
+			{
+				name = PYSTR(nameObj);
+			}
+	    	result = SPELLexecutor::instance().getCIF().clearSharedData(name,scope);
+    	}
+    	else
+    	{
+	    	result = SPELLexecutor::instance().getCIF().clearSharedData("",scope);
+    	}
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to clear shared data: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+
+    if (numItems>0)
+    {
+    	PyObject* list = PyList_New(numItems);
+    	std::vector<std::string> items = SPELLutils::tokenize(result,LIST_SEPARATOR_STR);
+    	std::vector<std::string>::iterator it;
+    	int idx = 0;
+    	for( it = items.begin(); it != items.end(); it++  )
+    	{
+    		if (*it == "True")
+    		{
+    			PyList_SetItem(list,idx,Py_True);
+    		}
+    		else
+    		{
+    			PyList_SetItem(list,idx,Py_False);
+    		}
+    		idx++;
+    	}
+    	Py_INCREF(list);
+    	return list;
+    }
+    else
+    {
+    	if (result == "True")
+    	{
+        	Py_RETURN_TRUE;
+    	}
+    	else
+    	{
+        	Py_RETURN_FALSE;
+    	}
+    }
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_GetSharedData
+//============================================================================
+static PyObject* ClientIF_GetSharedData( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] GetSharedData args : " + PYREPR(args))
+    DEBUG("[CIF PY] GetSharedData kargs: " + PYREPR(kwds))
+
+    if (PyTuple_Size(args)==0)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot get shared data", "No arguments given");
+    }
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()!=2)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot get shared data", "Malformed arguments: expected a variable name and scope");
+    }
+
+    PyObject* nameObj = argumentsA[0];
+    PyObject* scopeObj = argumentsA[1];
+
+    PyObject* result = NULL;
+
+    try
+    {
+    	std::string name = "";
+    	bool usingList = false;
+    	if (PyList_Check(nameObj))
+    	{
+    		usingList = true;
+    		int num = PyList_Size(nameObj);
+    		for(int idx =0; idx<num; idx++)
+    		{
+    			std::string itemName = PYSTR(PyList_GetItem(nameObj,idx));
+    			if (name != "") name += LIST_SEPARATOR;
+    			name += itemName;
+    		}
+    	}
+    	else
+    	{
+        	name = PYSTR(nameObj);
+    	}
+    	std::string scope = PYSTR(scopeObj);
+
+    	std::string value = SPELLexecutor::instance().getCIF().getSharedData(name,scope);
+
+    	if (usingList)
+    	{
+			std::vector<std::string> values = SPELLutils::tokenize(value, LIST_SEPARATOR_STR);
+			std::vector<std::string>::iterator it;
+			result = PyList_New(values.size());
+			int idx = 0;
+			for(it = values.begin(); it != values.end(); it++)
+			{
+				PyObject* item = SPELLpythonHelper::instance().eval( *it, false );
+				PyList_SetItem(result, idx, item);
+				idx++;
+			}
+    	}
+    	else
+    	{
+    		result = SPELLpythonHelper::instance().eval( value, false );
+    	}
+		Py_INCREF(result);
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to get shared data: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+
+    return result;
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_GetSharedDataKeys
+//============================================================================
+static PyObject* ClientIF_GetSharedDataKeys( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] GetSharedData args : " + PYREPR(args))
+    DEBUG("[CIF PY] GetSharedData kargs: " + PYREPR(kwds))
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()!=1)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot get shared data", "Malformed arguments: expected scope");
+    }
+
+    PyObject* scopeObj = argumentsA[0];
+
+    PyObject* result = NULL;
+
+    try
+    {
+    	std::string scope = PYSTR(scopeObj);
+    	std::string keys = SPELLexecutor::instance().getCIF().getSharedDataKeys(scope);
+
+    	if ( keys.find(LIST_SEPARATOR) != std::string::npos )
+    	{
+        	std::vector<std::string> items = SPELLutils::tokenize(keys,LIST_SEPARATOR_STR);
+        	std::vector<std::string>::iterator it;
+        	result = PyList_New(items.size());
+        	int index = 0;
+        	for( it = items.begin(); it != items.end(); it++ )
+        	{
+        		std::string key = *it;
+        		PyObject* item = SSTRPY(key);
+        		Py_INCREF(item);
+        		PyList_SetItem(result, index, item);
+        		index++;
+        	}
+    	}
+    	else if (keys == "")
+    	{
+    		result = PyList_New(0);
+    	}
+    	else
+    	{
+        	result = PyList_New(1);
+    		PyList_SetItem(result, 0, SSTRPY( keys ));
+    	}
+		Py_INCREF(result);
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to get shared data: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+
+    return result;
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_GetSharedDataScopes
+//============================================================================
+static PyObject* ClientIF_GetSharedDataScopes( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] GetSharedDataScopes args : " + PYREPR(args))
+    DEBUG("[CIF PY] GetSharedDataScopes kargs: " + PYREPR(kwds))
+
+    PyObject* result = NULL;
+
+    try
+    {
+    	std::string keys = SPELLexecutor::instance().getCIF().getSharedDataScopes();
+
+    	if ( keys.find(LIST_SEPARATOR) != std::string::npos )
+    	{
+        	std::vector<std::string> items = SPELLutils::tokenize(keys,LIST_SEPARATOR_STR);
+        	std::vector<std::string>::iterator it;
+        	result = PyList_New(items.size());
+        	int index = 0;
+        	for( it = items.begin(); it != items.end(); it++ )
+        	{
+        		std::string key = *it;
+        		PyObject* item = SSTRPY(key);
+        		Py_INCREF(item);
+        		PyList_SetItem(result, index, item);
+        		index++;
+        	}
+    	}
+    	else if (keys == "")
+    	{
+    		result = PyList_New(0);
+    	}
+    	else
+    	{
+        	result = PyList_New(1);
+    		PyList_SetItem(result, 0, SSTRPY( keys ));
+    	}
+		Py_INCREF(result);
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to get shared data scopes: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+
+    return result;
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_AddSharedDataScope
+//============================================================================
+static PyObject* ClientIF_AddSharedDataScope( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] AddSharedDataScope args : " + PYREPR(args))
+    DEBUG("[CIF PY] AddSharedDataScope kargs: " + PYREPR(kwds))
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()!=1)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot add shared data scope", "Malformed arguments: expected scope name");
+    }
+
+    PyObject* scopeObj = argumentsA[0];
+
+    PyObject* result = NULL;
+
+    try
+    {
+    	std::string scope = PYSTR(scopeObj);
+    	SPELLexecutor::instance().getCIF().addSharedDataScope(scope);
+    	Py_RETURN_TRUE;
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to add shared data scope: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+    return result;
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_RemoveSharedDataScope
+//============================================================================
+static PyObject* ClientIF_RemoveSharedDataScope( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] RemoveSharedDataScope args : " + PYREPR(args))
+    DEBUG("[CIF PY] RemoveSharedDataScope kargs: " + PYREPR(kwds))
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()!=1)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot remove shared data scope", "Malformed arguments: expected scope name");
+    }
+
+    PyObject* scopeObj = argumentsA[0];
+
+    PyObject* result = NULL;
+
+    try
+    {
+    	std::string scope = PYSTR(scopeObj);
+    	SPELLexecutor::instance().getCIF().removeSharedDataScope(scope);
+    	Py_RETURN_TRUE;
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to remove shared data scope: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+    return result;
+}
+
+//============================================================================
+// FUNCTION        : ClientIF_RemoveSharedDataScopes
+//============================================================================
+static PyObject* ClientIF_RemoveSharedDataScopes( PyObject* self, PyObject* args, PyObject* kwds )
+{
+    DEBUG("[CIF PY] RemoveSharedDataScopes args : " + PYREPR(args))
+    DEBUG("[CIF PY] RemoveSharedDataScopes kargs: " + PYREPR(kwds))
+
+    SPELLpyArgs argumentsA(args);
+    if (argumentsA.size()!=0)
+    {
+    	THROW_SYNTAX_EXCEPTION("Cannot remove ALL shared data scopes", "Expected no arguments");
+    }
+
+    PyObject* result = NULL;
+
+    try
+    {
+    	SPELLexecutor::instance().getCIF().removeSharedDataScopes();
+    	Py_RETURN_TRUE;
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("Failed to remove ALL shared data scopes: " + ex.what());
+    	THROW_DRIVER_EXCEPTION(ex.getError(),ex.getReason());
+    }
+    return result;
 }

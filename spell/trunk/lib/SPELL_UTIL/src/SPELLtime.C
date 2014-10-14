@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the time object
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -114,9 +114,10 @@ SPELLtime& SPELLtime::operator+=(SPELLtime& other)
 SPELLtime SPELLtime::operator-(const SPELLtime& other)
 {
     SPELLtime result(0,true);
+    bool delta = (m_delta && other.m_delta) || (!m_delta && !other.m_delta);
     long secs = m_secs - other.m_secs;
     int msecs = m_msecs - other.m_msecs;
-    result.set( (secs>0)? secs: 0, (msecs>0)? msecs: 0 );
+    result.set( (secs>0)? secs: 0, (msecs>0)? msecs: 0, delta );
     return result;
 }
 
@@ -125,9 +126,10 @@ SPELLtime SPELLtime::operator-(const SPELLtime& other)
 //=============================================================================
 SPELLtime& SPELLtime::operator-=(SPELLtime& other)
 {
+    bool delta = (m_delta && other.m_delta) || (!m_delta && !other.m_delta);
     long secs = m_secs - other.m_secs;
     int msecs = m_msecs - other.m_msecs;
-    set( (secs>0)? secs: 0, (msecs>0)? msecs: 0 );
+    set( (secs>0)? secs: 0, (msecs>0)? msecs: 0, delta );
     return *this;
 }
 
@@ -234,37 +236,64 @@ std::string SPELLtime::toString() const
     {
         return "0";
     }
-    time_t theTime = m_secs;
-    struct tm* ptm = localtime(&theTime);
-    if (ptm==NULL)
-    {
-        return "\?\?\?\?-\?\?-\?\? \?\?:\?\?:\?\?";
-    }
+    
     std::string timeStr = "";
-    // 2009-12-07 16:55:12
-    if (theTime >= 86400) // Long date format
+    //Relative date
+    if (isDelta())
     {
+    	time_t seconds = m_secs;
+        if (seconds<60) // Very short date format
+        {
+            timeStr = ISTR(seconds);
+        }
+		else
+		{
+			//Days
+			if (seconds >= 86400) // Long date format
+			{
+				char buffer[10];
+				sprintf( buffer, "+%03ld ", seconds/86400 );
+				timeStr = buffer;
+				seconds = seconds % 86400;
+			}
+			//Hours
+			if ( seconds/3600 < 10 ) timeStr += "0";
+			timeStr += ISTR(seconds/3600)+":";
+			seconds = seconds % 3600;
+			//Minutes
+			if ( seconds/60 < 10 ) timeStr += "0";
+			timeStr += ISTR(seconds/60)+":";
+			seconds = seconds % 60;
+			//Seconds
+			if ( seconds < 10 ) timeStr += "0";
+			timeStr += ISTR(seconds);
+		}
+	}
+    //Absolute date e.g. 2009-12-07 16:55:12
+    else
+    {
+        time_t seconds = m_secs;
+        struct tm* ptm = localtime(&seconds);
+        if (ptm==NULL)
+        {
+            return "\?\?\?\?-\?\?-\?\? \?\?:\?\?:\?\?";
+        }
         timeStr += ISTR(1900+ptm->tm_year) + "-";
         std::string month = ISTR(ptm->tm_mon+1);
         if (month.length()==1) month = "0" + month;
         std::string day = ISTR(ptm->tm_mday);
         if (day.length()==1) day = "0" + day;
         timeStr += month + "-" + day + " ";
-    }
 
-    if (theTime<60) // Very short date format
-    {
-        timeStr = ISTR(theTime);
-    }
-    else
-    {
-        std::string hour = ISTR(ptm->tm_hour);
-        if (hour.length()==1) hour = "0" + hour;
-        std::string min = ISTR(ptm->tm_min);
-        if (min.length()==1) min = "0" + min;
-        std::string sec = ISTR(ptm->tm_sec );
-        if (sec.length()==1) sec = "0" + sec;
-        timeStr += hour + ":" + min + ":" + sec;
+		//Hours
+		if ( ptm->tm_hour < 10 ) timeStr += "0";
+		timeStr += ISTR(ptm->tm_hour)+":";
+		//Minutes
+		if ( ptm->tm_min < 10 ) timeStr += "0";
+		timeStr += ISTR(ptm->tm_min)+":";
+		//Seconds
+		if ( ptm->tm_sec < 10 ) timeStr += "0";
+		timeStr += ISTR(ptm->tm_sec);
     }
     return timeStr;
 }
@@ -276,41 +305,65 @@ std::string SPELLtime::toTIMEString() const
 {
     if (m_secs==0)
     {
-        return "0";
+        return "+000 00:00:00";
     }
-    time_t theTime = m_secs;
-    struct tm* ptm = localtime(&theTime);
-    if (ptm==NULL)
-    {
-        return "0";
-    }
+
     std::string timeStr = "";
-    // 2009-12-07:16:55:12
-    if (theTime >= 86400) // Long date format
+    //Relative date
+    if (isDelta())
     {
-    	if (isDelta()) timeStr = "+";
+        long seconds = m_secs;
+        //Days
+        if (seconds >= 86400) // Long date format
+        {
+            char buffer[10];
+            sprintf( buffer, "+%03ld ", seconds/86400 );
+            timeStr = buffer;
+            seconds = seconds % 86400;
+        }
+        else
+        {
+        	timeStr = "+";
+        }
+        //Hours
+        if ( seconds/3600 < 10 ) timeStr += "0";
+        timeStr += ISTR(seconds/3600)+":";
+        seconds = seconds % 3600;
+        //Minutes
+        if ( seconds/60 < 10 ) timeStr += "0";
+        timeStr += ISTR(seconds/60)+":";
+        seconds = seconds % 60;
+        //Seconds
+        if ( seconds < 10 ) timeStr += "0";
+        timeStr += ISTR(seconds);
+    }
+    //Absolute date e.g. e.g. 2009-12-07:16:55:12
+    else
+    {
+        time_t seconds = m_secs;
+        struct tm* ptm = localtime(&seconds);
+        if (ptm==NULL)
+        {
+            return "\?\?\?\?-\?\?-\?\? \?\?:\?\?:\?\?";
+        }
+
+        // Absolute dates convert always to full date format including year, month, etc.
         timeStr += ISTR(1900+ptm->tm_year) + "-";
         std::string month = ISTR(ptm->tm_mon+1);
         if (month.length()==1) month = "0" + month;
         std::string day = ISTR(ptm->tm_mday);
         if (day.length()==1) day = "0" + day;
         timeStr += month + "-" + day + ":";
-    }
 
-    if (theTime<60) // Very short date format
-    {
-        timeStr = "+000 00:00:" + ISTR(theTime);
-    }
-    else
-    {
-    	if (isDelta() && timeStr == "") timeStr = "+000 ";
-        std::string hour = ISTR(ptm->tm_hour);
-        if (hour.length()==1) hour = "0" + hour;
-        std::string min = ISTR(ptm->tm_min);
-        if (min.length()==1) min = "0" + min;
-        std::string sec = ISTR(ptm->tm_sec );
-        if (sec.length()==1) sec = "0" + sec;
-        timeStr += hour + ":" + min + ":" + sec;
+		//Hours
+		if ( ptm->tm_hour < 10 ) timeStr += "0";
+		timeStr += ISTR(ptm->tm_hour)+":";
+		//Minutes
+		if ( ptm->tm_min < 10 ) timeStr += "0";
+		timeStr += ISTR(ptm->tm_min)+":";
+		//Seconds
+		if ( ptm->tm_sec < 10 ) timeStr += "0";
+		timeStr += ISTR(ptm->tm_sec);
     }
     return timeStr;
 }
@@ -320,9 +373,8 @@ std::string SPELLtime::toTIMEString() const
 //=============================================================================
 void SPELLtime::setCurrent()
 {
-    struct timeval tz;
-    gettimeofday( &tz, NULL );
-    set( tz.tv_sec, tz.tv_usec/1000, false );
+    SPELLutils::SPELLtimeDesc time = SPELLutils::getSystemTime();
+    set( time.seconds, time.useconds/1000, false );
 }
 
 //=============================================================================
@@ -330,7 +382,7 @@ void SPELLtime::setCurrent()
 //=============================================================================
 void SPELLtime::set( unsigned long secs, unsigned int msecs )
 {
-    set(secs,msecs,(secs<86400));
+    set(secs,msecs,true);
 }
 
 //=============================================================================
@@ -349,10 +401,9 @@ void SPELLtime::set( unsigned long secs, unsigned int msecs, bool delta )
 //=============================================================================
 void SPELLticker::tickIn( const std::string& function, unsigned int line )
 {
-    struct timeval tz;
-    gettimeofday( &tz, NULL );
+    SPELLutils::SPELLtimeDesc time = SPELLutils::getSystemTime();
 
-    long usec = tz.tv_sec * 1000000 + tz.tv_usec;
+    long usec = time.seconds * 1000000 + time.useconds;
     long idx = s_intime.size();
 
     std::string indent('-', idx);
@@ -369,8 +420,7 @@ void SPELLticker::tickIn( const std::string& function, unsigned int line )
 //=============================================================================
 void SPELLticker::tickOut( const std::string& function, unsigned int line )
 {
-    struct timeval tz;
-    gettimeofday( &tz, NULL );
+    SPELLutils::SPELLtimeDesc time = SPELLutils::getSystemTime();
 
     std::string indent('-', s_intime.size());
 
@@ -381,7 +431,7 @@ void SPELLticker::tickOut( const std::string& function, unsigned int line )
     	s_intime.pop_back();
 	}
     long idx = s_intime.size();
-    long usec = tz.tv_sec * 1000000 + tz.tv_usec;
+    long usec = time.seconds * 1000000 + time.useconds;
     long delta = usec - in;
 
     int pos = function.find("::");

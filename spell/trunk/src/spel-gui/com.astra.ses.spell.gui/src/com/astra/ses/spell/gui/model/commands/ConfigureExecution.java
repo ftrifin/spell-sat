@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,7 +59,6 @@ import org.eclipse.ui.PlatformUI;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.dialogs.ConfigDialog;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
@@ -108,9 +107,11 @@ public class ConfigureExecution extends AbstractHandler
 
 		if (result == IDialogConstants.OK_ID)
 		{
-			boolean runIntoOrig = proc.getController().getStepOverControl().getMode().equals(StepOverMode.STEP_INTO_ALWAYS);
+			boolean runIntoOrig = proc.getExecutionManager().isRunInto();
 			boolean byStepOrig = proc.getRuntimeInformation().isStepByStep();
+			boolean tcConfirmOrig = proc.getRuntimeInformation().isForceTcConfirmation();
 			int delayOrig = proc.getRuntimeInformation().getExecutionDelay();
+			int promptDelayOrig = proc.getRuntimeInformation().getPromptWarningDelay();
 
 			if (runIntoOrig != dialog.getRunInto())
 			{
@@ -123,6 +124,14 @@ public class ConfigureExecution extends AbstractHandler
 			if (delayOrig != dialog.getExecutionDelay())
 			{
 				proc.getController().setExecutionDelay(dialog.getExecutionDelay());
+			}
+			if (promptDelayOrig != dialog.getPromptWarningDelay())
+			{
+				proc.getController().setPromptWarningDelay(dialog.getPromptWarningDelay());
+			}
+			if (tcConfirmOrig != dialog.getTcConfirm())
+			{
+				proc.getController().setForceTcConfirmation(dialog.getTcConfirm());
 			}
 		}
 

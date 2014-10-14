@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 22, 2010
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -64,106 +64,81 @@ import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
  * Provides the labels and icons for the callstack tree.
  * 
  *****************************************************************************/
-public class WatchVariablesLabelProvider implements ITableLabelProvider,
-        ITableFontProvider, ITableColorProvider
+public class WatchVariablesLabelProvider implements ITableLabelProvider, ITableFontProvider, ITableColorProvider
 {
 	/** Holds the bold font for globals */
-	private Font	m_boldFont;
+	private Font m_boldFont;
 	/** Holds the normal font for locals */
-	private Font	m_normalFont;
+	private Font m_normalFont;
 	/** Holds the color for notified items */
-	private Color	m_notifiedBgColor;
+	//private Color m_notifiedBgColor;
 	/** notified element foreground color */
-	private Color	m_notifiedFgColor;
-	/** Holds the background color for registered variables */
-	private Color	m_registeredColor;
+	//private Color m_notifiedFgColor;
 	/** Holds the scope changed color */
-	private Color	m_scopeChangedColor;
+	private Color m_scopeChangedColor;
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public WatchVariablesLabelProvider()
 	{
-		m_boldFont = new Font(Display.getDefault(), "Courier New", 10, SWT.BOLD);
-		m_normalFont = new Font(Display.getDefault(), "Courier New", 10,
-		        SWT.NONE);
-		m_notifiedBgColor = new Color(Display.getDefault(), 21, 80, 122);
-		m_notifiedFgColor = Display.getDefault()
-		        .getSystemColor(SWT.COLOR_WHITE);
-		m_registeredColor = new Color(Display.getDefault(), 204, 234, 255);
+		m_boldFont = new Font(Display.getDefault(), "Monospace", 9, SWT.BOLD);
+		m_normalFont = new Font(Display.getDefault(), "Monospace", 9, SWT.NONE);
+		//m_notifiedBgColor = new Color(Display.getDefault(), 21, 80, 122);
+		//m_notifiedFgColor = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
 		m_scopeChangedColor = new Color(Display.getDefault(), 218, 228, 235);
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.IBaseLabelProvider#addListener(org.eclipse.
-	 * jface.viewers.ILabelProviderListener)
-	 */
+	 *************************************************************************/
 	@Override
 	public void addListener(ILabelProviderListener listener)
 	{
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.IBaseLabelProvider#removeListener(org.eclipse
-	 * .jface.viewers.ILabelProviderListener)
-	 */
+	 *************************************************************************/
 	@Override
 	public void removeListener(ILabelProviderListener listener)
 	{
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see org.eclipse.jface.viewers.IBaseLabelProvider#dispose()
-	 */
+	 *************************************************************************/
 	@Override
 	public void dispose()
 	{
 		m_boldFont.dispose();
 		m_normalFont.dispose();
-		m_notifiedBgColor.dispose();
-		m_registeredColor.dispose();
+		//m_notifiedFgColor.dispose();
+		//m_notifiedBgColor.dispose();
 		m_scopeChangedColor.dispose();
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.IBaseLabelProvider#isLabelProperty(java.lang
-	 * .Object, java.lang.String)
-	 */
+	 *************************************************************************/
 	@Override
 	public boolean isLabelProperty(Object element, String property)
 	{
 		return false;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.ITableLabelProvider#getColumnImage(java.lang
-	 * .Object, int)
-	 */
+	 *************************************************************************/
 	@Override
 	public Image getColumnImage(Object element, int columnIndex)
 	{
 		return null;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.ITableLabelProvider#getColumnText(java.lang
-	 * .Object, int)
-	 */
+	 *************************************************************************/
 	@Override
 	public String getColumnText(Object element, int columnIndex)
 	{
@@ -172,76 +147,53 @@ public class WatchVariablesLabelProvider implements ITableLabelProvider,
 		switch (WatchVariablesTableColumns.fromIndex(columnIndex))
 		{
 		case NAME_COLUMN:
-			text = data.name;
+			text = data.getName();
 			break;
 		case VALUE_COLUMN:
-			boolean complex = (data.type.indexOf("dict") != -1)
-			        || (data.type.indexOf("list") != -1)
-			        || (data.type.indexOf("adapter.databases") != -1)
-			        || (data.type.indexOf("instance") != -1);
+			boolean complex = (data.getType().indexOf("dict") != -1) || (data.getType().indexOf("list") != -1)
+			        || (data.getType().indexOf("adapter.databases") != -1) || (data.getType().indexOf("instance") != -1);
 			if (complex)
 			{
 				text = "[...]";
 			}
 			else
 			{
-				text = data.value;
+				text = data.getValue();
 			}
 			break;
 		}
 		return text;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.ITableFontProvider#getFont(java.lang.Object,
-	 * int)
-	 */
+	 *************************************************************************/
 	@Override
 	public Font getFont(Object element, int columnIndex)
 	{
 		VariableData data = (VariableData) element;
-		if (data.isGlobal) { return m_boldFont; }
+		if (data.isGlobal())
+		{
+			return m_boldFont;
+		}
 		return m_normalFont;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.ITableColorProvider#getForeground(java.lang
-	 * .Object, int)
-	 */
+	 *************************************************************************/
 	@Override
 	public Color getForeground(Object element, int columnIndex)
 	{
-		VariableData data = (VariableData) element;
-		if (data.isChanged) { return m_notifiedFgColor; }
 		return null;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**************************************************************************
 	 * 
-	 * @see
-	 * org.eclipse.jface.viewers.ITableColorProvider#getBackground(java.lang
-	 * .Object, int)
-	 */
+	 *************************************************************************/
 	@Override
 	public Color getBackground(Object element, int columnIndex)
 	{
-		VariableData data = (VariableData) element;
-		Color bg = null;
-		if (data.isRegistered)
-		{
-			bg = m_registeredColor;
-			if (data.isChanged)
-			{
-				bg = m_notifiedBgColor;
-			}
-		}
-		return bg;
+		return null;
 	}
 }

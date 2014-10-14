@@ -5,7 +5,7 @@
 // DESCRIPTION: General utilities
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -28,10 +28,11 @@
 #define __SPELL_COMPRESSION_H__
 
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
-// System includes ---------------------------------------------------------
-#include "SPELL_UTIL/SPELLbase.H"
 // Local includes ----------------------------------------------------------
 // Project includes --------------------------------------------------------
+#include "SPELL_UTIL/SPELLbase.H"
+// System includes ---------------------------------------------------------
+#include <zlib.h>
 
 /** \addtogroup SPELL_UTIL */
 /*@{*/

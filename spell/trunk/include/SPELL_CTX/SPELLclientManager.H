@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL client manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -129,7 +129,12 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Remove controller
 		**////////////////////////////////////////////////////////////////////
-		void removeExecutorController( SPELLclient* client, SPELLexecutor* exec, bool notifyExecutor );
+		void removeExecutorController( SPELLclient* client, SPELLexecutor* exec, bool notifyExecutor, bool error );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set a procedure as background (headless)
+		**////////////////////////////////////////////////////////////////////
+		void setExecutorInBackground( SPELLclient* client, SPELLexecutor* exec );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Client to monitor a procedure

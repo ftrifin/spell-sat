@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the procedure variable manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -54,30 +54,20 @@ SPELLvariableManager::~SPELLvariableManager()
 }
 
 //=============================================================================
-// METHOD    : SPELLvariableManager::getAllVariables()
+// METHOD    : SPELLvariableManager::setEnabled()
 //=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableManager::getAllVariables()
+void SPELLvariableManager::setEnabled( bool enabled )
 {
-	DEBUG("[VMGR] Retrieve all variables");
-	std::vector<SPELLvarInfo> vars;
+	SPELLvariableMonitor::s_enabled = enabled;
+	LOG_INFO("Watch of variables enabled: " + BSTR(enabled) );
+}
 
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return vars;
-	}
-
-	if(isStatusValid())
-	{
-		vars = m_frameManager.getModel().getVariableMonitor().getAllVariables();
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-	return vars;
+//=============================================================================
+// METHOD    : SPELLvariableManager::setEnabled()
+//=============================================================================
+bool SPELLvariableManager::isEnabled()
+{
+	return SPELLvariableMonitor::s_enabled;
 }
 
 //=============================================================================
@@ -88,15 +78,14 @@ std::vector<SPELLvarInfo> SPELLvariableManager::getLocalVariables()
 	DEBUG("[VMGR] Retrieve all local variables");
 	std::vector<SPELLvarInfo> vars;
 
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return vars;
-	}
-
 	if(isStatusValid())
 	{
-		vars = m_frameManager.getModel().getVariableMonitor().getLocalVariables();
+		const SPELLvariableMonitor::VarMap& map = m_frameManager.getModel().getVariableMonitor().getLocalVariables();
+		SPELLvariableMonitor::VarMap::const_iterator it;
+		for( it = map.begin(); it != map.end(); it++)
+		{
+			vars.push_back(it->second);
+		}
 	}
 	else
 	{
@@ -115,15 +104,14 @@ std::vector<SPELLvarInfo> SPELLvariableManager::getGlobalVariables()
 	DEBUG("[VMGR] Retrieve all global variables");
 	std::vector<SPELLvarInfo> vars;
 
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return vars;
-	}
-
 	if(isStatusValid())
 	{
-		vars = m_frameManager.getModel().getVariableMonitor().getGlobalVariables();
+		const SPELLvariableMonitor::VarMap& map = m_frameManager.getModel().getVariableMonitor().getGlobalVariables();
+		SPELLvariableMonitor::VarMap::const_iterator it;
+		for( it = map.begin(); it != map.end(); it++)
+		{
+			vars.push_back(it->second);
+		}
 	}
 	else
 	{
@@ -135,136 +123,13 @@ std::vector<SPELLvarInfo> SPELLvariableManager::getGlobalVariables()
 }
 
 //=============================================================================
-// METHOD    : SPELLvariableManager::getRegisteredVariables()
+// METHOD    : SPELLvariableManager::analyze()
 //=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableManager::getRegisteredVariables()
+void SPELLvariableManager::analyze()
 {
-	DEBUG("[VMGR] Retrieve all registered variables");
-	std::vector<SPELLvarInfo> vars;
-
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return vars;
-	}
-
-	if(isStatusValid())
-	{
-		vars = m_frameManager.getModel().getVariableMonitor().getRegisteredVariables();
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-	return vars;
+	m_frameManager.getModel().getVariableMonitor().analyze();
 }
 
-//=============================================================================
-// METHOD    : SPELLvariableManager::getRegisteredLocalVariables()
-//=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableManager::getRegisteredLocalVariables()
-{
-	DEBUG("[VMGR] Retrieve registered local variables");
-	std::vector<SPELLvarInfo> vars;
-
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return vars;
-	}
-
-	if(isStatusValid())
-	{
-		vars = m_frameManager.getModel().getVariableMonitor().getRegisteredLocalVariables();
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-	return vars;
-}
-
-//=============================================================================
-// METHOD    : SPELLvariableManager::getRegisteredGlobalVariables()
-//=============================================================================
-std::vector<SPELLvarInfo> SPELLvariableManager::getRegisteredGlobalVariables()
-{
-	DEBUG("[VMGR] Retrieve registered global variables");
-	std::vector<SPELLvarInfo> vars;
-
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return vars;
-	}
-
-	if(isStatusValid())
-	{
-		vars = m_frameManager.getModel().getVariableMonitor().getRegisteredGlobalVariables();
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-	return vars;
-}
-
-//=============================================================================
-// METHOD    : SPELLvariableManager::registerVariable()
-//=============================================================================
-bool SPELLvariableManager::registerVariable( SPELLvarInfo& var )
-{
-	DEBUG("[VMGR] Register variable " + var.varName);
-
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return false;
-	}
-
-	if(isStatusValid())
-	{
-		return m_frameManager.getModel().getVariableMonitor().registerVariable(var);
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-	return false;
-}
-
-//=============================================================================
-// METHOD    : SPELLvariableManager::unregisterVariable()
-//=============================================================================
-void SPELLvariableManager::unregisterVariable( SPELLvarInfo& var )
-{
-	DEBUG("[VMGR] Unregister variable " + var.varName);
-
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return;
-	}
-
-	if(isStatusValid())
-	{
-		return m_frameManager.getModel().getVariableMonitor().unregisterVariable(var);
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-}
 
 //=============================================================================
 // METHOD    : SPELLvariableManager::changeVariable()
@@ -272,12 +137,6 @@ void SPELLvariableManager::unregisterVariable( SPELLvarInfo& var )
 void SPELLvariableManager::changeVariable( SPELLvarInfo& var )
 {
 	DEBUG("[VMGR] Change variable " + var.varName);
-
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return;
-	}
 
 	if(isStatusValid())
 	{
@@ -290,29 +149,6 @@ void SPELLvariableManager::changeVariable( SPELLvarInfo& var )
 		{
 			LOG_ERROR("Unable to assign variable value: " + ex.what());
 		}
-	}
-	else
-	{
-		SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-		std::string status = SPELLexecutorUtils::statusToString(st);
-		LOG_WARN("Status is not valid for variable analysis: " + status);
-	}
-}
-
-//=============================================================================
-// METHOD    : SPELLvariableManager::unregisterAll()
-//=============================================================================
-void SPELLvariableManager::unregisterAll()
-{
-	if (!m_enabled)
-	{
-		LOG_WARN("Variable analysis is disabled");
-		return;
-	}
-
-	if(isStatusValid())
-	{
-		m_frameManager.getModel().getVariableMonitor().unregisterAll();
 	}
 	else
 	{
@@ -336,7 +172,9 @@ bool SPELLvariableManager::isStatusValid()
 		case STATUS_PAUSED:
 		case STATUS_WAITING:
 		case STATUS_PROMPT:
+		case STATUS_FINISHED:
 		case STATUS_INTERRUPTED:
+		case STATUS_ABORTED:
 			valid = true;
 			break;
 		default:

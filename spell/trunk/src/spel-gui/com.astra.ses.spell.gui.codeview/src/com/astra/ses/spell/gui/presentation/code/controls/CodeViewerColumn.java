@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,10 +59,10 @@ public enum CodeViewerColumn
 {
 
 	BREAKPOINT(" ", 0.02, 20, SWT.CENTER, false), 
-	LINE_NO("#", 0.04, 60, SWT.RIGHT, true), 
+	LINE_NO("#", 0.04, 30, SWT.RIGHT, true), 
 	CODE("Code", 0.62, 500, SWT.LEFT, true), 
-	DATA("Data", 0.1, 200, SWT.CENTER, true), 
-	RESULT("Result", 0.1, 150, SWT.CENTER, true); 
+	DATA("Data", 0.1, 150, SWT.CENTER, true), 
+	RESULT("Result", 0.1, 200, SWT.CENTER, true); 
 
 	/** Column's Name */
 	private String	m_name;

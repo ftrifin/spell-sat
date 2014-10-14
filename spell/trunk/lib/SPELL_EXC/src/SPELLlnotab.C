@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the LNotab analyzer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -58,9 +58,7 @@ SPELLlnotab::~SPELLlnotab()
 //=============================================================================
 void SPELLlnotab::analyze( PyCodeObject* code )
 {
-	DEBUG("==================================================");
-	DEBUG("Analyze LNOTAB: " + PYSSTR(code->co_filename));
-	DEBUG("==================================================");
+	DEBUG("[LNOTAB] Analyze: " + PYSSTR(code->co_filename));
     char*          lnotab     = NULL;
     Py_ssize_t      lnotab_len = 0;
     register int offset     = 0;
@@ -76,7 +74,6 @@ void SPELLlnotab::analyze( PyCodeObject* code )
         m_addrs.push_back(addr);
         addr += ((unsigned char*) lnotab)[offset];
         line += ((unsigned char*) lnotab)[offset+1];
-        DEBUG("  - line " + ISTR(line) + ": " + ISTR(addr))
     }
     m_lines.push_back(line);
     m_addrs.push_back(addr);

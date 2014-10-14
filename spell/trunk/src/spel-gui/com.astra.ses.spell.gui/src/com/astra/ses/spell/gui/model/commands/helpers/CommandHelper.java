@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -89,8 +89,7 @@ public class CommandHelper
 		try
 		{
 
-			IHandlerService handlerService = (IHandlerService) PlatformUI
-			        .getWorkbench().getService(IHandlerService.class);
+			IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
 			return (CommandResult) handlerService.executeCommand(cmdId, null);
 		}
 		catch (Exception ex)
@@ -115,8 +114,7 @@ public class CommandHelper
 		/*
 		 * Get the command
 		 */
-		ICommandService commandService = (ICommandService) PlatformUI
-		        .getWorkbench().getService(ICommandService.class);
+		ICommandService commandService = (ICommandService) PlatformUI.getWorkbench().getService(ICommandService.class);
 		Command command = commandService.getCommand(cmdId);
 
 		/*
@@ -143,8 +141,7 @@ public class CommandHelper
 					IParameter param = command.getParameter(key.toString());
 					if (param != null)
 					{
-						Parameterization parm = new Parameterization(param,
-						        arguments.get(key));
+						Parameterization parm = new Parameterization(param, arguments.get(key));
 						params[i] = parm;
 						i++;
 					}
@@ -155,10 +152,8 @@ public class CommandHelper
 				}
 			}
 		}
-		IHandlerService handlerService = (IHandlerService) PlatformUI
-		        .getWorkbench().getService(IHandlerService.class);
-		ParameterizedCommand paramCommand = new ParameterizedCommand(command,
-		        params);
+		IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
+		ParameterizedCommand paramCommand = new ParameterizedCommand(command, params);
 		try
 		{
 			result = handlerService.executeCommand(paramCommand, null);
@@ -182,13 +177,10 @@ public class CommandHelper
 		return result;
 	}
 
-	public static void executeInProgress(IRunnableWithProgress job,
-	        boolean cancellable, boolean fork)
+	public static void executeInProgress(IRunnableWithProgress job, boolean cancellable, boolean fork)
 	{
-		IWorkbenchWindow window = PlatformUI.getWorkbench()
-		        .getActiveWorkbenchWindow();
-		ProgressMonitorDialog dialog = new ProgressMonitorDialog(
-		        window.getShell());
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		ProgressMonitorDialog dialog = new ProgressMonitorDialog(window.getShell());
 		try
 		{
 			dialog.setCancelable(cancellable);
@@ -204,17 +196,29 @@ public class CommandHelper
 		}
 	}
 
-	public static void setToggleCommandState(String commandId, String stateId,
-	        boolean stateValue) throws ExecutionException
+	public static void setToggleCommandState(String commandId, String stateId, boolean stateValue) throws ExecutionException
 	{
-		ICommandService svc = (ICommandService) PlatformUI.getWorkbench()
-		        .getService(ICommandService.class);
+		ICommandService svc = (ICommandService) PlatformUI.getWorkbench().getService(ICommandService.class);
 		Command command = svc.getCommand(commandId);
 		State state = command.getState("org.eclipse.ui.commands.toggleState");
-		if (state == null) throw new ExecutionException(
-		        "The command does not have a toggle state"); //$NON-NLS-1$
-		if (!(state.getValue() instanceof Boolean)) throw new ExecutionException(
-		        "The command's toggle state doesn't contain a boolean value"); //$NON-NLS-1$
+		if (state == null)
+			throw new ExecutionException("The command does not have a toggle state"); //$NON-NLS-1$
+		if (!(state.getValue() instanceof Boolean))
+			throw new ExecutionException("The command's toggle state doesn't contain a boolean value"); //$NON-NLS-1$
 		state.setValue(new Boolean(stateValue));
+	}
+
+	public static void updateCommandEnabledState(String commandId)
+	{
+		try
+		{
+			ICommandService svc = (ICommandService) PlatformUI.getWorkbench().getService(ICommandService.class);
+			Command command = svc.getCommand(commandId);
+			command.setEnabled(null);
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+		}
 	}
 }

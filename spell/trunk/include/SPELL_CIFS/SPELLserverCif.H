@@ -5,7 +5,7 @@
 // DESCRIPTION: Client interface for server environment
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -32,6 +32,7 @@
 // Local includes ----------------------------------------------------------
 #include "SPELL_CIFS/SPELLrequestProcessor.H"
 #include "SPELL_CIFS/SPELLdisplayBuffer.H"
+#include "SPELL_CIFS/SPELLvariableBuffer.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLthread.H"
 #include "SPELL_SYN/SPELLevent.H"
@@ -55,17 +56,6 @@
 // TYPES ///////////////////////////////////////////////////////////////////
 // DEFINES /////////////////////////////////////////////////////////////////
 
-//============================================================================
-/** String mappings for notification types */
-static std::string NOTIF_TYPE_STR[] =
-{
-    MessageValue::DATA_NOTIF_TYPE_ITEM,
-    MessageValue::DATA_NOTIF_TYPE_VAL,
-    MessageValue::DATA_NOTIF_TYPE_VERIF,
-    MessageValue::DATA_NOTIF_TYPE_EXEC,
-    MessageValue::DATA_NOTIF_TYPE_SYS,
-    MessageValue::DATA_NOTIF_TYPE_TIME
-};
 
 //////////////////////////////////////////////////////////////////////////////
 /**
@@ -99,65 +89,6 @@ public: //--------------------------------------------------------------------
 	// STATIC ////////////////////////////////////////////////////////////////
 	// METHODS ///////////////////////////////////////////////////////////////
 
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::setup()
-		**////////////////////////////////////////////////////////////////////
-		void setup( const SPELLcifStartupInfo& info );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::cleanup()
-		**////////////////////////////////////////////////////////////////////
-		void cleanup( bool force );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::canClose()
-		**////////////////////////////////////////////////////////////////////
-		void canClose();
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::waitClose()
-		**////////////////////////////////////////////////////////////////////
-		void waitClose();
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::resetClose()
-		**////////////////////////////////////////////////////////////////////
-		void resetClose();
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::getArguments()
-		**////////////////////////////////////////////////////////////////////
-		std::string getArguments() {
-			return m_arguments;
-		};
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::getCondition()
-		**////////////////////////////////////////////////////////////////////
-		std::string getCondition() {
-			return m_condition;
-		};
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::isAutomatic()
-		**////////////////////////////////////////////////////////////////////
-		bool isAutomatic() {
-			return m_automatic;
-		};
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::isVisible()
-		**////////////////////////////////////////////////////////////////////
-		bool isVisible() {
-			return m_visible;
-		};
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif::isBlocking()
-		**////////////////////////////////////////////////////////////////////
-		bool isBlocking() {
-			return m_blocking;
-		};
 
     //====================================================================
     // IPC callbacks
@@ -207,105 +138,48 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcif class.
 		**////////////////////////////////////////////////////////////////////
-		void notifyLine();
+		void specificNotifyUserActionSet( const std::string& label, const unsigned int severity );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcif class.
 		**////////////////////////////////////////////////////////////////////
-		void notifyCall();
+		void specificNotifyUserActionUnset();
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcif class.
 		**////////////////////////////////////////////////////////////////////
-		void notifyReturn();
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void notifyStatus( const SPELLstatusInfo& st );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void notifyUserActionSet( const std::string& label, const unsigned int severity );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void notifyUserActionUnset();
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void notifyUserActionEnable( bool enable );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void notify( ItemNotification notification );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void notifyError( const std::string& error, const std::string& reason, bool fatal );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void write( const std::string& msg, unsigned int scope );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void warning( const std::string& msg, unsigned int scope );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		void error( const std::string& msg, unsigned int scope );
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcif class.
-		**////////////////////////////////////////////////////////////////////
-		std::string prompt( const SPELLpromptDefinition& definition );
+		void specificNotifyUserActionEnable( bool enable );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify a variable change.
 		**////////////////////////////////////////////////////////////////////
-		void notifyVariableChange(const std::vector<SPELLvarInfo>& changed );
+		void specificNotifyVariableChange(const std::vector<SPELLvarInfo>& added,
+				                  const std::vector<SPELLvarInfo>& changed,
+				                  const std::vector<SPELLvarInfo>& deleted);
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify a variable scope change.
 		**////////////////////////////////////////////////////////////////////
-		void notifyVariableScopeChange( const SPELLscopeInfo& info );
+		void specificNotifyVariableScopeChange( const std::string& scopeName,
+				                        const std::vector<SPELLvarInfo>& globals,
+				                        const std::vector<SPELLvarInfo>& locals );
 
 		//////////////////////////////////////////////////////////////////////
-		/** Open subprocedure.
-		 *
-		 * \param procId IN: identifier of the subprocedure
-		 * \param args IN: arguments for the subprocedure
-		 * \param automatic IN: automatic mode flag
-		 * \param blocking IN: blocking mode flag
-		 * \param visible IN: visible mode flag
-		 *
-		 * \returns The procedure identifier with instance number.
+		/** See openSubprocedure
 		**////////////////////////////////////////////////////////////////////
-		std::string openSubprocedure( const std::string& procId,
-									  const std::string& args, bool automatic, bool blocking, bool visible );
+		std::string specificOpenSubprocedure( const std::string& procId,
+											  int callingLine,
+											  const std::string& args, bool automatic, bool blocking, bool visible );
 
 		//////////////////////////////////////////////////////////////////////
-		/** Close the given child procedure.
-		 *
-		 * \param procId IN: child procedure identifier.
+		/** See CloseSubprocedure
 		**////////////////////////////////////////////////////////////////////
-		void closeSubprocedure( const std::string& procId );
+		void specificCloseSubprocedure( const std::string& procId );
 
 		//////////////////////////////////////////////////////////////////////
-		/** Kill the given child procedure.
-		 *
-		 * \param procId IN: child procedure identifier.
+		/** See KillSubprocedure
 		**////////////////////////////////////////////////////////////////////
-		void killSubprocedure( const std::string& procId );
+		void specificKillSubprocedure( const std::string& procId );
 
     //====================================================================
     // Python bindings end
@@ -316,6 +190,7 @@ public: //--------------------------------------------------------------------
 protected: //-----------------------------------------------------------------
 
 		friend class SPELLdisplayBuffer;
+		friend class SPELLvariableBuffer;
 
     // EXCEPTIONS ////////////////////////////////////////////////////////////
     // ENUMS /////////////////////////////////////////////////////////////////
@@ -370,10 +245,97 @@ protected: //-----------------------------------------------------------------
 		 *////////////////////////////////////////////////////////////////////
 		void waitAcknowledge( const SPELLipcMessage& msg );
 
+		//====================================================================
+		// Shared data handling
+		//====================================================================
+		std::string setSharedData( const std::string& name, const std::string& value, const std::string& expected, const std::string& scope );
+		std::string clearSharedData( const std::string& name, const std::string& scope );
+		std::string getSharedData( const std::string& name, const std::string& scope );
+		std::string getSharedDataKeys( const std::string& scope );
+		std::string getSharedDataScopes();
+		void removeSharedDataScope( const std::string& scope );
+		void removeSharedDataScopes();
+		void addSharedDataScope( const std::string& scope );
+
 		//////////////////////////////////////////////////////////////////////
-		/** Get message timestamp.
+		/** Specific code of NotifyLine
+		 *////////////////////////////////////////////////////////////////////
+		void specificNotifyLine();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyCall
+		 *////////////////////////////////////////////////////////////////////
+		void specificNotifyCall();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyReturn
+		 *////////////////////////////////////////////////////////////////////
+		void specificNotifyReturn();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyStatus
+		 *////////////////////////////////////////////////////////////////////
+		void specificNotifyStatus( const SPELLstatusInfo& st );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Notify
+		 *
+		 * \param notification IN: Notification
+		 *////////////////////////////////////////////////////////////////////
+		void specificNotify( ItemNotification notification );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code for NotifyError
+		 *
+		 * \param error IN: error message
+		 * \param reason IN: error cause, if known
+		 * \param fatal IN: true if the error cannot be recovered
 		**////////////////////////////////////////////////////////////////////
-		std::string getTimestampUsec();
+		void specificNotifyError( const std::string& error, const std::string& reason, bool fatal );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Write
+		 *////////////////////////////////////////////////////////////////////
+		void specificWrite( const std::string& msg, unsigned int scope = 2 );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Warning
+		 *////////////////////////////////////////////////////////////////////
+		//virtual void warning( const std::string& msg, unsigned int scope = 2) = 0;
+		void specificWarning( const std::string& msg, unsigned int scope = 2 );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Error
+		 *////////////////////////////////////////////////////////////////////
+		void specificError( const std::string& msg, unsigned int scope = 2 );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code for Prompt
+		 *////////////////////////////////////////////////////////////////////
+		void specificPrompt( const SPELLpromptDefinition& def, std::string& rawAnswer, std::string& answerToShow );
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLcif::setup()
+		**////////////////////////////////////////////////////////////////////
+		void specificSetup( const SPELLcifStartupInfo& info );
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLcif::cleanup()
+		**////////////////////////////////////////////////////////////////////
+		void specificCleanup( bool force );
+
+
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Prepare message for the GUI.
+		 *
+		 * \param msg IN: message or request to be sent
+		 * \param dataType IN: Specifies the data type of the message
+		 * \param msgType IN: specifies the message type
+		 *////////////////////////////////////////////////////////////////////
+		void prepareMessage( SPELLipcMessage& msg,  const std::string dataType, SPELLipcMessageType_ msgType );
+
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -439,25 +401,10 @@ private: //-------------------------------------------------------------------
 		SPELLipcClientInterface* m_ifc;
 		/** Buffer to accumulate display messages */
 		SPELLdisplayBuffer* m_buffer;
-		/** Last line notification time */
-		/** Optimization: prevent redundant line notifications */
-		std::string m_lastStack;
-		/** Visible mode flag */
-		bool m_visible;
-		/** Blocking mode flag */
-		bool m_blocking;
-		/** Automatic mode flag */
-		bool m_automatic;
-		/** Identifier of the controlling GUI */
-		std::string m_controlGui;
-		/** Host of the controlling GUI */
-		std::string m_controlHost;
-		/** Arguments for procedure execution, given by context */
-		std::string m_arguments;
-		/** Condition for procedure execution, given by context */
-		std::string m_condition;
-		/** Event for cleaning up connections */
-		SPELLevent m_finishEvent;
+		/** Buffer to accumulate WOV messages */
+		SPELLvariableBuffer* m_wovBuffer;
+
+
 		/** True when the CIF is ready to work */
 		bool m_ready;
 		/** Optimization: write message skeleton */
@@ -474,14 +421,15 @@ private: //-------------------------------------------------------------------
 		unsigned long m_sequence;
 		/** Stack sequence counter */
 		unsigned long m_sequenceStack;
+		/** Holds the active prompt configuration */
+		SPELLpromptDefinition m_promptDef;
 		/** Prompt response arrival event */
 		SPELLevent m_promptAnswerEvent;
 		/** Holds the active prompt message */
 		SPELLipcMessage m_promptMessage;
 		/** Holds the prompt answer message */
 		SPELLipcMessage m_promptAnswer;
-		/** True if error was reported */
-		bool m_errorState;
+
 		/** IPC synchronization */
 		SPELLmutex m_ipcLock;
 		/** Close synchronization */
@@ -496,14 +444,19 @@ private: //-------------------------------------------------------------------
 		unsigned int m_timeoutOpenProcMsec;
 		/** Timeout in msec for executor login response */
 		unsigned int m_timeoutExecLoginMsec;
+		/** Timeout in seconds for acknowledge messages */
+		unsigned int m_timeoutAcknowledgeSec;
+		/** Number of messages not acknowledged */
+		unsigned int m_numNotAcknowledged;
 		/** Timer to ensure correct line alignment with GUI */
 		SPELLtimer m_lineTimer;
-		/** Synchronization with line notification timer */
-		SPELLmutex m_lineLock;
+
+
 		/** Notification synchronization */
 		SPELLmutex m_ackLock;
 		std::vector<std::string> m_ackSequences;
 		bool m_ipcInterruptionNotified;
+
 };
 
 /*@}*/

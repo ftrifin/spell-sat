@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,29 +59,49 @@ public class TextViewLine implements Comparable<TextViewLine>
 {
 	private static DateFormat s_format ;
 	
+	// Time formatter
 	static
 	{
 		s_format = new SimpleDateFormat("HH:mm:ss");
 		s_format.setTimeZone(TimeZone.getTimeZone("GMT"));
 	}
 	
+	/** Holds the line text */
 	private String m_text;
+	/** Paragraph type for displays, warnings, errors, etc */
 	private ParagraphType m_type;
+	/** Scope of the messages (system, proc...) */
 	private Scope m_scope;
+	/** Sequence of arrival */
 	private long m_sequence;
+	/** Timestamp of the message (server generation) */
 	private String m_timestamp;
+	/** Show timestamp flag */
 	private boolean m_showTimestamp;
 
-	public TextViewLine(String text, Scope scope, ParagraphType iconId, long sequence, boolean showTimestamp )
+	/***********************************************************************
+	 * Constructor
+	 **********************************************************************/
+	public TextViewLine(String text, String timestamp, Scope scope, ParagraphType iconId, long sequence, boolean showTimestamp )
 	{
 		m_text = text;
 		m_type = iconId;
 		m_sequence = sequence;
 		m_scope = scope;
-		m_timestamp = s_format.format(Calendar.getInstance().getTime());
+		if (timestamp == null)
+		{
+			m_timestamp = s_format.format(Calendar.getInstance().getTime());
+		}
+		else
+		{
+			m_timestamp = timestamp;
+		}
 		m_showTimestamp = showTimestamp;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public String getText()
 	{
 		if (m_showTimestamp)
@@ -91,36 +111,57 @@ public class TextViewLine implements Comparable<TextViewLine>
 		return m_text;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public void setShowTimestamp(boolean show)
 	{
 		m_showTimestamp = show;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public long getSequence()
 	{
 		return m_sequence;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public ParagraphType getType()
 	{
 		return m_type;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public Scope getScope()
 	{
 		return m_scope;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public int length()
 	{
 		return m_text.length();
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	public String toString()
 	{
-		return m_text;
+		return "[ " + m_timestamp + " ] " + m_text;
 	}
 
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
 	@Override
 	public int compareTo(TextViewLine that)
 	{

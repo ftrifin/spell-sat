@@ -5,7 +5,7 @@
 ## DESCRIPTION: Resource management interface of the driver connection layer
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -31,6 +31,7 @@ from spell.utils.log import *
 from spell.lib.exception import *
 from spell.lang.constants import *
 from spell.lang.modifiers import *
+from spell.lib.registry import REGISTRY
 
 #*******************************************************************************
 # Local imports
@@ -83,19 +84,21 @@ class ResourceInterface(superClass):
         return True
     
     #==========================================================================
-    def _setResource(self, name, value):
-        pass
+    def _setResource(self, resourceName, resourceValue, config = {} ):
+        LOG("Modify simulated resource '" + resourceName + "'")
+        REGISTRY['SIM'].changeCFGitem(resourceName,resourceValue)
 
     #==========================================================================
     def _getResource(self, resourceName, config = {} ):
-        return "<NONE>"
+        LOG("Return simulated resource '" + resourceName + "'")
+        return REGISTRY['SIM'].getCFGitem(resourceName)
 
     #==========================================================================
-    def _getResourceStatus(self, resource, config = {} ):
+    def _getResourceStatus(self, resourceName, config = {} ):
         return True
 
     #==========================================================================
-    def _isResourceOK(self, resource, config = {} ):
+    def _isResourceOK(self, resourceName, config = {} ):
         return True
 
 

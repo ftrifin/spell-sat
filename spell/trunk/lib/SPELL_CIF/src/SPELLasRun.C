@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the As-RUN interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -41,6 +41,7 @@
 // DEFINES /////////////////////////////////////////////////////////////////
 static const std::string ASRUN_LOCATION = "ar";
 
+static const std::string SEVERITY_STR[] = { "INFO", "WARN" , "ERROR" };
 
 //=============================================================================
 // CONSTRUCTOR: SPELLasRun::SPELLasRun
@@ -49,6 +50,7 @@ SPELLasRun::SPELLasRun( const SPELLcontextConfig& ctxConfig, const std::string& 
 {
 	m_fileName = getAsRunFilename( ctxConfig, time, procId );
     m_file.open( m_fileName.c_str(), std::ios::out);
+	m_sequence = 0;
 
     // Dump procedure header to the AsRun file
     try
@@ -61,7 +63,7 @@ SPELLasRun::SPELLasRun( const SPELLcontextConfig& ctxConfig, const std::string& 
     	LOG_ERROR("Cannot dump procedure header to ASRUN file: " + ex.what());
     }
 
-    toAsRun( "INIT" );
+    toAsRun( "INIT", true );
 }
 
 //=============================================================================
@@ -110,21 +112,12 @@ std::string SPELLasRun::getAsRunFilename( const SPELLcontextConfig& ctxConfig, c
 //=============================================================================
 // METHOD:    SPELLasRun::toAsRun()
 //=============================================================================
-void SPELLasRun::toAsRun( const std::string& info )
+void SPELLasRun::toAsRun( const std::string& info, bool increaseSequence )
 {
-    std::string line = SPELLutils::timestamp() + "\t" + info;
+    std::string line = SPELLutils::timestamp() + "\t" + ISTR(m_sequence) + "\t" + info;
     m_file << line << std::endl;
     m_file.flush();
-}
-
-//=============================================================================
-// METHOD:    SPELLasRun::toAsRun()
-//=============================================================================
-void SPELLasRun::toAsRun( const std::string& info, long sequence )
-{
-    std::string line = SPELLutils::timestamp() + "\t" + info + "\t" + ISTR(sequence);
-    m_file << line << std::endl;
-    m_file.flush();
+    if (increaseSequence) m_sequence++;
 }
 
 //=============================================================================
@@ -132,9 +125,10 @@ void SPELLasRun::toAsRun( const std::string& info, long sequence )
 //=============================================================================
 void SPELLasRun::clear()
 {
+	m_sequence = 0;
     m_file.close();
     m_file.open( m_fileName.c_str(), std::ios::trunc | std::ios::out );
-    toAsRun( "INIT" );
+    toAsRun( "INIT", true );
 }
 
 //=============================================================================
@@ -142,7 +136,7 @@ void SPELLasRun::clear()
 //=============================================================================
 void SPELLasRun::writeStatus( const SPELLexecutorStatus st )
 {
-    toAsRun( STR("STATUS") + "\t\t\t" + SPELLexecutorUtils::statusToString(st) );
+    toAsRun( STR("STATUS") + "\t\t\t" + SPELLexecutorUtils::statusToString(st), true );
 }
 
 //=============================================================================
@@ -153,7 +147,7 @@ void SPELLasRun::writeInfo( const std::string& stack, const std::string& msg, un
     std::string message = msg;
     SPELLutils::replace( message, "\n", "%C%");
     SPELLutils::replace( message, "\t", "%T%");
-    toAsRun( STR("DISPLAY") + "\tINFO\t" + stack + "\t" + message + "\t" + ISTR(scope));
+    toAsRun( STR("DISPLAY") + "\tINFO\t" + stack + "\t" + message + "\t" + ISTR(scope), true);
 }
 
 //=============================================================================
@@ -164,7 +158,7 @@ void SPELLasRun::writeWarning( const std::string& stack, const std::string& msg,
     std::string message = msg;
     SPELLutils::replace( message, "\n", "%C%");
     SPELLutils::replace( message, "\t", "%T%");
-    toAsRun( STR("DISPLAY") + "\tWARN\t" + stack + "\t" + message + "\t" + ISTR(scope));
+    toAsRun( STR("DISPLAY") + "\tWARN\t" + stack + "\t" + message + "\t" + ISTR(scope), true);
 }
 
 //=============================================================================
@@ -175,7 +169,7 @@ void SPELLasRun::writeError( const std::string& stack, const std::string& msg, u
     std::string message = msg;
     SPELLutils::replace( message, "\n", "%C%");
     SPELLutils::replace( message, "\t", "%T%");
-    toAsRun( STR("DISPLAY") + "\tERROR\t" + stack + "\t" + message + "\t" + ISTR(scope));
+    toAsRun( STR("DISPLAY") + "\tERROR\t" + stack + "\t" + message + "\t" + ISTR(scope), true);
 }
 
 //=============================================================================
@@ -186,35 +180,35 @@ void SPELLasRun::writePrompt( const std::string& stack, const SPELLpromptDefinit
     std::string message = def.message;
     SPELLutils::replace( message, "\n", "%C%");
     SPELLutils::replace( message, "\t", "%T%");
-    toAsRun( STR("PROMPT") + "\t\t" + stack + "\t" + message + "\t" + ISTR(def.scope));
+    toAsRun( STR("PROMPT") + "\t\t" + stack + "\t" + message + "\t" + ISTR(def.scope), true);
 
-    toAsRun( STR("PROMPT_TYPE") + "\t" + ISTR(def.typecode));
+    toAsRun( STR("PROMPT_TYPE") + "\t" + ISTR(def.typecode), false);
 
     switch(def.typecode)
     {
     case LanguageConstants::PROMPT_OK:
-        toAsRun( STR("PROMPT_OPTIONS") + "\tOk" );
-        toAsRun( STR("PROMPT_EXPECTED") + "\tO");
+        toAsRun( STR("PROMPT_OPTIONS") + "\tOk", false );
+        toAsRun( STR("PROMPT_EXPECTED") + "\tO", false);
         break;
     case LanguageConstants::PROMPT_CANCEL:
-        toAsRun( STR("PROMPT_OPTIONS") + "\tCancel" );
-        toAsRun( STR("PROMPT_EXPECTED") + "\tC");
+        toAsRun( STR("PROMPT_OPTIONS") + "\tCancel", false );
+        toAsRun( STR("PROMPT_EXPECTED") + "\tC", false);
         break;
     case LanguageConstants::PROMPT_OK_CANCEL:
-        toAsRun( STR("PROMPT_OPTIONS") + "\tOk,,Cancel" );
-        toAsRun( STR("PROMPT_EXPECTED") + "\tO,,C");
+        toAsRun( STR("PROMPT_OPTIONS") + "\tOk,,Cancel", false );
+        toAsRun( STR("PROMPT_EXPECTED") + "\tO,,C", false);
         break;
     case LanguageConstants::PROMPT_YES:
-        toAsRun( STR("PROMPT_OPTIONS") + "\tYes" );
-        toAsRun( STR("PROMPT_EXPECTED") + "\tY");
+        toAsRun( STR("PROMPT_OPTIONS") + "\tYes", false );
+        toAsRun( STR("PROMPT_EXPECTED") + "\tY", false);
         break;
     case LanguageConstants::PROMPT_NO:
-        toAsRun( STR("PROMPT_OPTIONS") + "\tNo" );
-        toAsRun( STR("PROMPT_EXPECTED") + "\tN");
+        toAsRun( STR("PROMPT_OPTIONS") + "\tNo", false );
+        toAsRun( STR("PROMPT_EXPECTED") + "\tN", false);
         break;
     case LanguageConstants::PROMPT_YES_NO:
-        toAsRun( STR("PROMPT_OPTIONS") + "\tYes,,No" );
-        toAsRun( STR("PROMPT_EXPECTED") + "\tY,,N");
+        toAsRun( STR("PROMPT_OPTIONS") + "\tYes,,No", false );
+        toAsRun( STR("PROMPT_EXPECTED") + "\tY,,N", false);
         break;
     default:
         if ((def.typecode & LanguageConstants::PROMPT_LIST)>0)
@@ -227,7 +221,7 @@ void SPELLasRun::writePrompt( const std::string& stack, const SPELLpromptDefinit
         		if (!options.empty()) options += ",,";
         		options += *it;
         	}
-            toAsRun( STR("PROMPT_OPTIONS") + "\t" + options);
+            toAsRun( STR("PROMPT_OPTIONS") + "\t" + options, false);
 
         	std::string expected = "";
         	for( it = def.expected.begin(); it != def.expected.end(); it++)
@@ -235,7 +229,7 @@ void SPELLasRun::writePrompt( const std::string& stack, const SPELLpromptDefinit
         		if (!expected.empty()) expected += ",,";
         		expected += *it;
         	}
-            toAsRun( STR("PROMPT_EXPECTED") + "\t" + expected);
+            toAsRun( STR("PROMPT_EXPECTED") + "\t" + expected, false);
         }
     	break;
     }
@@ -249,7 +243,15 @@ void SPELLasRun::writeAnswer( const std::string& stack, const std::string& msg, 
     std::string message = msg;
     SPELLutils::replace( message, "\n", "%C%");
     SPELLutils::replace( message, "\t", "%T%");
-    toAsRun( STR("ANSWER") + "\t\t" + stack + "\t" + message + "\t" + ISTR(scope));
+    toAsRun( STR("ANSWER") + "\t\t" + stack + "\t" + message + "\t" + ISTR(scope), true);
+}
+
+//=============================================================================
+// METHOD:    SPELLasRun::writeChildProc
+//=============================================================================
+void SPELLasRun::writeChildProc( const std::string& stack, const std::string& asrun, const std::string& arguments, const std::string& openMode )
+{
+    toAsRun( STR("CHILD") + "\t" + STR("START") + "\t" + stack + "\t" + asrun + "\t" + arguments + "\t" + openMode, true);
 }
 
 //=============================================================================
@@ -264,31 +266,31 @@ void SPELLasRun::writeItem( const std::string& stack,
     std::string theTimestamp = " ";
     if (comment != "") theComment = comment;
     if (timestamp != "" ) theTimestamp = timestamp;
-    toAsRun( STR("ITEM") + "\t" + type + "\t" + stack + "\t" + name + "\t" + value + "\t" + status + "\t" + theTimestamp + "\t" + theComment);
+    toAsRun( STR("ITEM") + "\t" + type + "\t" + stack + "\t" + name + "\t" + value + "\t" + status + "\t" + theTimestamp + "\t" + theComment, true);
 }
 
 //=============================================================================
 // METHOD:    SPELLasRun::writeLine
 //=============================================================================
-void SPELLasRun::writeLine( const std::string& stack, long sequence )
+void SPELLasRun::writeLine( const std::string& stack )
 {
-    toAsRun( STR("LINE") + "\t\t" + stack, sequence );
+    toAsRun( STR("LINE") + "\t\t" + stack , true);
 }
 
 //=============================================================================
 // METHOD:    SPELLasRun::writeCall
 //=============================================================================
-void SPELLasRun::writeCall( const std::string& stack, long sequence )
+void SPELLasRun::writeCall( const std::string& stack )
 {
-    toAsRun( STR("CALL") + "\t\t" + stack, sequence );
+    toAsRun( STR("CALL") + "\t\t" + stack , true);
 }
 
 //=============================================================================
 // METHOD:    SPELLasRun::writeReturn
 //=============================================================================
-void SPELLasRun::writeReturn( long sequence )
+void SPELLasRun::writeReturn()
 {
-    toAsRun( STR("RETURN") + "\t\t", sequence );
+    toAsRun( STR("RETURN") , true);
 }
 
 //=============================================================================
@@ -302,5 +304,29 @@ void SPELLasRun::writeErrorInfo( const std::string& error, const std::string& re
     std::string rsnMessage = reason;
     SPELLutils::replace( rsnMessage, "\n", "%C%");
     SPELLutils::replace( rsnMessage, "\t", "%T%");
-    toAsRun( STR("ERROR") + "\t\t\t" + errMessage + "\t" + rsnMessage );
+    toAsRun( STR("ERROR") + "\t\t\t" + errMessage + "\t" + rsnMessage, true);
+}
+
+//=============================================================================
+// METHOD:    SPELLasRun::writeErrorInfo
+//=============================================================================
+void SPELLasRun::writeUserActionSet( const std::string& stack, const std::string& label, const unsigned int severity )
+{
+    toAsRun( STR("UACTION") + "\t" + STR("ENABLED") + "\t" + stack + "\t" + label + "\t" + SEVERITY_STR[severity], true);
+}
+
+//=============================================================================
+// METHOD:    SPELLasRun::writeErrorInfo
+//=============================================================================
+void SPELLasRun::writeUserActionUnset( const std::string& stack )
+{
+    toAsRun( STR("UACTION") + "\t" + STR("DISMISSED") + "\t" + stack,true);
+}
+
+//=============================================================================
+// METHOD:    SPELLasRun::writeErrorInfo
+//=============================================================================
+void SPELLasRun::writeUserActionEnable( const std::string& stack, bool enable )
+{
+    toAsRun( STR("UACTION") + "\t" + (enable ? STR("ENABLED") : STR("DISABLED")) + "\t" + stack, true);
 }

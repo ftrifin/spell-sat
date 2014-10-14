@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,7 +53,6 @@ import java.util.TreeMap;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
-import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
 import com.astra.ses.spell.gui.core.exceptions.CommandFailed;
 import com.astra.ses.spell.gui.core.interfaces.IService;
 import com.astra.ses.spell.gui.core.model.server.ProcedureRecoveryInfo;
@@ -63,6 +62,7 @@ import com.astra.ses.spell.gui.procs.exceptions.NoSuchProcedure;
 import com.astra.ses.spell.gui.procs.exceptions.UnloadFailed;
 import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorCommand;
 
 
 /*******************************************************************************
@@ -84,8 +84,27 @@ public interface IProcedureManager extends IService
 	 * @throws LoadFailed
 	 *             if the procedure could not be loaded
 	 **************************************************************************/
-	public void openProcedure(String procedureId, Map<String, String> arguments, IProgressMonitor monitor)
-	        throws LoadFailed;
+	public void openProcedure(String procedureId, Map<String, String> arguments, IProgressMonitor monitor) throws LoadFailed;
+
+	/***************************************************************************
+	 * Open a new procedure instance for the given procedure. in background (headless)
+	 * 
+	 * @param procedureId
+	 *            The procedure identifier, no instance number info
+	 * @throws LoadFailed
+	 *             if the procedure could not be loaded
+	 **************************************************************************/
+	public void backgroundProcedure(String procedureId, Map<String, String> arguments, IProgressMonitor monitor) throws LoadFailed;
+
+	/***************************************************************************
+	 * Add a model created by an external party programmatically.
+	 **************************************************************************/
+	public void addProcedure(String instanceId, IProcedure model);
+
+	/***************************************************************************
+	 * Remove a model created by an external party programmatically.
+	 **************************************************************************/
+	public void removeProcedure(String instanceId);
 
 	/***************************************************************************
 	 * Recover a procedure instance.
@@ -140,7 +159,7 @@ public interface IProcedureManager extends IService
 	 * @throws UnloadFailed
 	 *             if the procedure could not be unloaded
 	 **************************************************************************/
-	public void releaseProcedure(String instanceId, IProgressMonitor monitor) throws UnloadFailed;
+	public void releaseProcedure(String instanceId, boolean background, IProgressMonitor monitor) throws UnloadFailed;
 
 	/***************************************************************************
 	 * Force removing the control of a procedure
@@ -159,14 +178,6 @@ public interface IProcedureManager extends IService
 	 *             if the procedure could not be unloaded
 	 **************************************************************************/
 	public void killProcedure(String instanceId, IProgressMonitor monitor) throws UnloadFailed;
-
-	/***************************************************************************
-	 * Make the procedure to dump the interpreter information
-	 * 
-	 * @param instanceId
-	 *            The instance identifier
-	 **************************************************************************/
-	public void dumpInterpreterInformation(String instanceId);
 
 	/***************************************************************************
 	 * Obtain a local procedure model.
@@ -241,4 +252,20 @@ public interface IProcedureManager extends IService
 	 * @return
 	 *************************************************************************/
 	public String getProcedureName(String procId);
+
+	/**************************************************************************
+	 * Get a complete procedure id including leading folders if it is missing them
+	 * 
+	 * @param procId
+	 * @return
+	 *************************************************************************/
+	public String getCompleteProcedureId( String procId );
+
+	/**************************************************************************
+	 * Check if a procedure identifier is available
+	 * 
+	 * @param procId
+	 * @return
+	 *************************************************************************/
+	public boolean isProcedureIdAvailable( String procId );
 }

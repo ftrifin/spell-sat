@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Python frame manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -85,6 +85,10 @@ SPELLframeManager::~SPELLframeManager()
 void SPELLframeManager::initialize( const std::string& scriptFile )
 {
     m_filename = scriptFile;
+
+    // Enable or disable monitoring according to configuration
+    SPELLvariableMonitor::s_enabled = SPELLexecutor::instance().getConfiguration().isWatchEnabled();
+
     // Compile the script and create the Python frame
     // to execute bytecode
     reset();
@@ -157,10 +161,24 @@ void SPELLframeManager::fixState()
     if (m_warmStart)
     {
         DEBUG( "Starting state fix");
+#ifdef WITH_DEBUG
+	DEBUG("*******************************************************");
+	DEBUG("[EF] Current keys in list: " );
+	for(KeyList::iterator dkit = m_modelKeys.begin(); dkit != m_modelKeys.end(); dkit++)
+	{
+		DEBUG("   - " + *dkit );
+	}
+
+	DEBUG("[EF] Current keys in map:");
+	for( ModelMap::iterator dmit = m_modelMap.begin(); dmit != m_modelMap.end(); dmit++ )
+	{
+		DEBUG("   - Key: " + dmit->first);
+	}
+	DEBUG("*******************************************************");
+#endif
         // Fix the error state
         m_initialFrame = m_warmStart->fixState();
         LOG_INFO( "Fixed state at: " + PYREPR(m_initialFrame->f_code->co_filename) + ":" + ISTR(m_initialFrame->f_lineno));
-        DEBUG( "Fixed state at: " + PYREPR(m_initialFrame->f_code->co_filename) + ":" + ISTR(m_initialFrame->f_lineno));
     }
     else
     {
@@ -268,6 +286,9 @@ void SPELLframeManager::reset()
     // Compile the script.
     compile();
 
+    DEBUG("[EF] Clear error mode");
+    m_inError = false;
+
     // Create the Python frame for execution
     createInitialFrame();
 
@@ -313,9 +334,10 @@ const SPELLexecutionResult SPELLframeManager::execute()
     DEBUG("[EF] Starting execution loop, initial frame " + PYCREPR(frame) );
     while(frame!= NULL)
     {
-        DEBUG("[EF] Running frame " + PYCREPR(frame) + ", restricted: " + BSTR(PyEval_GetRestricted()));
+        DEBUG("[EF] Running frame " + PYCREPR(frame));
         PyEval_EvalFrame( frame );
-        DEBUG("[EF] Frame finished " + PYCREPR(frame) + ", restricted: " + BSTR(PyEval_GetRestricted()));
+        DEBUG("[EF] Frame finished " + PYCREPR(frame));
+        DEBUG("[EF] Next frame " + PYCREPR(frame));
         // Check errors
         checkRuntimeError();
         // If there is any error, stop right away. Status will be
@@ -323,7 +345,6 @@ const SPELLexecutionResult SPELLframeManager::execute()
         if (m_terminated || SPELLerror::instance().inError()) break;
         // Go to next frame, if any
         frame = frame->f_back;
-        DEBUG("[EF] Next frame " + PYCREPR(frame))
     }
     return m_status;
 }
@@ -360,7 +381,7 @@ void SPELLframeManager::retrieveDiscardedNames(PyFrameObject* frame)
 {
 	PyObject* itemList = PyDict_Keys(frame->f_globals);
 	unsigned int numItems = PyList_Size(itemList);
-	DEBUG("[E] Names to discard: " + ISTR(numItems) );
+	DEBUG("[F] Names to discard: " + ISTR(numItems) );
 	for( unsigned int index = 0; index<numItems; index++)
 	{
 		PyObject* key = PyList_GetItem( itemList, index );
@@ -383,9 +404,13 @@ const bool SPELLframeManager::canSkip()
 {
     SPELLsafePythonOperations ops("SPELLframeManager::canSkip()");
     int new_lineno = -1;
+    int currentLine = getCurrentLine();
 
-    bool isSimpleLine = m_ast.isSimpleLine( getCurrentLine() );
-    bool isBlockStart = m_ast.isBlockStart( getCurrentLine() );
+	DEBUG("[F] Check can skip line " + ISTR( currentLine ));
+
+    bool isSimpleLine = m_ast.isSimpleLine( currentLine );
+    bool isBlockStart = m_ast.isBlockStart( currentLine );
+    bool isInsideBlock = m_ast.isInsideBlock( currentLine );
     bool lineAfterTryBlock = true;
 
     // Special treatment for try blocks
@@ -393,7 +418,7 @@ const bool SPELLframeManager::canSkip()
 
     if (isEndTryBlock)
     {
-		DEBUG("[E] Line " + ISTR( getCurrentLine() ) + " is the last one in a try-except block");
+		DEBUG("[F] Line " + ISTR( getCurrentLine() ) + " is the last one in a try-except block");
         // The current lnotab model will find the next available line number in the
         // current code. If there is no such line it returns -1.
         new_lineno = getModel().lineAfter( getModel().tryBlockEndLine( m_currentFrame->f_lineno ) );
@@ -401,15 +426,52 @@ const bool SPELLframeManager::canSkip()
         // If there is no line avaiable after, dont do the go next
         if (new_lineno == -1)
 		{
-    		DEBUG("[E] Cannot find line aftet the try-except block");
+    		DEBUG("[F] Cannot find line after the try-except block");
         	lineAfterTryBlock = false;
 		}
     }
 
     // Special condition for try blocks
-    if (isEndTryBlock && !lineAfterTryBlock) return false;
+    if (isEndTryBlock && !lineAfterTryBlock)
+	{
+    	std::string msg = "Cannot skip line " + ISTR(currentLine) + ", cannot find line after try-except block";
+		LOG_WARN("[F] " + msg);
+		SPELLexecutor::instance().getCIF().warning(msg, LanguageConstants::SCOPE_SYS );
+    	return false;
+	}
 
-	return isSimpleLine || isBlockStart;
+    if (isInsideBlock)
+    {
+    	std::string msg = "Cannot skip line " + ISTR(currentLine) + ", it is inside a code block";
+		LOG_WARN("[F] " + msg);
+		SPELLexecutor::instance().getCIF().warning(msg, LanguageConstants::SCOPE_SYS );
+    	return false;
+	}
+
+    if (getModel().getLastLine() == currentLine)
+    {
+		DEBUG("[F] Line " + ISTR( currentLine ) + " is the last one in the code block");
+    	if (!getModel().isReturnConstant(currentLine))
+    	{
+        	std::string msg = "Cannot skip this type of return statement at line " + ISTR(currentLine);
+    		LOG_WARN("[F] " + msg);
+    		SPELLexecutor::instance().getCIF().warning(msg, LanguageConstants::SCOPE_SYS );
+    		return false;
+    	}
+    }
+    else
+    {
+		DEBUG("[F] Line " + ISTR( currentLine ) + " is NOT the last one in the code block");
+    }
+
+    if ( !isSimpleLine && !isBlockStart)
+    {
+    	std::string msg = "Cannot skip line " + ISTR(currentLine);
+		LOG_WARN("[F] " + msg);
+		SPELLexecutor::instance().getCIF().warning(msg, LanguageConstants::SCOPE_SYS );
+    	return false;
+    }
+	return true;
 }
 
 //=============================================================================
@@ -420,29 +482,36 @@ const bool SPELLframeManager::goNextLine()
     bool controllerContinue = true;
     SPELLsafePythonOperations ops("SPELLframeManager::goNextLine()");
     int new_lineno = -1;
+    unsigned int currentLine = m_currentFrame->f_lineno;
+
+	DEBUG("[F] Go to next line");
 
     // Special treatment for try blocks
-    if (getModel().isInTryBlock(m_currentFrame->f_lineno) && getModel().isTryBlockEnd(m_currentFrame->f_lineno))
+    if (getModel().isInTryBlock(currentLine) && getModel().isTryBlockEnd(currentLine))
     {
-		DEBUG("[E] Line " + ISTR(m_currentFrame->f_lineno) + " is the last one in a try-except block");
+		DEBUG("[F] Line " + ISTR(m_currentFrame->f_lineno) + " is the last one in a try-except block");
         // The current lnotab model will find the next available line number in the
         // current code. If there is no such line it returns -1.
-        new_lineno = getModel().lineAfter( getModel().tryBlockEndLine( m_currentFrame->f_lineno ) );
+        new_lineno = getModel().lineAfter( getModel().tryBlockEndLine( currentLine ) );
     }
     else
     {
         // The current lnotab model will find the next available line number in the
         // current code. If there is no such line it returns -1.
-        new_lineno = getModel().lineAfter( m_currentFrame->f_lineno );
+        new_lineno = getModel().lineAfter( currentLine );
     }
-
 
     // If there is no next line in this frame
     if (new_lineno == -1)
     {
-    	// If we are already in the last line of the code block
-		DEBUG("[E] No next line available in frame at " + PSTR(m_currentFrame));
-    	if (getModel().getLastLine()==m_currentFrame->f_lineno)
+    	// If we are already in the last line of the code block:
+    	// 1. It is a "return <constant>" statement: we can skip it by setting the lasti
+    	//    (current instruction) to be the last one in the LNOTAB. That way
+    	//    the interpreter will just jump out of the function.
+    	// 2. It is a "return <fast>": we can skip but there is the risk of using an undefined var.
+    	// 3. It is a "return <call>": we cannot skip as it leads to inconsistent code.
+		DEBUG("[F] No next line available in frame at " + PSTR(m_currentFrame));
+    	if (getModel().getLastLine()==currentLine)
     	{
     		// Get the last instruction address
     		int lastAddress = getModel().getLastAddress();
@@ -451,25 +520,25 @@ const bool SPELLframeManager::goNextLine()
     		// If we are already in the last instruction set, do nothing
     		if (m_currentFrame->f_lasti != lastAddress)
     		{
-        		DEBUG("[E] Set instruction to " + ISTR(lastAddress));
-    			setNewLine( m_currentFrame->f_lineno, lastAddress );
+        		DEBUG("[F] Set instruction to " + ISTR(lastAddress));
+    			setNewLine( currentLine, lastAddress );
     		}
     	}
 		controllerContinue = false;
     }
     else
     {
-        DEBUG("[E] Next line available in frame is " + ISTR(new_lineno));
+        DEBUG("[F] Next line available in frame is " + ISTR(new_lineno));
         // If there is next line, try to find the corresponding instruction offset
         int new_lasti = getModel().offset(new_lineno);
         if ( new_lasti == -1 )
         {
-            DEBUG("[E] No next instruction available in frame at " + PSTR(m_currentFrame));
+            DEBUG("[F] No next instruction available in frame at " + PSTR(m_currentFrame));
 			controllerContinue = false;
         }
         else
         {
-            DEBUG("[E] Go next line " + ISTR(new_lineno) + " at " + ISTR(new_lasti));
+            DEBUG("[F] Go next line " + ISTR(new_lineno) + " at " + ISTR(new_lasti));
 			controllerContinue = setNewLine( new_lineno, new_lasti );
         }
     }
@@ -484,7 +553,7 @@ const bool SPELLframeManager::goNextLine()
 const bool SPELLframeManager::goLabel( const std::string& label, bool report )
 {
 	SPELLsafePythonOperations ops("SPELLframeManager::goLabel()");
-    DEBUG("[E] Go-to label '" + label + "'")
+    DEBUG("[F] Go-to label '" + label + "'");
     std::map<std::string,unsigned int> labels = m_model->getLabels();
     std::map<std::string,unsigned int>::const_iterator it = labels.find(label);
     if ( it == labels.end() )
@@ -503,18 +572,71 @@ const bool SPELLframeManager::goLabel( const std::string& label, bool report )
 const bool SPELLframeManager::goLine( const int& new_lineno, bool report )
 {
 	SPELLsafePythonOperations ops("SPELLframeManager::goLine()");
-    DEBUG("[E] Go-to line " + ISTR(new_lineno) + " on model " + PSTR(m_model));
-    int new_lasti = m_model->offset(new_lineno);
+    DEBUG("[F] Go-to line " + ISTR(new_lineno) + " on model " + PSTR(m_model));
+
+    // We cannot jump in the middle of a block
+	if (m_ast.isInsideBlock(new_lineno))
+	{
+		LOG_WARN("[F] Cannot go to line " + ISTR(new_lineno) + ", it is inside a block");
+	    if (report)
+	    {
+	    	SPELLexecutor::instance().getCIF().warning("Unable to go to line " + ISTR(new_lineno) + ", it is inside of a code block", LanguageConstants::SCOPE_SYS );
+	    }
+		return false;
+	}
+
+	// We cannot jump if the target line is not executable
+	if (!getModel().isExecutable(new_lineno))
+	{
+		LOG_WARN("[F] Cannot go to line " + ISTR(new_lineno));
+	    if (report)
+	    {
+	    	SPELLexecutor::instance().getCIF().warning("Unable to go to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
+	    }
+		return false;
+	}
+
+	// We cannot jump inside blocks
+	bool inTry = getModel().isInTryBlock(new_lineno);
+	bool inExc = getModel().isInExceptBlock(new_lineno);
+	bool inFin = getModel().isInFinallyBlock(new_lineno);
+	if (inTry | inExc | inFin )
+	{
+		LOG_WARN("[F] Cannot go to line " + ISTR(new_lineno));
+	    if (report)
+	    {
+	    	SPELLexecutor::instance().getCIF().warning("Unable to go to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
+	    }
+		return false;
+	}
+
+    int new_lasti = getModel().offset(new_lineno);
     if ( new_lasti == -1 )
     {
+		LOG_WARN("[F] Cannot go to line " + ISTR(new_lineno) + " unable to find corresponding instruction");
+	    if (report)
+	    {
+	    	SPELLexecutor::instance().getCIF().warning("Unable to go to line '" + ISTR(new_lineno) + "', cannot find destination", LanguageConstants::SCOPE_SYS );
+	    }
         return false;
     }
-    DEBUG("[E] Go new line " + ISTR(new_lineno) + " at " + ISTR(new_lasti))
-    if (report)
+
+    bool result = false;
+    try
     {
-    	SPELLexecutor::instance().getCIF().write("Jump to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
+    	result = setNewLine( new_lineno, new_lasti );
+        DEBUG("[F] Go new line " + ISTR(new_lineno) + " at " + ISTR(new_lasti));
+        if (report)
+        {
+        	SPELLexecutor::instance().getCIF().write("Jump to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
+        }
     }
-    return setNewLine( new_lineno, new_lasti );
+    catch(SPELLcoreException& ex)
+    {
+    	SPELLexecutor::instance().getCIF().warning("Unable to go to line " + ISTR(new_lineno) + ", " + ex.what(), LanguageConstants::SCOPE_SYS );
+    }
+
+    return result;
 }
 
 //=============================================================================
@@ -538,11 +660,14 @@ bool SPELLframeManager::programmedGoto( const int& frameLine )
 //=============================================================================
 void SPELLframeManager::runScript( const std::string& script )
 {
+	DEBUG("[EF] Executing script TRY-IN");
 	SPELLsafePythonOperations ops("SPELLframeManager::runScript()");
+	DEBUG("[EF] Executing script IN");
 	try
     {
     	PyCodeObject* code = compileScript( std::string(script) );
     	DEBUG("[EF] Executing script on frame " + PYCREPR(m_currentFrame));
+    	LOG_INFO("Executing script: '" + script + "'");
     	// We need to take into account the fast locals. First the copy the fast locals to normal locals,
     	// and after the execution we UPDATE the fast locals, so that the values get updated in case of
     	// value redefinition in the script command.
@@ -552,9 +677,11 @@ void SPELLframeManager::runScript( const std::string& script )
         SPELLpythonHelper::instance().checkError();
     	// See model update its information
     	getModel().update();
+    	DEBUG("[EF] Executing script OUT");
     }
 	catch (SPELLcoreException& ex)
 	{
+		LOG_ERROR("Error while executing script: " + ex.what());
 		// Reset the error data in Python layer. We do not want the interpreter to
 		// think that there is an error in the procedure execution.
 		PyErr_Print();
@@ -569,6 +696,13 @@ void SPELLframeManager::runScript( const std::string& script )
 void SPELLframeManager::callbackEventCall( PyFrameObject* frame, const std::string& file, const int line, const std::string& name )
 {
 	DEBUG("[EF] Event CALL on frame " + PYCREPR(frame) + " - " + file + ":" + ISTR(line) + " (" + name + ")");
+
+	DEBUG("[EF] Error mode check: " + BSTR(m_inError));
+	if (m_inError)
+	{
+		DEBUG("[EF] Discard call event meanwhile in error mode");
+		return;
+	}
 
     // We use the call line to identify different calls of the same code block (functions)
     // in the same procedure
@@ -586,14 +720,16 @@ void SPELLframeManager::callbackEventCall( PyFrameObject* frame, const std::stri
 
 	DEBUG("------------------------------------------------------------------------");
 	DEBUG("[EF] Using model " + PSTR(m_model) + " -- " + m_model->getIdentifier());
-        DEBUG("     Frame model: " + PSTR(m_model->getFrame()));
+    DEBUG("     Frame model: " + PSTR(m_model->getFrame()));
 	DEBUG("------------------------------------------------------------------------");
-	m_model->inScope();
+
+	// Notify the scope change
+	m_model->scopeChanged();
 
 	// Notify the warmstart mechanism
 	if (m_warmStart)
 	{
-		m_warmStart->notifyCall(frame);
+		m_warmStart->notifyCall( m_model->getIdentifier(), frame );
 	}
 }
 
@@ -604,7 +740,7 @@ void SPELLframeManager::callbackEventLine( PyFrameObject* frame, const std::stri
 {
 	DEBUG("[EF] Event LINE on frame " + PYCREPR(frame) + " - " + file + ":" + ISTR(line) + " (" + name + ")");
 	DEBUG("[EF] Using model " + PSTR(m_model) + " -- " + m_model->getIdentifier());
-        DEBUG("     Frame model: " + PSTR(m_model->getFrame()));
+    DEBUG("     Frame model: " + PSTR(m_model->getFrame()));
 
 	// Notify the warmstart mechanism
 	if (m_warmStart)
@@ -620,8 +756,11 @@ void SPELLframeManager::callbackEventLine( PyFrameObject* frame, const std::stri
 			m_warmStart->notifyLine();
 		}
 	}
-	// See model update its information
+	// See model update its information (including variable monitor if enabled)
 	getModel().update();
+
+	DEBUG("[EF] Reset error mode");
+	m_inError = false;
 }
 
 //=============================================================================
@@ -630,19 +769,24 @@ void SPELLframeManager::callbackEventLine( PyFrameObject* frame, const std::stri
 void SPELLframeManager::callbackEventReturn( PyFrameObject* frame, const std::string& file, const int line, const std::string& name )
 {
 	DEBUG("[EF] Event RETURN on frame " + PYCREPR(frame) + " - " + file + ":" + ISTR(line) + " (" + name + ")");
+	DEBUG("[EF] Back frame is " + PYCREPR(frame->f_back) );
 
 	if (!m_model)
 	{
 		THROW_EXCEPTION("Failed to process return event", "No model available", SPELL_ERROR_EXECUTION);
 	}
 
-	if (!SPELLerror::instance().inError() )
+	DEBUG("[EF] Error mode check: " + BSTR(m_inError));
+	if (m_inError)
 	{
-		// Notify the warmstart mechanism
-		if (m_warmStart)
-		{
-			m_warmStart->notifyReturn();
-		}
+		DEBUG("[EF] Discard return event meanwhile in error mode");
+		return;
+	}
+
+	// Notify the warmstart mechanism
+	if (m_warmStart)
+	{
+		m_warmStart->notifyReturn();
 	}
 
 	std::string currentModelId = m_model->getIdentifier();
@@ -700,6 +844,9 @@ void SPELLframeManager::callbackEventReturn( PyFrameObject* frame, const std::st
 		LOG_WARN("Unable to remove model '" + currentModelId + "': we are at root!");
 	}
 
+	// Notify the scope change with the new model
+	m_model->scopeChanged();
+
 	DEBUG("------------------------------------------------------------------------");
 	DEBUG("[EF] After return: using model " + PSTR(m_model) + " -- " + m_model->getIdentifier());
     DEBUG("     Frame model: " + PSTR(m_model->getFrame()));
@@ -720,6 +867,15 @@ void SPELLframeManager::callbackEventReturn( PyFrameObject* frame, const std::st
 	}
 	DEBUG("*******************************************************");
 #endif
+}
+
+//=============================================================================
+// METHOD    : SPELLframeManager::eventStage
+//=============================================================================
+void SPELLframeManager::callbackEventError( PyFrameObject* frame, const std::string& file, const int line, const std::string& name )
+{
+	DEBUG("[EF] Go to error mode");
+	m_inError = true;
 }
 
 //=============================================================================
@@ -841,13 +997,13 @@ void SPELLframeManager::updateDefinitions( PyFrameObject* source, PyFrameObject*
 		for( unsigned int count = 0; count < numKeys; count++)
 		{
 			PyObject* key = PyList_GetItem( m_definitions, count );
-			if (PYSTR(key) == "ARGS" || PYSTR(key) == "IVARS") continue;
+			if (PYSTR(key) == "ARGS" || PYSTR(key) == "IVARS" || PYSTR(key) == "__name__") continue;
 			if (!PyDict_Contains(target->f_globals, key))
 			{
 				PyObject* obj = PyDict_GetItem( source->f_globals, key );
 				if (obj != NULL)
 				{
-					DEBUG("   Copying " + PYREPR(key))
+					//DEBUG("   Copying " + PYREPR(key))
 					Py_INCREF(key);
 					Py_INCREF(obj);
 					PyDict_SetItem( target->f_globals, key, obj );
@@ -866,8 +1022,13 @@ void SPELLframeManager::createFrameModel( int callLine, PyFrameObject* frame )
 	// Build the code block identifier
 	std::string filename = PYSTR(frame->f_code->co_filename);
 	std::string codename = PYSTR(frame->f_code->co_name);
-	std::string code_id = filename + "-" + codename + ":" + ISTR(callLine);
-	bool watchEnabled = SPELLexecutor::instance().getConfiguration().getWatchEnabled();
+    static unsigned int tail = 0;
+    // Get time of day
+    struct timeval time;
+    gettimeofday(&time, NULL);
+
+	std::string code_id = filename + "-" + codename + ":" + ISTR(callLine) + ISTR(time.tv_sec) + "." + ISTR(time.tv_usec) + "-" + ISTR(tail);
+    tail++;
 
 	DEBUG("[EF] Create frame model for " + code_id);
 
@@ -900,8 +1061,12 @@ void SPELLframeManager::createFrameModel( int callLine, PyFrameObject* frame )
 		m_model = new SPELLexecutionModel( code_id,
 				                           filename,
 				                           frame,
-										   watchEnabled,
 										   m_discardedNames);
+
+
+        // Initialize the variable monitor
+        m_model->getVariableMonitor().initialize();
+
 		m_modelMap.insert( std::make_pair( code_id, m_model ));
 
 		// Validate the data analyzed by the model

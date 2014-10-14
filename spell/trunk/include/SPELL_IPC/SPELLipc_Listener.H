@@ -5,7 +5,7 @@
 // DESCRIPTION: Inter process communication, data definitions for listener process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -105,10 +105,6 @@ namespace ListenerMessages
 	static const std::string  MSG_CONTEXT_OPEN("MSG_CONTEXT_OPEN");
 	/** Contex closed notification */
 	static const std::string  MSG_CONTEXT_CLOSED("MSG_CONTEXT_CLOSED");
-	/** Alignment internal notification EXECUTOR - LISTENER */
-	static const std::string  REQ_ALIGNMENT_DATA_AVAILABLE("REQ_ALIGNMENT_DATA_AVAILABLE");
-	/** Alignment internal notification response EXECUTOR - LISTENER */
-	static const std::string  RSP_ALIGNMENT_DATA_AVAILABLE("RSP_ALIGNMENT_DATA_AVAILABLE");
 	/** Sent by listener to GUIs when a context starts/stops */
 	static const std::string  MSG_CONTEXT_OP("MSG_CONTEXT_OP");
 	

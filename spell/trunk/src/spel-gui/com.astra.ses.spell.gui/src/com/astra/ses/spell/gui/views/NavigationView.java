@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -51,6 +51,11 @@ package com.astra.ses.spell.gui.views;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IMenuListener;
+import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.viewers.IOpenListener;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.OpenEvent;
@@ -62,8 +67,6 @@ import org.eclipse.jface.viewers.ViewerFilter;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -71,14 +74,17 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.part.ViewPart;
 
+import com.astra.ses.spell.gui.core.interfaces.IServerProxy;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.model.server.ServerInfo.ServerRole;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.model.commands.OpenProcedure;
+import com.astra.ses.spell.gui.model.commands.OpenProcedureBackground;
+import com.astra.ses.spell.gui.model.commands.OpenProceduresEditor;
 import com.astra.ses.spell.gui.model.commands.ShowProperties;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.model.nav.ProcedureListContentProvider;
@@ -90,6 +96,7 @@ import com.astra.ses.spell.gui.model.nav.content.NodeSorter;
 import com.astra.ses.spell.gui.model.nav.content.ProcedureNode;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
+import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
 import com.astra.ses.spell.gui.services.IViewManager;
@@ -99,8 +106,7 @@ import com.astra.ses.spell.gui.services.IViewManager;
  *        select one of them to be opened.
  * @date 09/10/07
  ******************************************************************************/
-public class NavigationView extends ViewPart implements IOpenListener,
-        ISelectionChangedListener, SelectionListener
+public class NavigationView extends ViewPart implements IOpenListener, ISelectionChangedListener
 {
 	/***************************************************************************
 	 * 
@@ -111,7 +117,7 @@ public class NavigationView extends ViewPart implements IOpenListener,
 	private class NavigationViewFilter extends ViewerFilter
 	{
 		/** String pattern to follow */
-		private Pattern	m_filterPattern;
+		private Pattern m_filterPattern;
 
 		/***********************************************************************
 		 * Constructor
@@ -160,16 +166,8 @@ public class NavigationView extends ViewPart implements IOpenListener,
 			return buffer.toString();
 		}
 
-		/*
-		 * ======================================================================
-		 * (non-Javadoc)
-		 * 
-		 * @see ViewerFilter#select(Viewer, Object, Object)
-		 * =====================================================================
-		 */
 		@Override
-		public boolean select(Viewer viewer, Object parentElement,
-		        Object element)
+		public boolean select(Viewer viewer, Object parentElement, Object element)
 		{
 			boolean result = false;
 			if (element instanceof ProcedureNode)
@@ -207,35 +205,33 @@ public class NavigationView extends ViewPart implements IOpenListener,
 		}
 	}
 
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
+	private static final String MENU_OPEN_PROCEDURE = "Load procedure";
+	private static final String MENU_BACKGROUND_PROCEDURE = "Load in background";
+	private static final String MENU_SHOW_PROPERTIES = "Show properties";
+	private static final String MENU_EDIT = "Edit";
+	private static IConfigurationManager s_cfg = null;
+	public static final String ID = "com.astra.ses.spell.gui.views.NavigationView";
 
-	// PRIVATE -----------------------------------------------------------------
-	private static final String	       MENU_SHOW_PROPERTIES	= "Show properties";
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-	public static final String	       ID	                = "com.astra.ses.spell.gui.views.NavigationView";
-
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	private TreeViewer	               m_procTree;
+	private TreeViewer m_procTree;
 	/** Procedure tree filter */
-	private NavigationViewFilter	   m_procTreeFilter;
+	private NavigationViewFilter m_procTreeFilter;
 	/** Text input widget for filtering the text */
-	private Text	                   m_filterText;
+	private Text m_filterText;
 	/** Procedures structure manager */
-	private ProceduresStructureManager	m_proceduresManager;
+	private ProceduresStructureManager m_proceduresManager;
+	/** Open procedure action */
+	private Action m_openProcedureAction;
+	/** Open procedure in background action */
+	private Action m_backgroundProcedureAction;
+	/** Show properties action */
+	private Action m_showPropertiesAction;
+	/** Edit file action */
+	private Action m_editFileAction;
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// ACCESSIBLE METHODS
-	// =========================================================================
+	static
+	{
+		s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
+	}
 
 	/***********************************************************************
 	 * Create the view contents.
@@ -265,8 +261,7 @@ public class NavigationView extends ViewPart implements IOpenListener,
 		m_proceduresManager.setView(this);
 
 		// Tree viewer
-		m_procTree = new TreeViewer(container, SWT.MULTI | SWT.H_SCROLL
-		        | SWT.V_SCROLL | SWT.BORDER);
+		m_procTree = new TreeViewer(container, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER);
 		// layout data
 		GridData layoutData = new GridData(GridData.FILL_BOTH);
 		layoutData.grabExcessHorizontalSpace = true;
@@ -283,15 +278,8 @@ public class NavigationView extends ViewPart implements IOpenListener,
 		getSite().setSelectionProvider(m_procTree);
 		// Register this view as open listener as well
 		m_procTree.addOpenListener(this);
-
-		// Create the contextual menu
-		Menu menu = new Menu(m_procTree.getControl());
-		MenuItem item = new MenuItem(menu, SWT.PUSH);
-		item.setText(MENU_SHOW_PROPERTIES);
-		item.addSelectionListener(this);
-		m_procTree.getControl().setMenu(menu);
-
 		m_procTree.addSelectionChangedListener(this);
+
 		// Register the view as a service listener for the procedure manager
 		// in order to receive updates when the list of available procedures
 		// may have changed.
@@ -306,9 +294,8 @@ public class NavigationView extends ViewPart implements IOpenListener,
 		IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 		Font boldFont = cfg.getFont(FontKey.GUI_BOLD);
 		lbl.setFont(boldFont);
-		
-		GridData textData = new GridData(GridData.FILL_HORIZONTAL
-		        | GridData.GRAB_HORIZONTAL);
+
+		GridData textData = new GridData(GridData.FILL_HORIZONTAL | GridData.GRAB_HORIZONTAL);
 		textData.horizontalIndent = 0;
 		textData.verticalIndent = 0;
 		m_filterText = new Text(container, SWT.BORDER);
@@ -323,8 +310,7 @@ public class NavigationView extends ViewPart implements IOpenListener,
 				String filter = filterText.getText().toUpperCase();
 				try
 				{
-					Pattern regex = Pattern.compile(m_procTreeFilter
-					        .globify(filter));
+					Pattern regex = Pattern.compile(m_procTreeFilter.globify(filter));
 					m_procTreeFilter.setPattern(regex);
 					m_procTree.refresh();
 					if (filter.isEmpty())
@@ -345,16 +331,130 @@ public class NavigationView extends ViewPart implements IOpenListener,
 
 		IViewManager vmgr = (IViewManager) ServiceManager.get(IViewManager.class);
 		vmgr.registerView(ID, this);
+
+		createActions();
+		hookContextMenu();
 	}
 
 	/***********************************************************************
 	 * Destroy the view.
 	 **********************************************************************/
+	@Override
 	public void dispose()
 	{
 		m_proceduresManager.setView(null);
 		super.dispose();
 		Logger.debug("Disposed", Level.PROC, this);
+	}
+
+	/***********************************************************************
+	 * Create actions
+	 **********************************************************************/
+	private void createActions()
+	{
+		m_editFileAction = new Action()
+		{
+			public void run()
+			{
+				OpenProceduresEditor openProcedure = new OpenProceduresEditor();
+				try
+				{
+					ProcedureNode selectedItem = (ProcedureNode) m_procTree.getTree().getSelection()[0].getData();
+					String procedureFileName = selectedItem.getProcID() + ".py";
+					openProcedure.setArguments(procedureFileName);
+					openProcedure.execute(null);
+				}
+				catch (ExecutionException e)
+				{
+					Logger.warning("Error: cannot execute the procedures editor", Level.PROC, this);
+				}
+			}
+		};
+		m_editFileAction.setText(MENU_EDIT);
+
+		m_showPropertiesAction = new Action()
+		{
+			public void run()
+			{
+				CommandHelper.execute(ShowProperties.ID);
+			}
+		};
+		m_showPropertiesAction.setText(MENU_SHOW_PROPERTIES);
+
+		m_openProcedureAction = new Action()
+		{
+			public void run()
+			{
+				CommandHelper.execute(OpenProcedure.ID);
+			}
+		};
+		m_openProcedureAction.setText(MENU_OPEN_PROCEDURE);
+
+		m_backgroundProcedureAction = new Action()
+		{
+			public void run()
+			{
+				CommandHelper.execute(OpenProcedureBackground.ID);
+			}
+		};
+		m_backgroundProcedureAction.setText(MENU_BACKGROUND_PROCEDURE);
+	}
+
+	/***********************************************************************
+	 * Select context menu
+	 **********************************************************************/
+	private void hookContextMenu()
+	{
+		MenuManager menuMgr = new MenuManager("#PopupMenu");
+		menuMgr.setRemoveAllWhenShown(true);
+		menuMgr.addMenuListener(new IMenuListener()
+		{
+			public void menuAboutToShow(IMenuManager manager)
+			{
+				NavigationView.this.fillContextMenu(manager);
+			}
+		});
+		Menu menu = menuMgr.createContextMenu(m_procTree.getControl());
+		m_procTree.getControl().setMenu(menu);
+		getSite().registerContextMenu(menuMgr, m_procTree);
+	}
+
+	/***********************************************************************
+	 * Fill the procedure contextual menu with all the available options
+	 **********************************************************************/
+	private void fillContextMenu(IMenuManager manager)
+	{
+		if (!m_procTree.getSelection().isEmpty())
+		{
+			BaseProcedureSystemElement selectedItem = (BaseProcedureSystemElement) m_procTree.getTree().getSelection()[0].getData();
+			// Ignore folders
+			if (selectedItem.isLeaf())
+			{
+				IServerProxy proxy = (IServerProxy) ServiceManager.get(IServerProxy.class);
+				if (proxy.getCurrentServer().getRole().equals(ServerRole.COMMANDING))
+				{
+					// Add open procedure
+					manager.add(m_openProcedureAction);
+					// Add open procedure in background
+					manager.add(m_backgroundProcedureAction);
+				}
+				// Add show properties
+				manager.add(m_showPropertiesAction);
+				// Add editor command only if available
+				if (isEditorAvailable())
+				{
+					manager.add(m_editFileAction);
+				}
+			}
+		}
+	}
+
+	/***********************************************************************
+	 * Check if procedure editor command is available
+	 **********************************************************************/
+	private boolean isEditorAvailable()
+	{
+		return (s_cfg.getProperty(PropertyKey.PROCS_EDITOR) != null) && (!s_cfg.getProperty(PropertyKey.PROCS_EDITOR).trim().isEmpty());
 	}
 
 	/***********************************************************************
@@ -372,6 +472,7 @@ public class NavigationView extends ViewPart implements IOpenListener,
 	{
 		m_procTree.setInput(m_proceduresManager.getRootElements());
 		m_procTree.refresh();
+		m_filterText.setText("");
 	}
 
 	/***********************************************************************
@@ -394,8 +495,10 @@ public class NavigationView extends ViewPart implements IOpenListener,
 			ProcedureNode item = (ProcedureNode) sel.getFirstElement();
 			// Open procedures only, ignore categories
 			String category = item.getProcID();
-			if (category == null || category.equals("")
-			        || category.equals("CATEGORY")) { return; }
+			if (category == null || category.equals("") || category.equals("CATEGORY"))
+			{
+				return;
+			}
 			CommandHelper.execute(OpenProcedure.ID);
 		}
 		catch (Exception e)
@@ -415,30 +518,11 @@ public class NavigationView extends ViewPart implements IOpenListener,
 		try
 		{
 			ProcedureNode item = (ProcedureNode) sel.getFirstElement();
-			runtime.setRuntimeProperty(
-			        RuntimeProperty.ID_NAVIGATION_VIEW_SELECTION,
-			        item.getProcID());
+			runtime.setRuntimeProperty(RuntimeProperty.ID_NAVIGATION_VIEW_SELECTION, item.getProcID());
 		}
 		catch (Exception ex)
 		{
-			runtime.setRuntimeProperty(
-			        RuntimeProperty.ID_NAVIGATION_VIEW_SELECTION, null);
+			runtime.setRuntimeProperty(RuntimeProperty.ID_NAVIGATION_VIEW_SELECTION, null);
 		}
-	}
-
-	@Override
-	public void widgetSelected(SelectionEvent e)
-	{
-		MenuItem item = (MenuItem) e.widget;
-		if (item.getText().equals(MENU_SHOW_PROPERTIES))
-		{
-			CommandHelper.execute(ShowProperties.ID);
-		}
-	}
-
-	@Override
-	public void widgetDefaultSelected(SelectionEvent e)
-	{
-		widgetSelected(e);
 	}
 }

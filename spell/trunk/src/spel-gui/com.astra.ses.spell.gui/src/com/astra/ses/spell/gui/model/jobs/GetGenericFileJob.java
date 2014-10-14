@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -85,7 +85,7 @@ public class GetGenericFileJob implements IRunnableWithProgress
 			monitor.setTaskName("Retrieving file from server " + m_path);
 			
 			IFileManager fileMgr = (IFileManager) ServiceManager.get(IFileManager.class);
-			file = (IServerFile) fileMgr.getServerFile(m_path, ServerFileType.OTHER, monitor);
+			file = (IServerFile) fileMgr.getServerFile(m_path, ServerFileType.OTHER, null, monitor);
 			
 			result = CommandResult.SUCCESS;
 		}

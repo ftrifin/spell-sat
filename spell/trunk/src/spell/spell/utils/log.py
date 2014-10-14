@@ -5,7 +5,7 @@
 ## DESCRIPTION: Logger (temporary)
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -105,7 +105,6 @@ class LoggerClass(object):
             timestamp = time.strftime('%Y-%m-%d_%H%M%S') 
         self.__filename = home + os.sep + timestamp + "_" + filename + ".log"
         self.__fileobj = file(self.__filename, 'wt')
-        self.write('Created on ' + time.strftime('%d-%b-%Y %H:%M:%S') + '\n\n')
 
     #===========================================================================
     def getLogFile(self):
@@ -123,7 +122,7 @@ class LoggerClass(object):
             return
                     
         if self.showlog or self.__fileobj:
-            timestamp = str(datetime.now())[:-3]
+            timestamp = self._getTimeFormat()
             try:
                 stack = inspect.stack()
                 pname = stack[1][0].f_locals['self'].__class__.__name__
@@ -150,6 +149,26 @@ class LoggerClass(object):
         if self.__fileobj:
             self.__fileobj.write(msg)
             self.__fileobj.flush()
+
+    #===========================================================================
+    def _getTimeFormat(self):
+        tdsTimeFormat = spell.config.reader.Config.instance().getProperty( COMMON, "TdsTimeFormat" )
+
+        val=datetime.now()
+        microsecond=val.microsecond
+        millisecond= microsecond/1000
+
+        if tdsTimeFormat == "1":
+            notificationTime=val.strftime("%d/%m/%Y %H:%M:%S")
+            notificationTime = notificationTime + ":%03i" % millisecond
+        elif tdsTimeFormat == "0":
+            notificationTime=val.strftime("%Y.%j.%H.%M.%S");
+            notificationTime = notificationTime + ".%03i" % millisecond
+        else:
+            notificationTime=val.strftime("%d-%m-%Y %H:%M:%S")
+            notificationTime = notificationTime + ":%03i" % millisecond
+
+        return notificationTime    
 
 ################################################################################
 LOG = LoggerClass()

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,7 +49,10 @@
 package com.astra.ses.spell.gui.preferences;
 
 import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -65,14 +68,17 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Display;
 
 import com.astra.ses.spell.gui.core.interfaces.BaseService;
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
 import com.astra.ses.spell.gui.core.model.types.Environment;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ICoreConstants;
 import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Scope;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.preferences.initializer.GUIPreferencesInitializer;
+import com.astra.ses.spell.gui.preferences.initializer.elements.CommandsInfo;
+import com.astra.ses.spell.gui.preferences.initializer.elements.StatusInfo;
 import com.astra.ses.spell.gui.preferences.initializer.elements.StyleInfo;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
@@ -85,6 +91,8 @@ import com.astra.ses.spell.gui.preferences.model.BooleanValue;
 import com.astra.ses.spell.gui.preferences.model.PresentationsManager;
 import com.astra.ses.spell.gui.preferences.model.ServersManager;
 import com.astra.ses.spell.gui.preferences.utils.PreferencesConverter;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
+import com.astra.ses.spell.gui.types.GuiExecutorCommand;
 
 /*******************************************************************************
  * Configuration manager provides attributes stored in the preferences system
@@ -146,6 +154,16 @@ public class ConfigurationManager extends BaseService implements IConfigurationM
 	public String getConfigurationFile()
 	{
 		return m_configFile;
+	}
+
+	/***************************************************************************
+	 * Set the configuration file
+	 **************************************************************************/
+	public void setConfigurationFile( String path )
+	{
+		m_configFile = path;
+		GUIPreferencesInitializer initializer = new GUIPreferencesInitializer();
+		initializer.initializeDefaultPreferences();
 	}
 
 	/***************************************************************************
@@ -217,7 +235,19 @@ public class ConfigurationManager extends BaseService implements IConfigurationM
 	{
 		String managerRepr = m_preferences.getString(PreferenceCategory.SERVER.tag);
 		ServersManager manager = ServersManager.fromString(managerRepr);
-		return manager.getServer(serverID);
+		ServerInfo info = manager.getServer(serverID);
+		
+		// If the server information exists (may not, when a manual connection is used)
+		if (info != null)
+		{
+			// Put the connectivity defaults if the server has none
+			if (info.getAuthentication()==null)
+			{
+				info.setAuthentication( getConnectivityDefaults() );
+			}
+		}
+
+		return info;
 	}
 
 	@Override
@@ -251,6 +281,23 @@ public class ConfigurationManager extends BaseService implements IConfigurationM
 		PresentationsManager mgr = new PresentationsManager(enabledPres, disabledPres);
 		String serialized = mgr.toString();
 		m_preferences.putValue(PreferenceCategory.PRESENTATIONS.tag, serialized);
+	}
+
+	@Override
+	public void updateConnectivityDefaults( AuthenticationData auth )
+	{
+		m_preferences.putValue(PreferenceCategory.CONNECTIVITY.tag, auth.toString());
+	}
+
+	@Override
+	public AuthenticationData getConnectivityDefaults()
+	{
+		String repr = m_preferences.getString(PreferenceCategory.CONNECTIVITY.tag);
+		if (repr != null && !repr.trim().isEmpty())
+		{
+			return AuthenticationData.valueOf(repr);
+		}
+		return null;
 	}
 
 	@Override
@@ -472,5 +519,116 @@ public class ConfigurationManager extends BaseService implements IConfigurationM
 	public void removePropertyChangeListener(IPropertyChangeListener listener)
 	{
 		m_preferences.removePropertyChangeListener(listener);
+	}
+
+	@Override
+	public DateFormat getTimeFormat() {
+		DateFormat ret;
+		// Time configuration
+		int timeFormat = Integer.parseInt(getProperty(PropertyKey.TDS_TIME_FORMAT));
+	    switch (timeFormat)
+	    {
+	    case 0:
+	    	ret = new SimpleDateFormat("yyyy.DDD.HH.mm.ss");
+	    	break;
+	    case 1:
+	    	ret = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	    	break;
+	    default:
+	    	ret = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	    }
+	    return ret;
+	}
+
+	@Override
+	public CommandsInfo getCommands() 
+	{
+		// Extract commands from preferences
+		String commands = m_preferences.getString(PreferenceCategory.COMMANDS.tag);
+		
+		// Create commands info
+		CommandsInfo info;
+		if ( commands.isEmpty() )
+		{
+			// If preferences does not contain then use default configuration
+			info = getDefaultCommands();
+		}
+		else
+		{
+			// Use preferences configuration
+			info = new CommandsInfo(commands);
+		}
+		return info;
+	}
+	
+	@Override
+	public void setCommands(CommandsInfo commands)
+	{
+		m_preferences.setValue(PreferenceCategory.COMMANDS.tag, commands.getText());
+	}
+	
+	@Override
+	public void restoreCommands()
+	{
+		m_preferences.setToDefault(PreferenceCategory.COMMANDS.tag);
+	}
+	
+	@Override
+	public StatusInfo getStatus() 
+	{
+		// Extract status from preferences
+		String status = m_preferences.getString(PreferenceCategory.STATUS.tag);
+		
+		// Create status info
+		StatusInfo info;
+		if ( status.isEmpty() )
+		{
+			// If preferences does not contain then use default configuration
+			info = getDefaultStatus();
+		}
+		else
+		{
+			// Use preferences configuration
+			info = new StatusInfo(status);
+		}
+		
+		return info;
+	}
+	
+	@Override
+	public void setStatus(StatusInfo status) 
+	{
+		m_preferences.setValue(PreferenceCategory.STATUS.tag,status.getText());
+	}
+	
+	@Override
+	public void restoreStatus()
+	{
+		m_preferences.setToDefault(PreferenceCategory.STATUS.tag);
+	}
+	
+	/**
+	 * Get default commands
+	 * 
+	 * @return
+	 */
+	private CommandsInfo getDefaultCommands()
+	{
+		LinkedHashMap<String,String> commands = new LinkedHashMap<String,String>();
+		for (GuiExecutorCommand command : GuiExecutorCommand.values())
+		{
+			commands.put(command.command.getId(),command.label);
+		}
+		return new CommandsInfo(commands);
+	}
+	
+	/**
+	 * Get default status
+	 * 
+	 * @return
+	 */
+	private StatusInfo getDefaultStatus()
+	{
+		return new StatusInfo(GuiExecutorCommand.values().length+";Status");
 	}
 }

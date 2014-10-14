@@ -5,7 +5,7 @@
 ## DESCRIPTION: Telecommand item model
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -110,6 +110,13 @@ class TcItemClass(Configurable):
         return self.__cmdName
 
     #==========================================================================
+    def _copy(self):
+        itemCopy = TcItemClass( self.__tcClass, self.__cmdName, self.__cmdDescription )
+        itemCopy._setParams(self.__parameters)
+        itemCopy.setConfig( self.getConfig() )
+        return itemCopy
+
+    #==========================================================================
     def _setName(self, cmdName):
         self.__cmdName = cmdName
 
@@ -132,6 +139,10 @@ class TcItemClass(Configurable):
     #==========================================================================
     def _getParams(self):
         return self.__parameters
+
+    #==========================================================================
+    def _setParams(self, parameters):
+        self.__parameters = parameters[:]
 
     #==========================================================================
     def _reset(self):

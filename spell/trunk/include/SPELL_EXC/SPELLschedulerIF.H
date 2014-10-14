@@ -5,7 +5,7 @@
 // DESCRIPTION: Defines the interface of the executor scheduler
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -81,8 +81,10 @@ public: //--------------------------------------------------------------------
 
 		//////////////////////////////////////////////////////////////////////
 		/** Starts a prompt state
+		 *
+		 * timeoutSec IN: Time before raising a warning if the prompt is not answered
 		**////////////////////////////////////////////////////////////////////
-		virtual void startPrompt() = 0;
+		virtual void startPrompt( const SPELLtime& timeout, bool headless ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Cancels a prompt state
@@ -166,6 +168,10 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		virtual bool timerCallback( unsigned long elapsed ) = 0;
 
+		//////////////////////////////////////////////////////////////////////
+		/** Set default delay for prompt warnings
+		**////////////////////////////////////////////////////////////////////
+		virtual void setPromptWarningDelay( unsigned int secs ) = 0;
 };
 
 /*@}*/

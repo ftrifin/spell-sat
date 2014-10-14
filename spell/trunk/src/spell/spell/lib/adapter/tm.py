@@ -5,7 +5,7 @@
 ## DESCRIPTION: Telemetry interface
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -45,6 +45,7 @@ from config import Configurable
 from constants.core import COMP_SYMBOLS
 from result import TmResult
 from interface import Interface
+from expression import ExpressionVerifier,Expression
 
 #*******************************************************************************
 # System imports
@@ -83,7 +84,7 @@ class TmInterface(Configurable, Interface):
     __verifTable = []
     __verifMutex = None
     __useConfig = {}
-
+    
     #===========================================================================
     def __init__(self):
         Interface.__init__(self, "TM")
@@ -142,66 +143,6 @@ class TmInterface(Configurable, Interface):
 
     #===========================================================================
     def eq(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if their values are equal.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.eq( <tm item>, <value> )
-            
-            Compares the default value of given TM item against the given value. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.eq( <tm item>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -211,66 +152,6 @@ class TmInterface(Configurable, Interface):
             
     #===========================================================================
     def neq(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if their values are different.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.neq( <tm item>, <value> )
-            
-            Compares the default value of given TM item against the given value. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, a tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.neq( <tm item>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -280,66 +161,6 @@ class TmInterface(Configurable, Interface):
     
     #===========================================================================
     def lt(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if the 1st value is less than the 2nd.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.lt( <tm item>, <value> )
-            
-            Compares the default value of given TM item against the given value. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.lt( <tm item>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -349,67 +170,6 @@ class TmInterface(Configurable, Interface):
     
     #===========================================================================
     def le(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if the 1st value is less thant or equal
-        to the second.  
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.le( <tm item>, <value> )
-            
-            Compares the default value of given TM item against the given value. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.le( <tm item>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -419,66 +179,6 @@ class TmInterface(Configurable, Interface):
     
     #===========================================================================
     def gt(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if the 1st value is greater than the 2nd.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.gt( <tm item>, <value> )
-            
-            Compares the default value of given TM item against the given value. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.gt( <tm item>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -488,67 +188,6 @@ class TmInterface(Configurable, Interface):
     
     #===========================================================================
     def ge(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if the first value is greater than or 
-        equal to the second.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.ge( <tm item>, <value> )
-            
-            Compares the default value of given TM item against the given value. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.ge( <tm item>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -558,69 +197,6 @@ class TmInterface(Configurable, Interface):
     
     #===========================================================================
     def between(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if the first value is between the second
-        and the third values.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.between( <tm item>, <value>, <value> )
-            
-            Compares the default value of given TM item against the given values. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.between( <tm item>, <value>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-
-            - Strict:True/False             Strict comparison flag
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -631,69 +207,6 @@ class TmInterface(Configurable, Interface):
     
     #===========================================================================
     def not_between(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Compare two entities and test if the first value is NOT between the second
-        and the third values.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.not_between( <tm item>, <value>, <value> )
-            
-            Compares the default value of given TM item against the given values. 
-            Default interface configuration is used.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-            <value> may be a constant, variable, or tm item
-
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.not_between( <tm item>, <value>, <value>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - ValueFormat:RAW/ENG           Specify the tm item value to use 
-              
-            - Timeout:<float>               Timeout for tm item value check
-              
-            - Wait:True/False               Wait for tm item updates or use
-                                            the current value
-                                            
-            - Retries:<int>                 Number of retries for failed comps.
-
-            - Strict:True/False             Strict comparison flag
-            
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         self.__checkComparsionArgs(args, kargs)
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         param = args[0]
@@ -704,68 +217,6 @@ class TmInterface(Configurable, Interface):
                   
     #===========================================================================
     def refresh(self, *args, **kargs):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Refresh the given TM item or all stored TM items.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.refresh( <tm item> )
-            
-            Refresh the value of the corresponding tm item.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.refresh( <tm item>, {config} )
-            
-            Same as syntax #1, but using a particular configuration for the
-            comparison instead of the interface defaults.
-
-        ------------------------------------------------------------------------
-        Syntax #3:
-            TM.refresh()
-            
-            Refresh all stored tm items. See syntax #1.
-
-        ------------------------------------------------------------------------
-        Syntax #4:
-            TM.refresh( {config} )
-            
-            Refresh all stored tm items. See syntax #2.
-
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - Timeout:<float>               Timeout for tm item value check
-              
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         if len(args)==0:
             for param in self.__tmParameters:
@@ -783,88 +234,6 @@ class TmInterface(Configurable, Interface):
 
     #===========================================================================
     def inject(self, *args, **kargs ):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Inject values for the given tm items into the GCS.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.inject( <tm item>, <value> )
-            
-            Inject the value of the corresponding tm item using default
-            configuration.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            <value> may be a constant, variable, or tm item.
-            
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.inject( <tm item>, <value>, {config} )
-            
-            Inject the value of the corresponding tm item using specific
-            configuration.
-            
-        ------------------------------------------------------------------------
-        Syntax #3:
-            TM.inject( [ tm item list ] )
-            
-            Inject a group of tm items with their corresponding values. The
-            list format shall be
-            
-            [ [ <tm_item>, <value>, {config} ], ... ]
-            
-            Where the config dictionary is optional. This configuration may
-            be used to determine the format of the value injected, for example.
-            <tm item> may be a TM parameter name, or a tm item instance.
-            <value> may be a constant, variable or tm item.
-
-        ------------------------------------------------------------------------
-        Syntax #4:
-            TM.inject( [ tm item list ], {config} )
-            
-            Same as Syntax #3, but applying a specific configuration for
-            all tm item injections. Specific item configurations (see #3)
-            override the global specific configuration.
-            
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - Timeout:<float>               Timeout for tm injection
-            - ValueFormat:ENG/RAW           Which tm value to use in injection
-                                            when using a tm item
-            - Radix:HEX/OCT/BIN/DEC         Radix for values
-            - Units:<str>                   Units for values
-            - ValueType:LONG/STRING/FLOAT
-                        DOUBLE/SHORT/USHORT
-                        ULONG/CHAR/BOOLEAN
-                        TIME (default LONG) Type for values
-              
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
         if len(args)==0 and len(kargs)==0:
             raise SyntaxException("No arguments given")
 
@@ -909,84 +278,6 @@ class TmInterface(Configurable, Interface):
 
     #===========================================================================
     def verify(self, *args, **kargs ):
-        """
-        ------------------------------------------------------------------------
-        Description
-
-        Perform a TM verification. Return True if the verification is 
-        successful, False otherwise.
-        
-        ------------------------------------------------------------------------
-        Syntax #1:
-            TM.verify( <tm item>, <comparison>, <value> )
-            
-            Perform a verification with default configuration
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            <comparison> is the comparison operator.
-            <value> may be a constant, variable or tm item.
-            
-        ------------------------------------------------------------------------
-        Syntax #2:
-            TM.verify( <tm item>, <comparison>, <value>, {config} )
-            
-            Same as #1, but using specific configuration
-            
-        ------------------------------------------------------------------------
-        Syntax #3:
-            TM.verify( [ step list ] )
-            
-            Carry out a list of verifications. The given list shall be like
-            
-            [ [ <tm_item>, <comparison>, <value>, {config} ], ... ]
-            
-            Where the config dictionary is optional. This configuration may
-            be used to determine the way the tm item value is extracted, for 
-            example.
-            
-            <tm item> may be a TM parameter name, or a tm item instance.
-            <comparison> is the comparison operator.
-            <value> may be a constant, variable or tm item.
-
-        ------------------------------------------------------------------------
-        Syntax #4:
-            TM.verify( [ step list ], {config} )
-            
-            Same as Syntax #3, but applying a specific configuration for
-            all tm verifications. Specific item configurations (see #3)
-            override the global specific configuration.
-            
-        ------------------------------------------------------------------------
-        Configuration
-        
-        Possible configuration modifiers are:
-        
-            - Timeout:<float>               Timeout for tm injection
-            - ValueFormat:ENG/RAW           Which tm value to use 
-              
-        ------------------------------------------------------------------------
-        NOTES
-        
-        Notice that all configuration parameters (modifiers) can be passed in
-        two ways:
-        
-            a) { ModifierName:ModifierValue, ModifierName:ModifierValue }
-            
-            b) modifiername = ModifierValue, modifiername = ModifierValue
-        
-        In the first case modifier names are written with leading capital letters
-        (e.g. ValueFormat) and they must be passed within a dictionary {}.
-        
-        In the second case, modifier names are written in lowercase, separated
-        by commas and the value is assigned with '='.
-        
-        Examples:
-        
-            Function( param, { Modifier:Value } )    is the same as
-            Function( param, modifier = Value ) 
-        ------------------------------------------------------------------------
-        """
-
         if len(args)==0 and len(kargs)==0:
             raise SyntaxException("No arguments given")
         
@@ -1035,7 +326,9 @@ class TmInterface(Configurable, Interface):
                 # Here we have a list. To distinguish between a single step or a 
                 # list of steps, just check if the first element is a list 
                 # (a step) or not
-                if type(iargs[0])==list:
+                if isinstance(iargs,Expression):
+                    verificationSteps = iargs
+                elif type(iargs[0])==list:
                     verificationSteps = iargs
                     LOG("Using direct definition")
                 else:
@@ -1043,7 +336,14 @@ class TmInterface(Configurable, Interface):
                         raise SyntaxException("Malformed condition")
                     verificationSteps = [ iargs ] 
                     LOG("Built list of steps" + repr(iargs))
-            
+
+        if type(verificationSteps)==list:
+            return self.performListVerification(verificationSteps)
+        else:
+            return self.performExpressionVerification(verificationSteps)
+
+    #===========================================================================
+    def performListVerification(self, verificationSteps):
         try:
             self._operationStart()
             
@@ -1062,48 +362,93 @@ class TmInterface(Configurable, Interface):
     
             # If there is a failure somewhere
             if not overallResult:
-                
-                # This will hold the description of the errors
-                description = ""
-                
-                # First, if there is a system failure somewhere, report it
-                # unless PromptFailure is false
-                thereIsFailure = False
-                for key,reason,withError,failed in errors:
-                    thereIsFailure = (thereIsFailure or withError)
-                    description += ("  %-10s" % key.split(":")[1]) + ": " + reason 
-                    if withError:
-                        description += " (failed)\n"
-                    elif failed:
-                        description += " (NOK)\n"
-                    else:
-                        description += " (OK)\n"
-                
-                if thereIsFailure: 
-                    if self.__useConfig.get(PromptFailure) != False:
-                        raise DriverException("Verification failed", "Could not evaluate all TM conditions\n" + description)
-                    else:
-                        # Do not raise the exception
-                        pass
-                # No failure but still the verification did not succeed,
-                # then check Prompt User                     
-                else:
-                    if self.__useConfig.get(PromptUser)!=False:
-                        raise DriverException("Verification failed", "Some of the conditions evaluated to False\n" + description)
-                    else:
-                        # Do not raise the exception
-                        pass
-
-                whichError = ""
-                for ed in errors:
-                    if ed[1] is not None:
-                        if len(whichError)>0: whichError += ","
-                        whichError += ed[0].split()[-1]
+                self.reportVerificationResult(errors)
             
         finally:
+            # Cleanup verifiers
+            self.__resetVerification()
             self._operationEnd()
         
         return overallResult
+
+    #===========================================================================
+    def performExpressionVerification(self, expression ):
+
+        try:
+            self._operationStart()
+            self.__resetVerification()        
+            
+            verifier = ExpressionVerifier(expression)
+    
+            verifier.prepare(self.__useConfig,self.__verifiers,self.__verifTable)
+            
+            overallResult,errors = verifier.evaluate()
+            
+    
+            # If there is a failure somewhere
+            if not overallResult:
+                REGISTRY['CIF'].write("Telemetry expression evaluates to False", {Severity:ERROR})
+                self.reportVerificationResult(errors)
+            else:
+                REGISTRY['CIF'].write("Telemetry expression evaluates to True" )
+            
+        finally:
+            # cleanup expression verifier
+            verifier.clear()
+            del verifier
+            # Cleanup list verifiers
+            self.__resetVerification()
+            self._operationEnd()
+
+        return overallResult
+
+    #===========================================================================
+    def reportVerificationResult(self, errors):
+        # This will hold the description of the errors
+        description = ""
+        
+        # First, if there is a system failure somewhere, report it
+        # unless PromptFailure is false
+        thereIsFailure = False
+        wasStopped = False
+        for key,reason,withError,failed,stopped in errors:
+            thereIsFailure = (thereIsFailure or withError)
+            wasStopped = (wasStopped or stopped)
+            description += ("  %-10s" % key.split(":")[1]) + ": " + reason 
+            if withError:
+                description += " (failed)\n"
+            elif stopped:
+                description += " (stopped)\n"
+            elif failed:
+                description += " (NOK)\n"
+            else:
+                description += " (OK)\n"
+        
+        if thereIsFailure: 
+            if self.__useConfig.get(PromptFailure) != False:
+                raise DriverException("Verification failed", "Could not evaluate all TM conditions\n" + description)
+            else:
+                # Do not raise the exception
+                pass
+        elif wasStopped:
+            if not ("InWaitFor" in self.__useConfig): 
+                raise DriverException("Verification stopped", "Aborted by user\n" + description)
+            else:
+                return False
+        # No failure but still the verification did not succeed,
+        # then check Prompt User                     
+        else:
+            if self.__useConfig.get(PromptUser)!=False:
+                raise DriverException("Verification failed", "Some of the conditions evaluated to False\n" + description)
+            else:
+                # Do not raise the exception
+                pass
+
+        whichError = ""
+        for ed in errors:
+            if ed[1] is not None:
+                if len(whichError)>0: whichError += ","
+                whichError += ed[0].split()[-1]
     
     #===========================================================================
     def updateVerificationStatus(self, verifier):
@@ -1139,6 +484,28 @@ class TmInterface(Configurable, Interface):
             
         REGISTRY['CIF'].notify( NOTIF_TYPE_VERIF, names, values, status, reason, times)
         self.__verifMutex.release()
+
+    #===========================================================================
+    def setTMparam(self, *args, **kargs):
+        config = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        param = args[0]
+        properties = args[1]
+        return self._setTMparam(param, properties, config)
+
+    #===========================================================================
+    def getTMparam(self, *args, **kargs):
+        config = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        param = args[0]
+        prop = args[1]
+        return self._getTMparam(param, prop, config)
+
+    #===========================================================================
+    def _setTMparam(self, *args, **kargs):
+        REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
+
+    #===========================================================================
+    def _getTMparam(self, param, prop, config):
+        REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
     
     #===========================================================================
     def setLimit(self, *args, **kargs ):
@@ -1224,6 +591,14 @@ class TmInterface(Configurable, Interface):
         return self._restoreNormalLimits( useConfig )
 
     #===========================================================================
+    def databaseLookup(self, *args, **kargs):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        name   = args[0]
+        rtype  = args[1]
+        source = args[2]
+        return self._databaseLookup( name, rtype, source, useConfig )
+
+    #===========================================================================
     def _restoreNormalLimits(self, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return True
@@ -1278,11 +653,13 @@ class TmInterface(Configurable, Interface):
     #===========================================================================
     def __refreshItemNotify(self, param, useConfig):
         try:
-            doNotify = useConfig.get(Notify) == True 
-            if doNotify:
+            doNotify = useConfig.get(Notify) == True
+            doWait   = useConfig.get(Wait) == True
+            doExtended = useConfig.get(Extended) == True
+            if doNotify and doWait:
                 REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), "???", NOTIF_STATUS_PR, "" )
             self.__refreshItemValidity(param, useConfig)
-            if doNotify:
+            if doNotify and not doExtended:
                 if useConfig.get(ValueFormat) == ENG:
                     value = repr(param._getEng())
                 else:
@@ -1310,9 +687,19 @@ class TmInterface(Configurable, Interface):
         
     #===========================================================================
     def __timeiter(self, value, config):
-        comp = value
-        if isinstance(value, TmItemClass):
-            comp,status = self.__refreshItemValidity( value, config )
+        if type(value)==list:
+            comp = []
+            for item in value:
+                if isinstance(item, TmItemClass):
+                    iv,status = self.__refreshItemValidity( item, config )
+                    comp.append(iv)
+                else:
+                    comp.append(item)
+        else:
+            if isinstance(value, TmItemClass):
+                comp,status = self.__refreshItemValidity( value, config )
+            else:
+                comp = value
         return comp
 
     #===========================================================================
@@ -1345,6 +732,11 @@ class TmInterface(Configurable, Interface):
         # Perform comparisons        
         while counter > 0:
             
+            # Abort verifications on pause or abort commands
+            for verifier in self.__verifiers:
+                if verifier.stopped:
+                    return False
+            
             if firstCheck: 
                 firstCheck = False
             else:
@@ -1353,9 +745,14 @@ class TmInterface(Configurable, Interface):
             LOG("### (" + str(counter) + ") Retrieving " + param.name() + " comparison value")
             cvalue,status = self.__refreshItemValidity(param, config)
 
-            LOG("### (" + str(counter) + ") Comparing " + repr(param.name()) + "=" + repr(cvalue) + " against " + repr(comp) +\
+            LOG("### (" + str(counter) + ") Comparing " + repr(param.name()) + "=" + repr(cvalue) + " against " + str(comp) +\
                 ", iteration " + str(counter) + ", tolerance " + str(tolerance))
             LOG("### (" + str(counter) + ") Comparison config: " + repr(config))
+            
+            #-----------------------------------------------------------------------
+            # Type checking
+            self.__checkComparisonTypes(cvalue,comp)
+
             if cFunc(cvalue,comp,tolerance,ignoreCase):
                 LOG("### (" + str(counter) + ") Comparison success") 
                 comparisonResult = True
@@ -1411,6 +808,16 @@ class TmInterface(Configurable, Interface):
         
         while counter > 0: 
 
+            # Abort verifications on pause or abort commands
+            for verifier in self.__verifiers:
+                if verifier.stopped:
+                    return False
+
+            #-----------------------------------------------------------------------
+            # Type checking
+            self.__checkComparisonTypes(cvalue,comp_lt)
+            self.__checkComparisonTypes(cvalue,comp_gt)
+
             if cFunc(cvalue,comp_lt, comp_gt, strict, tolerance): return True
             
             if firstCheck: 
@@ -1440,9 +847,15 @@ class TmInterface(Configurable, Interface):
     #===========================================================================
     def __c_eq(self, cvalue, comp, tolerance = 0, ignoreCase = False):
         
+        if type(comp)==list:
+            for item in comp:
+                if self.__c_eq(cvalue, item, tolerance, ignoreCase): return True
+            return False
+
         #-----------------------------------------------------------------------
         # String comparisons (tolerance does not apply)
         if type(cvalue) == str:
+            
             if ignoreCase:
                 return (cvalue.upper() == comp.upper())
             else:
@@ -1450,6 +863,7 @@ class TmInterface(Configurable, Interface):
         #-----------------------------------------------------------------------
         # Numeric comparisons (ignoreCase does not apply)
         else:
+            
             if tolerance<0:
                 raise DriverException("Error: cannot accept negative tolerance")
             elif tolerance>0:
@@ -1464,6 +878,11 @@ class TmInterface(Configurable, Interface):
         
     #===========================================================================
     def __c_neq(self, cvalue, comp, tolerance = 0, ignoreCase = False): 
+
+        if type(comp)==list:
+            for item in comp:
+                if self.__c_neq(cvalue, item, tolerance, ignoreCase): return True
+            return False
 
         #-----------------------------------------------------------------------
         # String comparisons (tolerance does not apply)
@@ -1488,7 +907,13 @@ class TmInterface(Configurable, Interface):
                     return (cvalue != comp)
     
     #===========================================================================
-    def __c_lt(self, cvalue, comp, tolerance = 0, ignoreCase = False): 
+    def __c_lt(self, cvalue, comp, tolerance = 0, ignoreCase = False):
+         
+        if type(comp)==list:
+            for item in comp:
+                if self.__c_lt(cvalue, item, tolerance, ignoreCase): return True
+            return False
+         
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
@@ -1498,7 +923,13 @@ class TmInterface(Configurable, Interface):
             return (cvalue < comp)
         
     #===========================================================================
-    def __c_le(self, cvalue, comp, tolerance = 0, ignoreCase = False): 
+    def __c_le(self, cvalue, comp, tolerance = 0, ignoreCase = False):
+
+        if type(comp)==list:
+            for item in comp:
+                if self.__c_le(cvalue, item, tolerance, ignoreCase): return True
+            return False
+        
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
@@ -1508,7 +939,13 @@ class TmInterface(Configurable, Interface):
             return (cvalue <= comp)
         
     #===========================================================================
-    def __c_gt(self, cvalue, comp, tolerance = 0, ignoreCase = False): 
+    def __c_gt(self, cvalue, comp, tolerance = 0, ignoreCase = False):
+        
+        if type(comp)==list:
+            for item in comp:
+                if self.__c_gt(cvalue, item, tolerance, ignoreCase): return True
+            return False
+
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
@@ -1518,7 +955,13 @@ class TmInterface(Configurable, Interface):
             return (cvalue > comp)
         
     #===========================================================================
-    def __c_ge(self, cvalue, comp, tolerance = 0, ignoreCase = False): 
+    def __c_ge(self, cvalue, comp, tolerance = 0, ignoreCase = False):
+        
+        if type(comp)==list:
+            for item in comp:
+                if self.__c_ge(cvalue, item, tolerance, ignoreCase): return True
+            return False
+         
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
@@ -1529,8 +972,13 @@ class TmInterface(Configurable, Interface):
                 
     #===========================================================================
     def __c_btw(self, cvalue, lcomp, gcomp, strict, tolerance = 0):
+        
+        if type(lcomp)==list or type(gcomp)==list:
+            raise DriverException("Error: cannot use this operator with lists")
+        
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
+        
         if tolerance<0:
             raise DriverException("Error: cannot accept negative tolerance")
         else:
@@ -1541,6 +989,10 @@ class TmInterface(Configurable, Interface):
             
     #===========================================================================
     def __c_nbtw(self, cvalue, lcomp, gcomp, strict, tolerance = 0): 
+
+        if type(lcomp)==list or type(gcomp)==list:
+            raise DriverException("Error: cannot use this operator with lists")
+        
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if tolerance<0:
@@ -1550,6 +1002,16 @@ class TmInterface(Configurable, Interface):
                 return (lcomp + tolerance > cvalue) or (gcomp - tolerance < cvalue)
             else:
                 return (lcomp + tolerance >= cvalue) or (gcomp - tolerance <= cvalue)
+
+    #===========================================================================
+    def __checkComparisonTypes(self, cvalue, comp):
+        if type(cvalue) == str and type(comp) != str:
+            raise DriverException("Comparing a string against a value of type " + str(type(comp)))
+        elif type(cvalue) == bool and type(comp) != bool:
+            raise DriverException("Comparing a boolean value against a value of type " + str(type(comp)))
+        else:
+            if type(cvalue) in [int,long,float] and type(comp) not in [int,long,float]:
+                raise DriverException("Comparing a value of type " + str(type(cvalue)) +" against a value of type " + str(type(comp)))
 
     #===========================================================================
     def __checkComparsionArgs(self, args, kargs):
@@ -1568,7 +1030,7 @@ class TmInterface(Configurable, Interface):
         stepCount = 0
         REGISTRY['CIF'].write( "Verifying telemetry conditions" )
         for step in verificationSteps:
-            verifier = TmVerifierClass( self, stepCount, step, self.__useConfig )
+            verifier = TmVerifierClass( stepCount, step, self.__useConfig )
             self.__verifiers.append( verifier )
             self.__verifTable.append([verifier.name,verifier.value,
                                       verifier.status,verifier.reason,verifier.updtime])
@@ -1581,9 +1043,9 @@ class TmInterface(Configurable, Interface):
     #===========================================================================
     def __waitVerifiers(self):
         while True:
-            time.sleep(0.2)
             someAlive = False
             for v in self.__verifiers:
+                v.join(0.2)
                 if v.isAlive():
                     someAlive = True
                     break
@@ -1622,16 +1084,27 @@ class TmInterface(Configurable, Interface):
         someWrong = False
         # Will be true if user interaction has been disabled
         superseded = False
+        # Will be true if verification was interrupted
+        stopped = False
         overallResult = TmResult() 
         errors = []
         for v in self.__verifiers:
             defn = v.getDefinition()
-            keyName = str(defn[0]) + ": " + defn[1][0]
+            keyName = str(defn[0]) + ": " + str(defn[1][0])
             overallResult[keyName] = (not v.failed)
             # This will be used later to decide if an exception shall be raised
-            errors.append( [ keyName, v.reason, (v.error != None), v.failed ] )
+            errors.append( [ keyName, v.reason, (v.error != None), v.failed, v.stopped ] )
+
+            # Verifier step number
+            stepNum = str(defn[0])
+            
             # Decide how to report the failed verification step
-            if v.failed:
+            if v.stopped:
+                stopped = True
+                overallResult = False
+                break
+
+            elif v.failed:
                 # Mark the error
                 someWrong = True
                 # If PromptUser is True, we do not need to check anything else
@@ -1652,14 +1125,25 @@ class TmInterface(Configurable, Interface):
                     superseded = False
                     severity = ERROR
                 reason = v.reason
-                stepNum = str(defn[0])
                 message = "Verification " + stepNum + " failed. "
                 message += reason + "."
                 REGISTRY['CIF'].write( message , {Severity:severity} )
         
-        if someWrong and superseded:
+        if stopped:
+            REGISTRY['CIF'].write( "Verification interrupted" )
+        elif someWrong and superseded:
             REGISTRY['CIF'].write( "Verification conditions superseded" )
         elif not someWrong:
             REGISTRY['CIF'].write( "Verifications succeeded" )
         return overallResult,errors
 
+    #==========================================================================
+    def _onInterfaceCommand(self, commandId):
+        if (commandId in ["CMD_INTERRUPT","CMD_ABORT"]):
+            for verifier in self.__verifiers:
+                verifier.stopVerification()
+
+    #===========================================================================
+    def _databaseLookup(self, name, resource_type, source, config ):
+        REGISTRY['CIF'].write("TMTC database service not implemented on this driver", {Severity:WARNING})
+        return None

@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL language constants
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -44,6 +44,16 @@
 
 // FORWARD REFERENCES //////////////////////////////////////////////////////
 // TYPES ///////////////////////////////////////////////////////////////////
+/** Separator for lists in general */
+#define LIST_SEPARATOR '\3'
+#define LIST_SEPARATOR_STR "\3"
+/** For variable messages */
+#define VARIABLE_SEPARATOR '\4'
+#define VARIABLE_SEPARATOR_STR "\4"
+/** For variable messages */
+#define VARIABLE_PROPERTY_SEPARATOR '\5'
+#define VARIABLE_PROPERTY_SEPARATOR_STR "\5"
+
 
 // =========================================================================
 /** Executor configuration parameters */
@@ -51,6 +61,7 @@ namespace ExecutorConstants
 {
 const std::string RunInto                = "RunInto";
 const std::string ExecDelay              = "ExecDelay";
+const std::string PromptDelay            = "PromptWarningDelay";
 const std::string ByStep                 = "ByStep";
 const std::string MaxVerbosity           = "MaxVerbosity";
 const std::string BrowsableLib           = "BrowsableLib";
@@ -62,6 +73,8 @@ const std::string ENABLED                = "ENABLED";
 const std::string SAVE_ON_LINE           = "ON_LINE";
 const std::string SAVE_ON_DEMAND         = "ON_DEMAND";
 const std::string SAVE_ON_STEP           = "ON_STEP";
+const std::string TRUE_VALUE			 = "True";
+const std::string FALSE_VALUE			 = "False";
 };
 // =========================================================================
 
@@ -82,6 +95,7 @@ namespace DatabaseConstants
 	const std::string PREV_STEP  = "PREV_STEP";
 	const std::string OUTPUT_DATA = "OUTPUT_DATA";
 	const std::string INPUT_DATA  = "INPUT_DATA";
+	const std::string PARENT     = "PARENT";
 }
 
 // =========================================================================
@@ -189,6 +203,7 @@ namespace LanguageModifiers
 {
 	const std::string Timeout                = "Timeout";
 	const std::string Retries                = "Retries";
+	const std::string InWaitFor				 = "InWaitFor"; //Internal
 	const std::string Wait                   = "Wait";
 	const std::string ValueFormat            = "ValueFormat";
 	const std::string ValueType              = "ValueType";
@@ -299,7 +314,6 @@ namespace XMLTags
 	const std::string TAG_CTX_IPATH           = "input_dir";
 	const std::string TAG_CTX_ECONFIG         = "executor";
 	const std::string TAG_CTX_DCONFIG         = "driverconfig";
-	const std::string TAG_CTX_ICONFIG         = "alignment";
 
 	// XML configuration file tags - tags for driver configuration
 	const std::string TAG_DRV_NAME            = "name";

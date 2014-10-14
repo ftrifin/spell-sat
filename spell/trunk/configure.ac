@@ -27,7 +27,7 @@
 #
 ################################################################################
 
-AC_INIT([SPELL], [3.0], [])
+AC_INIT([SPELL], [2.4], [])
 AM_INIT_AUTOMAKE([1.9 tar-pax -Wall -Werror foreign])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -103,9 +103,9 @@ AM_CONDITIONAL([WITH_GUI], [test x$gui = xtrue])
 # ENABLE argument to activate or deactivate the SPELL standalone driver
 #------------------------------------------------------------------------------#
 AC_ARG_ENABLE([driverstd],
-              [AS_HELP_STRING([--enable-driverstd],[Compile the SPELL standalone driver (default is yes) ])],
+              [AS_HELP_STRING([--enable-driverstd],[Compile the SPELL standalone driver (default is no) ])],
               [driverstd=true],
-              [driverstd=true])
+              [driverstd=false])
 AM_CONDITIONAL([WITH_DRIVER_STD], [test x$driverstd = xtrue])
 
 
@@ -152,15 +152,15 @@ AM_CONDITIONAL([WITH_DOCUMENTATION], [test x$documentation = xtrue])
 # ENABLE argument to activate or deactivate the sample procedures
 #------------------------------------------------------------------------------#
 AC_ARG_ENABLE([procs],
-              [AS_HELP_STRING([--enable-procs],[Include the sample procedures (default is yes) ])],
+              [AS_HELP_STRING([--enable-procs],[Include the sample procedures (default is no) ])],
               [procs=true],
-              [procs=true])
+              [procs=false])
 AM_CONDITIONAL([WITH_PROCS], [test x$procs = xtrue])
 
 
 #------------------------------------------------------------------------------#
 # WITH argument to indicate the path to the Eclipse installation used to 
-# compile the RCP applications. Shall be of version 3.5 or higher.
+# compile the RCP applications. Shall be of version 3.7.
 #------------------------------------------------------------------------------#
 AC_ARG_WITH([eclipse],
             [AS_HELP_STRING([--with-eclipse=PATH],[eclipse installation used to compile RCP components])],
@@ -218,6 +218,9 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test x$`which doxygen &> /dev/null` != x])
 #------------------------------------------------------------------------------#
 # Specification of all the makefiles to be generated.
 #------------------------------------------------------------------------------#
+
+MAKEFILES=Makefile
+
 AC_CONFIG_FILES([Makefile \
 
                  lib/Makefile   \

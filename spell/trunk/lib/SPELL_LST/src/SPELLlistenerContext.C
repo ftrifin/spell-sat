@@ -5,7 +5,7 @@
 // DESCRIPTION: 
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -400,7 +400,7 @@ void SPELLlistenerContext::onNewContext( const SPELLipcMessage& msg )
     notify.setReceiver("GUI");
     m_gui->displace(&notify);
 
-    // Send notification to peer if any, and if alignment is enabled
+    // Send notification to peer if any
     if (m_peer) m_peer->displace(msg);
 }
 

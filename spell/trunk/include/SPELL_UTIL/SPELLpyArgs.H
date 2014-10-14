@@ -5,7 +5,7 @@
 // DESCRIPTION: Utility for Python arguments processing
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -278,6 +278,15 @@ public: //--------------------------------------------------------------------
 		 * \return The modifier value.
 		**////////////////////////////////////////////////////////////////////
 		int getModifier_Type() const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the value of the Default modifier.
+		 *
+		 * \throws SPELLcoreException if the modifier does not contain a valid value
+		 *
+		 * \return The modifier value.
+		**////////////////////////////////////////////////////////////////////
+		std::string getModifier_Default() const;
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

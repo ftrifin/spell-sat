@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the custom interpreter
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -139,6 +139,23 @@ void SPELLinterpreter::initialize( const SPELLinterpreterConfig& config, SPELLci
 //=============================================================================
 void SPELLinterpreter::mainLoop()
 {
+    // Load the SPELL configuration (will fail with exception if there is an error)
+    SPELLconfiguration::instance().loadConfig(m_config.configFile);
+
+    // Configure the time format if defined in configuration
+    std::string format = SPELLconfiguration::instance().getCommonParameter("TdsTimeFormat");
+    if (format.length()!=0)
+    {
+    	if (format.compare ("1") == 0)
+    	{
+    		SPELLutils::setTimeFormat(TIME_FORMAT_SLASH);
+    	}
+    	else if (format.compare("0")==0)
+    	{
+    		SPELLutils::setTimeFormat(TIME_FORMAT_DOT);
+    	}
+    }
+
     LOG_INFO("[***] Start main loop");
 
     // Create and connect all execution control objects
@@ -201,31 +218,42 @@ void SPELLinterpreter::prepareWarmStart( const SPELLcontextConfig& ctxConfig )
 		std::string wsdir = ctxConfig.getLocationPath( WS_LOCATION );
 		std::string saveMode = ctxConfig.getExecutorParameter(ExecutorConstants::SaveStateMode);
 
-
 		// Prepare the WS configuration
 		SPELLwsStartupInfo startup;
-		startup.persistentFile = STR(home) + PATH_SEPARATOR + wsdir + PATH_SEPARATOR;
-		// Check that the directory exists
-		if (!SPELLutils::pathExists(startup.persistentFile))
+
+		if (saveMode == "DISABLED")
 		{
-            std::string msg = "Unable to setup persistent file, warm-start directory not found: " + startup.persistentFile;
-            LOG_ERROR("    " + msg);
-            m_cif->error(msg, LanguageConstants::SCOPE_SYS );
-            m_config.warmstart = false;
-            return;
+			LOG_WARN("Warmstart disabled by configuration");
+			startup.persistentFile = "";
 		}
+		else
+		{
+			startup.persistentFile = STR(home) + PATH_SEPARATOR + wsdir + PATH_SEPARATOR;
+			// Check that the directory exists
+			if (!SPELLutils::pathExists(startup.persistentFile))
+			{
+	            std::string msg = "Unable to setup persistent file, warm-start directory not found: " + startup.persistentFile;
+	            LOG_ERROR("    " + msg);
+	            m_cif->error(msg, LanguageConstants::SCOPE_SYS );
+	            m_config.warmstart = false;
+	            return;
+			}
+
+	        // Character replacements for constructing the file ids
+	        std::string theId = m_procedure;
+	        SPELLutils::replace( theId, ".py", "" );
+	        SPELLutils::replace( theId, "..", "" );
+	        SPELLutils::replace( theId, "//", "/" );
+	        SPELLutils::replace( theId, PATH_SEPARATOR, "__" );
+	        startup.persistentFile += m_config.timeId + "_Executor_" + theId;
+			LOG_INFO("Warm start persistent file: " + startup.persistentFile);
+		}
+
 
 		LOG_INFO("Warm start files location: " + wsdir);
 		LOG_INFO("Warm start working mode: " + saveMode);
 		LOG_INFO("Warm start procedure file: " + m_procedure);
 
-        // Character replacements for constructing the file ids
-        std::string theId = m_procedure;
-        SPELLutils::replace( theId, ".py", "" );
-        SPELLutils::replace( theId, "..", "" );
-        SPELLutils::replace( theId, "//", "/" );
-        SPELLutils::replace( theId, PATH_SEPARATOR, "__" );
-        startup.persistentFile += m_config.timeId + "_Executor_" + theId;
 
         // Set the configured working mode
         startup.workingMode = StringToWorkingMode(saveMode);
@@ -242,8 +270,6 @@ void SPELLinterpreter::prepareWarmStart( const SPELLcontextConfig& ctxConfig )
 
 		try
 		{
-			LOG_INFO("Warm start persistent file: " + startup.persistentFile);
-
             // Create the warm start support
             m_warmStart = new SPELLwsWarmStartImpl();
             // Initialize it
@@ -328,9 +354,6 @@ const bool SPELLinterpreter::prepareObjects()
         // Setup the execution environment
         SPELLpythonHelper::instance().loadFramework();
 
-        DEBUG("   Loading configuration");
-        // Load the SPELL configuration (will fail with exception if there is an error)
-        SPELLconfiguration::instance().loadConfig(m_config.configFile);
         // Load the configuration on python side for the language and drivers
         SPELLconfiguration::instance().loadPythonConfig(m_config.configFile);
         // Get the context configuration

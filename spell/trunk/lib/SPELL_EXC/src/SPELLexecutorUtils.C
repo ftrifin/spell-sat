@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor utilities
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -334,7 +334,7 @@ void SPELLexecutorUtils::configureConditionArguments( SPELLpyArgs& arguments, SP
 	{
 		setTimeCondition( arguments, condition );
 	}
-	else if (PyList_Check(conditionObj))
+	else if (PyList_Check(conditionObj) || SPELLpythonHelper::instance().isInstance( conditionObj, "Expression", "spell.lib.adapter.expression" ))
 	{
 		setVerificationCondition( arguments, condition, configObj );
 	}

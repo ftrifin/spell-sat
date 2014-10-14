@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor configuration
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -50,19 +50,91 @@ SPELLexecutorConfig::~SPELLexecutorConfig()
     DEBUG("[E] SPELLexecutorConfig destroyed")
 }
 
+
+//=============================================================================
+// CONSTRUCTOR : SPELLexecutorConfig::SPELLexecutorConfig
+//=============================================================================
+SPELLexecutorConfig::SPELLexecutorConfig( const SPELLexecutorConfig& refConfig )
+{
+	m_parentProcId = refConfig.getParentProcId();
+	m_byStep = refConfig.isByStep();
+	m_execDelay = refConfig.getExecDelay();
+	m_promptWarningDelay = refConfig.getPromptWarningDelay();
+	m_runInto = refConfig.isRunInto();
+	m_browsableLib = refConfig.isBrowsableLib();
+	m_arguments = refConfig.getArguments();
+	m_condition = refConfig.getCondition();
+	m_visible = refConfig.isVisible();
+	m_automatic = refConfig.isAutomatic();
+	m_blocking = refConfig.isBlocking();
+	m_saveStateMode = refConfig.getSaveStateMode();
+	m_watchVariables = refConfig.isWatchEnabled();
+	m_forceTcConfirm = refConfig.isForceTcConfirm();
+	m_controlClient = refConfig.getControlClient();
+	m_controlHost = refConfig.getControlHost();
+	m_headless = refConfig.isHeadless();
+	m_maxVerbosity = refConfig.getMaxVerbosity();
+	m_contextName = refConfig.getContextName();
+} //Constructor SPELLexecutorConfig( SPELLexecutorConfig& other )
+
+
+//=============================================================================
+// Operator overload : SPELLexecutorConfig::operator=
+//=============================================================================
+SPELLexecutorConfig& SPELLexecutorConfig::operator=( SPELLexecutorConfig& refConfig )
+{
+	m_parentProcId = refConfig.getParentProcId();
+	m_byStep = refConfig.isByStep();
+	m_execDelay = refConfig.getExecDelay();
+	m_promptWarningDelay = refConfig.getPromptWarningDelay();
+	m_runInto = refConfig.isRunInto();
+	m_browsableLib = refConfig.isBrowsableLib();
+	m_arguments = refConfig.getArguments();
+	m_condition = refConfig.getCondition();
+	m_visible = refConfig.isVisible();
+	m_automatic = refConfig.isAutomatic();
+	m_blocking = refConfig.isBlocking();
+	m_saveStateMode = refConfig.getSaveStateMode();
+	m_watchVariables = refConfig.isWatchEnabled();
+	m_forceTcConfirm = refConfig.isForceTcConfirm();
+	m_controlClient = refConfig.getControlClient();
+	m_controlHost = refConfig.getControlHost();
+	m_headless = refConfig.isHeadless();
+	m_maxVerbosity = refConfig.getMaxVerbosity();
+	m_contextName = refConfig.getContextName();
+
+	return *this;
+} //SPELLexecutorConfig& operator=( SPELLexecutorConfig& refConfig )
+
+
 //=============================================================================
 // METHOD    : SPELLexecutorConfig::reset()
 //=============================================================================
 void SPELLexecutorConfig::reset()
 {
-    m_byStep             = false;
-    m_execDelay          = 0;
-    m_runInto            = true;
+	// Login params
     m_visible            = true;
     m_automatic          = false;
     m_blocking           = true;
     m_arguments          = "";
     m_condition          = "";
+    m_browsableLib		 = false;
+    m_headless			 = false;
+
+	// Startup params
+	m_byStep             = false;
+    m_execDelay          = 0;
+    m_promptWarningDelay = 30;
+    m_runInto            = true;
+
+    m_watchVariables 	 = false;
     m_forceTcConfirm     = false;
+	m_controlClient = "";
+	m_controlHost = "";
+	m_contextName = "";
+
+	m_maxVerbosity = 0;
+	m_parentProcId = -1;
+    m_saveStateMode = MODE_UNINIT;
 }
 

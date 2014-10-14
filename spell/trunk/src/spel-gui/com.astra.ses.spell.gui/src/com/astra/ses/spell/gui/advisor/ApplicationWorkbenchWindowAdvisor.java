@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -91,30 +91,10 @@ import com.astra.ses.spell.gui.views.MasterView;
 
 public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor implements IPropertyChangeListener
 {
-
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the release version */
 	private static String	    RELEASE;
 	/** Holds the name of SPELL release information file */
 	private static final String	NFO_FILE	= "/release.nfo";
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # STATIC INITIALIZATION CODE
-	// =========================================================================
 
 	/***************************************************************************
 	 * Initialize the release version data
@@ -158,13 +138,9 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
 		}
 		catch (Exception e)
 		{
-			RELEASE = "2.3.14";
+			RELEASE = "3.0";
 		}
 	}
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor.
@@ -200,7 +176,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
 		IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 		String appName = cfg.getProperty(PropertyKey.APPLICATION_NAME);
 		configurer.setTitle(appName + " Procedure Executor - " + RELEASE);
-		configurer.setInitialSize(new Point(1200, 800));
+		configurer.setInitialSize(new Point(1300, 900));
 		configurer.setShowCoolBar(true);
 		configurer.setShowMenuBar(true);
 		configurer.setShowStatusLine(true);
@@ -234,14 +210,14 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
 			if (!cproxy.getAvailableExecutors().isEmpty())
 			{
 				final String ctx = cproxy.getCurrentContext();
-				Display.getDefault().asyncExec( new Runnable()
+				Display.getDefault().syncExec( new Runnable()
 				{
 					public void run()
 					{
 						MessageDialog.openInformation(window.getShell(), "Open procedures", 
 								"There are procedures open on the current context " + ctx + ".\n\n" +
 						        "Be aware of that there is a limit for the number of open procedures in the GCS system.\n\n" +
-								"It should be recommended to check the Executors Dialog for details.");
+								"It should be recommended to check the Master View for details.");
 						
 					}
 				});

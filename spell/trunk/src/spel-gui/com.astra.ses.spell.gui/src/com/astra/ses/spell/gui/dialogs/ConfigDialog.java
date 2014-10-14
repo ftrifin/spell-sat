@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,11 +61,11 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 
 import com.astra.ses.spell.gui.Activator;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /*******************************************************************************
@@ -95,6 +95,10 @@ public class ConfigDialog extends TitleAreaDialog
 	private boolean m_byStep;
 	/** Holds the exec delay value */
 	private int m_delay;
+	/** Holds the TC Confirm status */
+	private boolean m_tcConfirm;
+	/** PromptWaringDelay */
+	private int m_promptWarningDelay;
 	/** Holds the model reference */
 	private IProcedure m_model;
 
@@ -115,7 +119,7 @@ public class ConfigDialog extends TitleAreaDialog
 	{
 		super(shell);
 		// Obtain the image for the dialog icon
-		ImageDescriptor descr = Activator.getImageDescriptor("icons/dlg_time.png");
+		ImageDescriptor descr = Activator.getImageDescriptor("icons/dlg_configuration.png");
 		m_image = descr.createImage();
 		m_model = model;
 	}
@@ -145,9 +149,9 @@ public class ConfigDialog extends TitleAreaDialog
 	protected Control createContents(Composite parent)
 	{
 		Control contents = super.createContents(parent);
-		setMessage("Configure the procedure execution parameters");
 		setTitle("Execution configuration");
 		setTitleImage(m_image);
+		setMessage("Configure the procedure execution parameters");
 		return contents;
 	}
 
@@ -160,48 +164,89 @@ public class ConfigDialog extends TitleAreaDialog
 	 **************************************************************************/
 	protected Control createDialogArea(Composite parent)
 	{
+		
+		//fix dialog size
+		getShell().setSize(420,250);
 		// Main composite of the dialog area -----------------------------------
-		Composite top = new Composite(parent, SWT.NONE);
+		Composite top = new Composite(parent, SWT.NONE );
+		Composite leftColumn = new Composite(top, SWT.NONE );
+		Composite rightColumn = new Composite(top, SWT.NONE );
+		
 		GridLayout layout = new GridLayout();
-		top.setLayoutData(new GridData(GridData.FILL_BOTH));
 		layout.marginHeight = 2;
 		layout.marginWidth = 2;
 		layout.marginTop = 2;
 		layout.marginBottom = 2;
-		layout.marginLeft = 2;
-		layout.marginRight = 2;
+		layout.marginLeft = 10;
+		layout.marginRight = 10;
 		layout.numColumns = 2;
+		
+		GridLayout rightLayout = new GridLayout(2, false);
+		rightLayout.marginWidth = 0;
+		
+		GridLayout leftLayout = new GridLayout(1, false);
+		leftLayout.marginWidth = 0;
+		
+		GridData gd = new GridData( GridData.FILL_BOTH );
+		gd.horizontalAlignment = SWT.RIGHT;
+		
 		top.setLayout(layout);
-
+		top.setLayoutData(new GridData(GridData.FILL_BOTH));
+		
+		leftColumn.setLayoutData(new GridData(GridData.FILL_VERTICAL));
+		leftColumn.setLayout(leftLayout);
+		
+		rightColumn.setLayoutData(gd);
+		rightColumn.setLayout(rightLayout);
+		
 		// Create controls
-		final Button chkRunInto = new Button(top, SWT.CHECK);
-		chkRunInto.setText("Run into functions:");
+		final Button chkRunInto = new Button(leftColumn, SWT.CHECK);
+		chkRunInto.setText("Run into functions");
+	
+		final Button chkByStep = new Button(leftColumn, SWT.CHECK);
+		chkByStep.setText("Step by step");
 
-		new Label(top, SWT.NONE);
+		final Button tcConfirm = new Button(leftColumn, SWT.CHECK);
+		tcConfirm.setText("TC Confirm");		
 
-		final Button chkByStep = new Button(top, SWT.CHECK);
-		chkByStep.setText("Stop on steps:");
 
-		new Label(top, SWT.NONE);
+		//Exec delay
+		Label labelExecDelay = new Label(rightColumn, SWT.NONE);
+		labelExecDelay.setText("Execution delay (msec):");
 
-		Label label = new Label(top, SWT.NONE);
-		label.setText("Execution delay (msec):");
-
-		final Spinner spnDelay = new Spinner(top, SWT.NONE);
+		final Spinner spnDelay = new Spinner(rightColumn, SWT.NONE);
 		spnDelay.setMinimum(0);
 		spnDelay.setMaximum(2000);
 		spnDelay.setIncrement(1);
 		spnDelay.setPageIncrement(100);
-		spnDelay.setSelection(m_model.getRuntimeInformation().getExecutionDelay());
-
-		StepOverMode mode = m_model.getController().getStepOverControl().getMode();
-		m_runInto = mode.equals(StepOverMode.STEP_INTO_ALWAYS);
+		m_delay = m_model.getRuntimeInformation().getExecutionDelay();
+		spnDelay.setSelection(m_delay);
+		
+		//Prompt Warning Delay
+		Label labelPromptDelay = new Label(rightColumn, SWT.NONE);
+		labelPromptDelay.setText("Prompt warning delay (sec):");
+		
+		final Spinner spnPromptWarningDelay = new Spinner(rightColumn, SWT.NONE);
+		spnPromptWarningDelay.setMinimum(0);
+		spnPromptWarningDelay.setMaximum(9999);
+		spnPromptWarningDelay.setIncrement(1);
+		spnPromptWarningDelay.setPageIncrement(100);
+		m_promptWarningDelay = m_model.getRuntimeInformation().getPromptWarningDelay();
+		spnPromptWarningDelay.setSelection(m_promptWarningDelay);
+		
+		//Run Into
+		m_runInto = m_model.getExecutionManager().isRunInto();
 		chkRunInto.setSelection(m_runInto);
 
+		//By Step
 		m_byStep = m_model.getRuntimeInformation().isStepByStep();
 		chkByStep.setSelection(m_byStep);
 
-		// Assign handlers
+		//Tc Confirm
+		m_tcConfirm = m_model.getRuntimeInformation().isForceTcConfirmation();
+		tcConfirm.setSelection(m_tcConfirm);
+		
+		// Assign handlers to register the changes
 		chkRunInto.addSelectionListener(new SelectionAdapter()
 		{
 			public void widgetSelected(SelectionEvent ev)
@@ -217,12 +262,28 @@ public class ConfigDialog extends TitleAreaDialog
 				m_byStep = chkByStep.getSelection();
 			}
 		});
-
+		
 		spnDelay.addSelectionListener(new SelectionAdapter()
 		{
 			public void widgetSelected(SelectionEvent ev)
 			{
 				m_delay = spnDelay.getSelection();
+			}
+		});
+		
+		tcConfirm.addSelectionListener(new SelectionAdapter()
+		{
+			public void widgetSelected(SelectionEvent ev)
+			{
+				m_tcConfirm = tcConfirm.getSelection();
+			}
+		});
+		
+		spnPromptWarningDelay.addSelectionListener(new SelectionAdapter()
+		{
+			public void widgetSelected(SelectionEvent ev)
+			{
+				m_promptWarningDelay = spnPromptWarningDelay.getSelection();
 			}
 		});
 
@@ -237,8 +298,8 @@ public class ConfigDialog extends TitleAreaDialog
 	 **************************************************************************/
 	protected void createButtonsForButtonBar(Composite parent)
 	{
-		createButton(parent, IDialogConstants.OK_ID, IDialogConstants.OK_LABEL, true);
 		createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CANCEL_LABEL, false);
+		createButton(parent, IDialogConstants.OK_ID, IDialogConstants.OK_LABEL, true);
 	}
 
 	/***************************************************************************
@@ -264,6 +325,11 @@ public class ConfigDialog extends TitleAreaDialog
 		return m_delay;
 	}
 
+	public int getPromptWarningDelay()
+	{
+		return m_promptWarningDelay;
+	}
+	
 	public boolean getRunInto()
 	{
 		return m_runInto;
@@ -273,4 +339,10 @@ public class ConfigDialog extends TitleAreaDialog
 	{
 		return m_byStep;
 	}
+	
+	public boolean getTcConfirm()
+	{
+		return m_tcConfirm;
+	}
 }
+

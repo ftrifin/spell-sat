@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the context configuration model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -36,6 +36,10 @@
 
 
 // GLOBALS /////////////////////////////////////////////////////////////////
+const std::string SPELLcontextConfig::ExecutorProgram = "ExecutorProgram";
+const std::string SPELLcontextConfig::ExecutorStartTimeout = "ExecutorStartTimeout";
+const std::string SPELLcontextConfig::ExecutorLoginTimeout = "ExecutorLoginTimeout";
+const std::string SPELLcontextConfig::UseDriverTime = "UseDriverTime";
 
 
 
@@ -60,8 +64,6 @@ SPELLcontextConfig::SPELLcontextConfig( const std::string& contextFile )
     loadBasics();
 
     loadExecutorParameters();
-
-    loadISAParameters();
 
     loadDriverParameters();
 
@@ -97,20 +99,6 @@ std::string SPELLcontextConfig::getDriverParameter( const std::string& key ) con
     }
     return "";
 }
-
-//=============================================================================
-// METHOD    : SPELLcontextConfig::getISAParameter
-//=============================================================================
-std::string SPELLcontextConfig::getISAParameter( const std::string& key ) const
-{
-    Properties::const_iterator it = m_isaConfig.find(key);
-    if ( it != m_isaConfig.end())
-    {
-        return it->second;
-    }
-    return "";
-}
-
 
 //=============================================================================
 // METHOD    : SPELLcontextConfig::getExecutorParameter
@@ -246,29 +234,6 @@ void SPELLcontextConfig::loadExecutorParameters()
         }
         dealloc_list(list);
         dealloc_list(exProperties);
-    }
-}
-
-//=============================================================================
-// METHOD    : SPELLcontextConfig::loadISAParameters
-//=============================================================================
-void SPELLcontextConfig::loadISAParameters()
-{
-    SPELLxmlNodeList list = m_reader->findElementsByName( XMLTags::TAG_CTX_ICONFIG );
-    if (list.size()>0)
-    {
-        LOG_INFO("[CFG] ISA config: ");
-        SPELLxmlNode* node = *(list.begin());
-        SPELLxmlNodeList properties = node->getChildren();
-        for( SPELLxmlNodeList::iterator it = properties.begin(); it != properties.end(); it++)
-        {
-            std::string name = (*it)->getAttributeValue( XMLTags::TAG_ATTR_NAME );
-            std::string value = (*it)->getValue();
-            LOG_INFO("     " + name + "=" + value);
-            m_isaConfig.insert( std::make_pair( name, value ));
-        }
-        dealloc_list(list);
-        dealloc_list(properties);
     }
 }
 

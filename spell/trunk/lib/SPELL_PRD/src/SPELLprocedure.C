@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of procedure model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -25,18 +25,26 @@
 // ################################################################################
 
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
-// System includes ---------------------------------------------------------
 // Local includes ----------------------------------------------------------
 #include "SPELL_PRD/SPELLprocedure.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_CFG/SPELLconfiguration.H"
 #include "SPELL_UTIL/SPELLlog.H"
 #include "SPELL_UTIL/SPELLerror.H"
+// System includes ---------------------------------------------------------
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <openssl/md5.h>
 
 #define KEY_NAME "NAME"
 #define KEY_FILE "FILE"
+#define KEY_HISTORY "REVISION HISTORY"
 #define KEY_SC1 "SPACECRAFT"
 #define KEY_SC2 "SPACECRAFTS"
+
+const std::string CHECK_SPACECRAFT = "CheckSpacecraft";
 
 //=============================================================================
 // CONSTRUCTOR : SPELLprocedure::SPELLprocedure()
@@ -60,6 +68,9 @@ SPELLprocedure::SPELLprocedure( const std::string& procPath, const std::string& 
 
     m_file = filename;
     m_header = "";
+
+    // Obtain the file checksum
+    m_md5 = obtainChecksum(filename);
 
     // Parse the file to get properties and source code
     parseFile(filename);
@@ -101,11 +112,16 @@ void SPELLprocedure::parseFile( const std::string& path )
     bool isComment = false;
     // Will be true while inside the header
     bool inHeader = false;
-    // Wil lbe true when finished parsing the header
+    // Will be true when finished parsing the header
     bool headerDone = false;
+    // Will be true if parsing the history of changes
+    bool inHistory  = false;
 
     // Reset properties
     m_properties.clear();
+
+    // Insert a blank history of changes
+    m_properties[KEY_HISTORY] = "";
 
     // Stores the last key found
     std::string lastKey;
@@ -133,6 +149,20 @@ void SPELLprocedure::parseFile( const std::string& path )
                 {
                     headerDone = true;
                 }
+                else if (inHistory)
+                {
+                    // This adds more lines to the history property
+                    line = line.substr(1,line.size()-1);
+                    SPELLutils::trim(line, "\r\n");
+                    if (m_properties[KEY_HISTORY] == "")
+                    {
+                        m_properties[KEY_HISTORY] = line;
+                    }
+                    else
+                    {
+                    	m_properties[KEY_HISTORY] = (m_properties[KEY_HISTORY] + "\n" + line);
+                    }
+                }
                 else if (isPropertyLine(line))
                 {
                     // Remove the leading hash #
@@ -149,12 +179,22 @@ void SPELLprocedure::parseFile( const std::string& path )
                     {
                         value = "<?>";
                     }
+
                     // Remove unwanted characters
                     SPELLutils::trim(lastKey);
-                    SPELLutils::trim(value);
                     SPELLutils::trim(lastKey, "\r\n");
-                    SPELLutils::trim(value, "\r\n");
-                    m_properties.insert( std::make_pair(lastKey, value));
+
+                    // Skip to process the history of changes
+                    if (lastKey == KEY_HISTORY)
+                    {
+                    	inHistory = true;
+                    }
+                    else
+                    {
+                        SPELLutils::trim(value);
+                        SPELLutils::trim(value, "\r\n");
+                    	m_properties.insert( std::make_pair(lastKey, value));
+                    }
                 }
                 else if (isPropertyContinued(line))
                 {
@@ -176,17 +216,49 @@ void SPELLprocedure::parseFile( const std::string& path )
     }
     file.close();
     // If the name was not found in the properties, take the proc id as the procedure name
-    Properties::const_iterator it;
-    it = m_properties.find(KEY_NAME);
-    if (it == m_properties.end())
+    if (m_properties.find(KEY_NAME) == m_properties.end())
     {
-        m_name = m_procId;
+        m_properties[KEY_NAME] = m_procId;
     }
-    else
-    {
-        m_name = m_properties[KEY_NAME];
-    }
+    m_name = m_properties[KEY_NAME];
     m_properties[KEY_FILE] = m_file;
+}
+
+//=============================================================================
+// METHOD    : SPELLprocedure::obtainChecksum()
+//=============================================================================
+std::string SPELLprocedure::obtainChecksum( const std::string& filename )
+{
+    int fd = open(filename.c_str(), O_RDONLY);
+    if (fd<0)
+    {
+        THROW_EXCEPTION("Cannot calculate MD5 for file " + filename, "Unable to open", SPELL_ERROR_FILESYSTEM);
+    }
+    struct stat statbuf;
+    if(fstat(fd, &statbuf) < 0)
+    {
+        THROW_EXCEPTION("Cannot calculate MD5 for file " + filename, "Unable to stat file", SPELL_ERROR_FILESYSTEM);
+    }
+    int fileSize = statbuf.st_size;
+    char* fileBuffer;
+    unsigned char result[MD5_DIGEST_LENGTH];
+
+    fileBuffer = (char*) mmap(0, fileSize, PROT_READ, MAP_SHARED, fd, 0);
+    MD5((unsigned char*) fileBuffer, fileSize, result);
+
+    // Print the MD5 sum as hex-digits.
+    int i;
+    char* hex = new char[2];
+    std::string checksum = "";
+    for(i=0; i<MD5_DIGEST_LENGTH; i++)
+    {
+    	sprintf(hex, "%02x",result[i]);
+    	checksum += hex;
+    }
+    delete hex;
+
+    close(fd);
+    return checksum;
 }
 
 //=============================================================================
@@ -251,6 +323,11 @@ const bool SPELLprocedure::isPropertyContinued( const std::string& line )
 //=============================================================================
 bool SPELLprocedure::forSpacecraft( const std::string& sc ) const
 {
+	if (SPELLconfiguration::instance().getContextParameter(CHECK_SPACECRAFT) == "false")
+	{
+		return true;
+	}
+
 	std::string fam = SPELLconfiguration::instance().getFamilyFor(sc);
 	// If the family is undefined, discard the proc
 	if (fam == "") return false;

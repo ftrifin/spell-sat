@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,10 +49,12 @@ package com.astra.ses.spell.gui.watchvariables.messages;
 public interface IWVMessageField
 {
 	// Watch of variables
-	public static final String	FIELD_VARIABLE_GET	      = "VarGet";
 	public static final String	FIELD_VARIABLE_NAME	      = "VarName";
 	public static final String	FIELD_VARIABLE_VALUE	  = "VarValue";
 	public static final String	FIELD_VARIABLE_TYPE	      = "VarType";
 	public static final String	FIELD_VARIABLE_GLOBAL	  = "VarGlobal";
-	public static final String	FIELD_VARIABLE_REGISTERED	= "VarRegistered";
+	public static final String	FIELD_VARIABLE_ADDED      = "VarAdded";
+	public static final String	FIELD_VARIABLE_DELETE     = "VarDelete";
+	public static final String	FIELD_VARIABLE_SCOPE      = "VarScope";
+	public static final String	FIELD_WVARIABLES_ENABLED  = "WVarEnabled";
 }

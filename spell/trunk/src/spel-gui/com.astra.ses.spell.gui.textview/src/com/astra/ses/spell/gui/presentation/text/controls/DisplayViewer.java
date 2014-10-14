@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,40 +48,59 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.presentation.text.controls;
 
-import org.eclipse.jface.util.IPropertyChangeListener;
-import org.eclipse.jface.util.PropertyChangeEvent;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.TimeZone;
+
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.DisposeEvent;
-import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Scope;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
-import com.astra.ses.spell.gui.preferences.keys.PreferenceCategory;
+import com.astra.ses.spell.gui.preferences.keys.FontKey;
+import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 import com.astra.ses.spell.gui.presentation.text.model.ParagraphType;
 import com.astra.ses.spell.gui.presentation.text.model.TextParagraph;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * @brief Text-based view of the procedure execution
  * @date 09/10/07
  ******************************************************************************/
-public class DisplayViewer implements IPropertyChangeListener
+public class DisplayViewer  
 {
 	private static IConfigurationManager s_cfg = null;
-
+	private static DateFormat s_format ;
+	
+	// Time formatter
+	static
+	{
+		s_format = new SimpleDateFormat("HH:mm:ss");
+		s_format.setTimeZone(TimeZone.getTimeZone("GMT"));
+	}
+	
 	/** Text contents */
 	private CustomStyledText m_text;
 	/** Show timestamp control */
 	private Button m_chkTimestamp;
+	/** Code name control */
+	private Label m_codeTitle;
+	private Label m_codeName;
+	private Label m_functionTitle;
+	private Label m_functionName;
+	private Label m_lineTitle;
+	private Label m_lineName;
 	/** Previous status */
 	private ExecutorStatus m_previousStatus = null;
 
@@ -93,7 +112,7 @@ public class DisplayViewer implements IPropertyChangeListener
 	 * @param top
 	 *            Container composite
 	 **************************************************************************/
-	public DisplayViewer(Composite top)
+	public DisplayViewer(Composite top, int capacity)
 	{
 		if (s_cfg == null)
 		{
@@ -104,16 +123,17 @@ public class DisplayViewer implements IPropertyChangeListener
 		base.setLayoutData( new GridData( GridData.FILL_BOTH ));
 		base.setLayout( new GridLayout(1,true) );
 		
-		m_text = new CustomStyledText(base);
+		m_text = new CustomStyledText(base, capacity);
 		m_text.setLayoutData(new GridData(GridData.FILL_BOTH | GridData.GRAB_HORIZONTAL | GridData.GRAB_VERTICAL));
 		m_text.setBackground(s_cfg.getProcedureColor(ExecutorStatus.LOADED));
 
 		Composite tools = new Composite(base, SWT.BORDER);
 		tools.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
-		tools.setLayout( new RowLayout( SWT.HORIZONTAL ) );
+		tools.setLayout( new GridLayout( 10, false ) );
 		
 		m_chkTimestamp = new Button(tools, SWT.CHECK );
 		m_chkTimestamp.setText("Show message timestamp");
+		m_chkTimestamp.setLayoutData( new GridData( GridData.HORIZONTAL_ALIGN_BEGINNING ) );
 		m_chkTimestamp.addSelectionListener( new SelectionAdapter()
 		{
 			public void widgetSelected( SelectionEvent ev )
@@ -123,15 +143,74 @@ public class DisplayViewer implements IPropertyChangeListener
 		}
 		);
 		
-		s_cfg.addPropertyChangeListener(this);
-		m_text.addDisposeListener(new DisposeListener()
+		m_chkTimestamp.setSelection(s_cfg.getProperty(PropertyKey.TEXT_TIMESTAMP).equals("YES"));
+		
+		Label sep = new Label( tools, SWT.SEPARATOR | SWT.VERTICAL );
+		GridData gd = new GridData();
+		gd.heightHint = 20;
+		gd.widthHint = 30;
+		sep.setLayoutData(gd);
+		
+		m_codeTitle = new Label(tools, SWT.NONE);
+		m_codeTitle.setText("Current code: ");
+		m_codeTitle.setLayoutData( new GridData( GridData.HORIZONTAL_ALIGN_BEGINNING ) );
+		m_codeTitle.setFont(s_cfg.getFont(FontKey.GUI_BOLD));
+		
+		m_codeName = new Label( tools, SWT.NONE);
+		m_codeName.setText( "" );
+		m_codeName.setLayoutData( new GridData( GridData.GRAB_HORIZONTAL ) );
+
+		Label sep2 = new Label( tools, SWT.SEPARATOR | SWT.VERTICAL );
+		GridData gd2 = new GridData();
+		gd2.heightHint = 20;
+		gd2.widthHint = 30;
+		sep2.setLayoutData(gd2);
+
+		m_lineTitle = new Label(tools, SWT.NONE);
+		m_lineTitle.setText("Line: ");
+		m_lineTitle.setLayoutData( new GridData( GridData.HORIZONTAL_ALIGN_BEGINNING ) );
+		m_lineTitle.setFont(s_cfg.getFont(FontKey.GUI_BOLD));
+		
+		m_lineName = new Label( tools, SWT.NONE);
+		m_lineName.setText( "" );
+		m_lineName.setLayoutData( new GridData( GridData.GRAB_HORIZONTAL ) );
+
+		Label sep3 = new Label( tools, SWT.SEPARATOR | SWT.VERTICAL );
+		GridData gd3 = new GridData();
+		gd3.heightHint = 20;
+		gd3.widthHint = 30;
+		sep3.setLayoutData(gd3);
+		
+		m_functionTitle = new Label(tools, SWT.NONE);
+		m_functionTitle.setText("Function: ");
+		m_functionTitle.setLayoutData( new GridData( GridData.HORIZONTAL_ALIGN_BEGINNING ) );
+		m_functionTitle.setFont(s_cfg.getFont(FontKey.GUI_BOLD));
+		
+		m_functionName = new Label( tools, SWT.NONE);
+		m_functionName.setText( "" );
+		m_functionName.setLayoutData( new GridData( GridData.GRAB_HORIZONTAL ) );
+	}
+
+	/***************************************************************************
+	 * Set code information
+	 **************************************************************************/
+	public void setCodeName( String name, String function, String line )
+	{
+		if (m_codeName.isDisposed()) return;
+		m_codeName.setText(name);
+		m_lineName.setText(line);
+		if (function == null || function.equals("<module>"))
 		{
-			@Override
-			public void widgetDisposed(DisposeEvent e)
-			{
-				unsubscribefFromProperties();
-			}
-		});
+			m_functionTitle.setVisible(false);
+			m_functionName.setVisible(false);
+		}
+		else
+		{
+			m_functionTitle.setVisible(true);
+			m_functionName.setVisible(true);
+			m_functionName.setText(function);
+		}
+		m_codeName.getParent().layout();
 	}
 
 	/***************************************************************************
@@ -203,25 +282,40 @@ public class DisplayViewer implements IPropertyChangeListener
 	/***************************************************************************
 	 * Add a normal message to the model
 	 **************************************************************************/
-	public synchronized void addMessage(String text, Severity severity, Scope scope, long sequence)
+	public synchronized void addMessage(String text, Severity severity, String timestamp, Scope scope, long sequence)
 	{
+		String msgTimestamp = "";
+		try
+		{
+			// Time is coming from the server in the form of USECS
+			Calendar c = Calendar.getInstance();
+			c.setTimeInMillis( Long.parseLong(timestamp) / 1000 );
+			msgTimestamp = s_format.format(c.getTime());
+		}
+		catch(Exception ex)
+		{
+			// Time is coming from the server in the form of USECS
+			Calendar c = Calendar.getInstance();
+			msgTimestamp = s_format.format(c.getTime());
+		}
+		
 		TextParagraph p = null;
 		if (severity == Severity.ERROR)
 		{
-			p = getTextParagraph(ParagraphType.ERROR, scope, text, sequence);
+			p = getTextParagraph(ParagraphType.ERROR, scope, text, msgTimestamp, sequence);
 		}
 		else if (severity == Severity.WARN)
 		{
-			p = getTextParagraph(ParagraphType.WARNING, scope, text, sequence);
+			p = getTextParagraph(ParagraphType.WARNING, scope, text, msgTimestamp, sequence);
 		}
 		// When replaying prompts
 		else if (severity == Severity.PROMPT)
 		{
-			p = getTextParagraph(ParagraphType.PROMPT, scope, text, sequence);
+			p = getTextParagraph(ParagraphType.PROMPT, scope, text, msgTimestamp, sequence);
 		}
 		else
 		{
-			p = getTextParagraph(ParagraphType.NORMAL, scope, text, sequence);
+			p = getTextParagraph(ParagraphType.NORMAL, scope, text, msgTimestamp, sequence);
 		}
 		appendParagraph(p);
 	}
@@ -253,45 +347,56 @@ public class DisplayViewer implements IPropertyChangeListener
 	/***************************************************************************
 	 * Create a text parahraph with the given type.
 	 **************************************************************************/
-	private TextParagraph getTextParagraph(ParagraphType t, Scope scope, String text, long sequence)
+	private TextParagraph getTextParagraph(ParagraphType t, Scope scope, String text, String timestamp, long sequence)
 	{
 		switch (t)
 		{
 		case ERROR:
-			return new TextParagraph(ParagraphType.ERROR, scope, text, sequence);
+			return new TextParagraph(ParagraphType.ERROR, scope, text, timestamp, sequence);
 		case WARNING:
-			return new TextParagraph(ParagraphType.WARNING, scope, text, sequence);
+			return new TextParagraph(ParagraphType.WARNING, scope, text, timestamp, sequence);
 		case NOTIF_WARN:
-			return new TextParagraph(ParagraphType.WARNING, scope, text, sequence);
+			return new TextParagraph(ParagraphType.WARNING, scope, text, timestamp, sequence);
 		case NOTIF_ERR:
-			return new TextParagraph(ParagraphType.ERROR, scope, text, sequence);
+			return new TextParagraph(ParagraphType.ERROR, scope, text, timestamp, sequence);
 		case PROMPT:
-			return new TextParagraph(ParagraphType.NORMAL, scope, text, sequence);
+			return new TextParagraph(ParagraphType.NORMAL, scope, text, timestamp, sequence);
 		case SPELL:
-			return new TextParagraph(ParagraphType.NORMAL, scope, text, sequence);
+			return new TextParagraph(ParagraphType.NORMAL, scope, text, timestamp, sequence);
 		default: /* NORMAL */
-			return new TextParagraph(ParagraphType.NORMAL, scope, text, sequence);
+			return new TextParagraph(ParagraphType.NORMAL, scope, text, timestamp, sequence);
 		}
 	}
-
-	@Override
-	public void propertyChange(PropertyChangeEvent event)
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void setBackground( Color color )
 	{
-		String property = event.getProperty();
-		if (property.startsWith(PreferenceCategory.PROC_COLOR.tag))
-		{
-			String statusStr = property.substring(PreferenceCategory.PROC_COLOR.tag.length() + 1);
-			ExecutorStatus st = ExecutorStatus.valueOf(statusStr);
-			m_text.setBackground(s_cfg.getProcedureColor(st));
-		}
+		m_text.setBackground(color);
 	}
 
 	/***************************************************************************
-	 * Stop listening from preferences changes
+	 * 
 	 **************************************************************************/
-	private void unsubscribefFromProperties()
+	public void setShowTimestamp( boolean show )
 	{
-		IConfigurationManager rsc = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-		rsc.removePropertyChangeListener(this);
+		m_text.setShowTimestamp( show );
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void setCapacity( int capacity )
+	{
+		m_text.setCapacity( capacity );
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void setFont( Font newFont )
+	{
+		m_text.setFont(newFont);
 	}
 }

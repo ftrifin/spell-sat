@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -59,7 +59,7 @@ public:
 		{
 			SPELLtime now;
 			SPELLtime delta = now - checkStart;
-			if (delta.getSeconds()>10)
+			if (delta.getSeconds()>120)
 			{
 				SPELLexecutorManager::instance().callback_executorNotReconnected( m_exec.getModel().getInstanceId() );
 				return;
@@ -85,10 +85,14 @@ private:
 
 // DEFINES /////////////////////////////////////////////////////////////////
 
+#define DEFAULT_START_TIMEOUT 20
+#define DEFAULT_LOGIN_TIMEOUT 60
+
+
 //=============================================================================
 // CONSTRUCTOR: SPELLexecutor::SPELLexecutor()
 //=============================================================================
-SPELLexecutor::SPELLexecutor( const SPELLexecutorConfiguration& config, SPELLclient* controllingClient )
+SPELLexecutor::SPELLexecutor( const SPELLexecutorStartupParams& config, SPELLclient* controllingClient )
 : SPELLexecutorListener(),
   SPELLprocessListener(),
   m_model(config),
@@ -96,6 +100,15 @@ SPELLexecutor::SPELLexecutor( const SPELLexecutorConfiguration& config, SPELLcli
   m_controllingClient(controllingClient)
 {
 	SPELLprocessManager::instance().addListener( m_model.getInstanceId(), this );
+	switch(config.getClientMode())
+	{
+	case CLIENT_MODE_BACKGROUND:
+		m_clientConnection = CLI_BACKGROUND;
+		break;
+	default:
+		m_clientConnection = CLI_CONNECTED;
+		break;
+	}
 	m_reconnecting = config.isReconnecting();
 	m_loggedIn = false;
 	m_loginMonitor = NULL;
@@ -131,15 +144,34 @@ void SPELLexecutor::start()
 	if (!m_reconnecting)
 	{
 		m_processStartedEvent.clear();
-		std::string command = SPELLconfiguration::instance().getContextParameter( "ExecutorProgram" );
+		std::string command = SPELLconfiguration::instance().getContextParameter( SPELLcontextConfig::ExecutorProgram );
 		if (command == "")
 		{
 			THROW_EXCEPTION("Cannot launch executor", "No executor command defined in configuration", SPELL_ERROR_CONFIG);
 		}
+
+		int startTimeout = -1;
+		int loginTimeout = -1;
+		std::string startTimeoutStr = SPELLconfiguration::instance().getContextParameter( SPELLcontextConfig::ExecutorStartTimeout );
+		std::string loginTimeoutStr = SPELLconfiguration::instance().getContextParameter( SPELLcontextConfig::ExecutorLoginTimeout );
+		if (startTimeoutStr != "")
+		{
+			startTimeout = STRI(startTimeoutStr);
+		}
+		if (loginTimeoutStr != "")
+		{
+			loginTimeout = STRI(loginTimeoutStr);
+		}
+		if (startTimeout == -1) startTimeout = DEFAULT_START_TIMEOUT;
+		if (loginTimeout == -1) loginTimeout = DEFAULT_LOGIN_TIMEOUT;
+
+		LOG_INFO("Using start timeout: " + ISTR(startTimeout) + " seconds");
+		LOG_INFO("Using login timeout: " + ISTR(loginTimeout) + " seconds");
+
 		command += " -c " + m_model.getConfigFile();
 		command += " -n " + m_model.getContextName();
 		command += " -s " + ISTR(m_ipc.getPort());
-		command += " -p " + m_model.getInstanceId();
+		command += " -p " + m_model.getInstanceId(); // Parent id
 		command += " -w ";
 		if (m_model.getWsFilename() != "")
 		{
@@ -152,7 +184,7 @@ void SPELLexecutor::start()
 		m_processStatus = SPELLprocessManager::instance().getProcessStatus( m_model.getInstanceId() );
 
 		DEBUG("Waiting executor process to begin");
-		bool timedOut = m_processStartedEvent.wait( 60 * 1000 ); // milliseconds
+		bool timedOut = m_processStartedEvent.wait( startTimeout * 1000 ); // milliseconds
 		if (timedOut)
 		{
 			THROW_EXCEPTION("Cannot launch executor", "Executor process did not begin in time", SPELL_ERROR_PROCESS);
@@ -164,7 +196,7 @@ void SPELLexecutor::start()
 			if (!m_loggedIn)
 			{
 				DEBUG("Executor process started, waiting for login");
-				bool timeout = m_executorLoggedInEvent.wait( 20 * 1000 ); // milliseconds
+				bool timeout = m_executorLoggedInEvent.wait( loginTimeout * 1000 ); // milliseconds
 				if (timeout)
 				{
 					THROW_EXCEPTION("Cannot launch executor", "Executor did not login in time", SPELL_ERROR_PROCESS);
@@ -244,33 +276,33 @@ void SPELLexecutor::close()
 		cmd.id = CMD_CLOSE;
 		command(cmd);
 		bool timeout = m_executorLoggedOutEvent.wait(5 * 1000); // Wait for 5 seconds
+
+		DEBUG("Executor logged out or about to be killed, disconnecting IPC");
+		m_ipc.cleanup();
+		DEBUG("Executor logged out or about to be killed, disconnecting IPC done");
+
 		if (timeout)
 		{
-			LOG_ERROR("Failed to close executor, it did not log out in time");
+			LOG_ERROR("Failed to close executor, it did not log out in time, it will be killed");
 			try
 			{
-		    	SPELLprocessManager::instance().removeListener( m_model.getInstanceId(), this );
+				SPELLprocessManager::instance().removeListener( m_model.getInstanceId(), this );
 				SPELLprocessManager::instance().killProcess( m_model.getInstanceId() );
-		    	SPELLprocessManager::instance().waitProcess( m_model.getInstanceId() );
-		    	SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
+				SPELLprocessManager::instance().waitProcess( m_model.getInstanceId() );
+				SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
 			}
 			catch( SPELLcoreException& ex )
 			{
 				LOG_ERROR("Could not kill process: " + m_model.getInstanceId());
 			}
-	    	return;
 		}
-		DEBUG("Executor logged out, disconnecting IPC");
-		m_ipc.cleanup();
-		DEBUG("Executor logged out, disconnecting IPC done");
-	}
-
-	if (needToClose)
-	{
-		// Will not wait if the process is no longer there
-		DEBUG("Now waiting process to finish");
-		waitFinish();
-		DEBUG("Waiting process to finish done");
+		else
+		{
+			// Wait only if the process is known to be still alive
+			DEBUG("Now waiting process to finish");
+			waitFinish();
+			DEBUG("Waiting process to finish done");
+		}
 	}
 
 	LOG_INFO("Executor closed: " + m_model.getInstanceId());
@@ -333,7 +365,7 @@ SPELLipcMessage SPELLexecutor::sendRequestToExecutor( const SPELLipcMessage& msg
 	SPELLipcMessage response = VOID_MESSAGE;
 	if (processOk())
 	{
-		response =  m_ipc.sendRequest( m_model.getInstanceId(), msg, 15000 );
+		response =  m_ipc.sendRequest( m_model.getInstanceId(), msg, 5000 );
 	}
 	else
 	{
@@ -352,6 +384,7 @@ SPELLipcMessage SPELLexecutor::sendRequestToExecutor( const SPELLipcMessage& msg
 //=============================================================================
 void SPELLexecutor::processMessageFromExecutor( SPELLipcMessage msg )
 {
+	DEBUG("Executor message: " + msg.dataStr());
 	std::string id = msg.getId();
 	if (id == ExecutorMessages::MSG_NOTIF_EXEC_CLOSE )
 	{
@@ -362,6 +395,33 @@ void SPELLexecutor::processMessageFromExecutor( SPELLipcMessage msg )
     else if ( id == MessageId::MSG_ID_NOTIFICATION )
     {
     	executorNotification(msg);
+    }
+    else if ( id == MessageId::MSG_ID_SET_UACTION )
+    {
+    	LOG_INFO("Executor set user action");
+    	std::string label = msg.get(MessageField::FIELD_ACTION_LABEL);
+    	std::string sevStr = msg.get(MessageField::FIELD_ACTION_SEVERITY);
+    	unsigned int severity = LanguageConstants::INFORMATION;
+    	getModel().getUserAction().setLabel(label);
+    	if (sevStr == MessageValue::DATA_SEVERITY_WARN ) severity = LanguageConstants::WARNING;
+    	if (sevStr == MessageValue::DATA_SEVERITY_ERROR ) severity = LanguageConstants::ERROR;
+    	getModel().getUserAction().setSeverity(severity);
+    	getModel().getUserAction().enable(true);
+    }
+    else if ( id == MessageId::MSG_ID_DISMISS_UACTION )
+    {
+    	LOG_INFO("Executor dismiss user action");
+    	getModel().getUserAction().reset();
+    }
+    else if ( id == MessageId::MSG_ID_ENABLE_UACTION )
+    {
+    	LOG_INFO("Executor enable user action");
+    	getModel().getUserAction().enable(true);
+    }
+    else if ( id == MessageId::MSG_ID_DISABLE_UACTION )
+    {
+    	LOG_INFO("Executor disable user action");
+    	getModel().getUserAction().enable(false);
     }
 	else
 	{
@@ -394,18 +454,6 @@ SPELLipcMessage SPELLexecutor::processRequestFromExecutor( SPELLipcMessage msg )
     	return response;
     }
 
-    // If there is no client to propagate the request, respond to the executor
-    // TBD: this will conflict with background procedures, will see then
-    if (m_controllingClient == NULL)
-    {
-    	response = SPELLipcHelper::createErrorResponse( MessageId::MSG_PEER_LOST, msg );
-    	response.set(MessageField::FIELD_ERROR, "Cannot forward " + msg.getId());
-    	response.set(MessageField::FIELD_REASON, "No controlling client available");
-    	response.set(MessageField::FIELD_FATAL, PythonConstants::False );
-    	LOG_ERROR("Executor request end in peer error");
-    	return response;
-    }
-
     if ( requestId == ContextMessages::REQ_OPEN_EXEC )
     {
         response = SPELLcontext::instance().openExecutor( msg, m_controllingClient );
@@ -413,6 +461,38 @@ SPELLipcMessage SPELLexecutor::processRequestFromExecutor( SPELLipcMessage msg )
     else if ( requestId == ContextMessages::REQ_INSTANCE_ID )
     {
         response = SPELLcontext::instance().getInstanceId( msg );
+    }
+    else if ( requestId == ContextMessages::REQ_EXEC_INFO )
+    {
+        response = SPELLcontext::instance().getExecutorInfo( msg );
+    }
+    else if ( requestId == ContextMessages::REQ_DEL_SHARED_DATA )
+    {
+        response = SPELLcontext::instance().clearSharedData(msg);
+    }
+    else if ( requestId == ContextMessages::REQ_SET_SHARED_DATA )
+    {
+        response = SPELLcontext::instance().setSharedData(msg);
+    }
+    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA )
+    {
+        response = SPELLcontext::instance().getSharedData(msg);
+    }
+    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA_KEYS )
+    {
+        response = SPELLcontext::instance().getSharedDataKeys(msg);
+    }
+    else if ( requestId == ContextMessages::REQ_ADD_SHARED_DATA_SCOPE )
+    {
+        response = SPELLcontext::instance().addSharedDataScope(msg);
+    }
+    else if ( requestId == ContextMessages::REQ_DEL_SHARED_DATA_SCOPE )
+    {
+        response = SPELLcontext::instance().removeSharedDataScope(msg);
+    }
+    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA_SCOPES )
+    {
+        response = SPELLcontext::instance().getSharedDataScopes(msg);
     }
     else
     {
@@ -610,9 +690,8 @@ void SPELLexecutor::command( const ExecutorCommand& command )
 //=============================================================================
 void SPELLexecutor::setControllingClient( SPELLclient* client )
 {
-	SPELLtryMonitor m(m_clientLock);
+	SPELLmonitor m(m_clientLock);
 	LOG_INFO("Set controlling client: " + ISTR(client->getClientKey()));
-	m_controllingClient = client;
 
 	SPELLipcMessage addClient( MessageId::MSG_ID_ADD_CLIENT );
 	addClient.setType( MSG_TYPE_ONEWAY );
@@ -622,68 +701,106 @@ void SPELLexecutor::setControllingClient( SPELLclient* client )
 	addClient.set( MessageField::FIELD_GUI_CONTROL, ISTR(client->getClientKey()));
 	addClient.set( MessageField::FIELD_GUI_CONTROL_HOST, client->getClientHost());
 	sendMessageToExecutor(addClient);
+
+	m_controllingClient = client;
+	m_notAckNotifications = 0;
+	m_clientConnection = CLI_CONNECTED;
 }
 
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::removeControllingClient()
+void SPELLexecutor::removeControllingClient( bool clientLost )
 {
-	SPELLtryMonitor m(m_clientLock);
-	DEBUG("Removing controlling client");
+	SPELLmonitor m(m_clientLock);
+	LOG_INFO("Remove controlling client (lost: " + BSTR(clientLost) + ")");
+
+	if (m_controllingClient)
+	{
+		m_clientConnection = clientLost ? CLI_ERROR : CLI_NO_CLIENT;
+
+		int cKey = m_controllingClient->getClientKey();
+		std::string cHost = m_controllingClient->getClientHost();
+
+		DEBUG("Remove client from executor");
+		SPELLipcMessage removeClient( MessageId::MSG_ID_REMOVE_CLIENT );
+		removeClient.setType( MSG_TYPE_ONEWAY );
+		removeClient.setSender( "CTX" );
+		removeClient.setReceiver( m_model.getInstanceId() );
+		removeClient.set( MessageField::FIELD_PROC_ID, m_model.getInstanceId() );
+		removeClient.set( MessageField::FIELD_GUI_CONTROL, ISTR(cKey));
+		removeClient.set( MessageField::FIELD_GUI_CONTROL_HOST, cHost);
+		sendMessageToExecutor(removeClient);
+
+		LOG_INFO("Controlling client removed");
+		m_controllingClient = NULL;
+		m_notAckNotifications = 0;
+	}
+}
+
+//=============================================================================
+// METHOD: SPELLexecutor::
+//=============================================================================
+void SPELLexecutor::forcePause()
+{
+	ExecutorCommand cmd;
+	if (getStatus() == STATUS_WAITING)
+	{
+		cmd.id = CMD_INTERRUPT;
+		LOG_WARN("Interrupting procedure (force stop)");
+		command(cmd);
+		bool timedout = waitStatus(STATUS_INTERRUPTED, 5*1000);
+		if (timedout)
+		{
+			LOG_ERROR("Unable to interrupt procedure");
+			return;
+		}
+		LOG_WARN("Procedure interrupted");
+	}
+	else if (getStatus() == STATUS_RUNNING)
+	{
+		cmd.id = CMD_PAUSE;
+		LOG_WARN("Pausing procedure (force stop)");
+		command(cmd);
+		bool timedout = waitStatus(STATUS_PAUSED, 5*1000);
+		if (timedout)
+		{
+			LOG_ERROR("Unable to pause procedure");
+			return;
+		}
+		LOG_WARN("Procedure paused");
+	}
+}
+
+//=============================================================================
+// METHOD: SPELLexecutor::
+//=============================================================================
+void SPELLexecutor::setBackground()
+{
+	SPELLmonitor m(m_clientLock);
+	LOG_WARN("Make procedure headless");
 
 	int cKey = m_controllingClient->getClientKey();
 	std::string cHost = m_controllingClient->getClientHost();
 
+	SPELLipcMessage setBackground( MessageId::MSG_ID_BACKGROUND );
+	setBackground.setType( MSG_TYPE_ONEWAY );
+	setBackground.setSender( "CTX" );
+	setBackground.setReceiver( m_model.getInstanceId() );
+	setBackground.set( MessageField::FIELD_PROC_ID, m_model.getInstanceId() );
+	setBackground.set( MessageField::FIELD_GUI_CONTROL, ISTR(cKey));
+	setBackground.set( MessageField::FIELD_GUI_CONTROL_HOST, cHost);
+	sendMessageToExecutor(setBackground);
+
+	m_clientConnection = CLI_BACKGROUND;
 	m_controllingClient = NULL;
+	m_notAckNotifications = 0;
 
-	switch(getStatus())
-	{
-	case STATUS_FINISHED:
-	case STATUS_PAUSED:
-	case STATUS_ABORTED:
-	case STATUS_ERROR:
-		break;
-	default:
-		{
-			ExecutorCommand cmd;
-			cmd.id = CMD_PAUSE;
-			DEBUG("Pausing procedure");
-			command(cmd);
-			if (getStatus() == STATUS_WAITING)
-			{
-				bool timedout = waitStatus(STATUS_INTERRUPTED, 10*1000);
-				if (timedout)
-				{
-					LOG_ERROR("Cannot pause procedure, kill it!");
-					//kill();
-					return;
-				}
-			}
-			else if (getStatus() == STATUS_RUNNING)
-			{
-				bool timedout = waitStatus(STATUS_PAUSED, 10*1000);
-				if (timedout)
-				{
-					LOG_ERROR("Cannot pause procedure, kill it!");
-					//kill();
-					return;
-				}
-			}
-			LOG_INFO("Procedure paused");
-			break;
-		}
-	}
-
-	SPELLipcMessage removeClient( MessageId::MSG_ID_REMOVE_CLIENT );
-	removeClient.setType( MSG_TYPE_ONEWAY );
-	removeClient.setSender( "CTX" );
-	removeClient.setReceiver( m_model.getInstanceId() );
-	removeClient.set( MessageField::FIELD_PROC_ID, m_model.getInstanceId() );
-	removeClient.set( MessageField::FIELD_GUI_CONTROL, ISTR(cKey));
-	removeClient.set( MessageField::FIELD_GUI_CONTROL_HOST, cHost);
-	sendMessageToExecutor(removeClient);
-	DEBUG("Controlling client removed");
+	DEBUG("Controlling client removed, procedure in background now");
+	ExecutorCommand cmd;
+	cmd.id = CMD_RUN;
+	DEBUG("Running procedure in background");
+	command(cmd);
 }
 
 //=============================================================================
@@ -691,7 +808,7 @@ void SPELLexecutor::removeControllingClient()
 //=============================================================================
 bool SPELLexecutor::hasControllingClient()
 {
-	SPELLtryMonitor m(m_clientLock);
+	SPELLmonitor m(m_clientLock);
 	return (m_controllingClient != NULL);
 }
 
@@ -700,7 +817,7 @@ bool SPELLexecutor::hasControllingClient()
 //=============================================================================
 SPELLclient* SPELLexecutor::getControllingClient()
 {
-	SPELLtryMonitor m(m_clientLock);
+	SPELLmonitor m(m_clientLock);
 	return m_controllingClient;
 }
 
@@ -709,13 +826,69 @@ SPELLclient* SPELLexecutor::getControllingClient()
 //=============================================================================
 void SPELLexecutor::forwardMessageToClient( const SPELLipcMessage& msg )
 {
-	if (m_controllingClient)
+	switch(m_clientConnection)
 	{
-		m_controllingClient->sendMessageToClient(msg);
-	}
-	else
-	{
-		LOG_ERROR("Cannot forward message, no controlling client! " + msg.getId());
+	case CLI_ERROR:
+		LOG_ERROR("Cannot forward message, controlling client error (" + msg.getId() + ")");
+		LOG_ERROR("Msg: " + msg.dataStr());
+		forcePause();
+		break;
+
+	case CLI_NO_CLIENT:
+		LOG_WARN("Received message but no client is attached (" + msg.getId() + ")");
+		LOG_ERROR("Msg: " + msg.dataStr());
+		// Send acknowledge. We may want to do other stuff later on. We cannot just
+		// force pause as the executor knows that the client was removed and will pause,
+		// but it needs some notifications to be acknowledge either way in order to
+		// finish a detach operation if it was done in RUNNING mode.
+		if (msg.getType() == MSG_TYPE_NOTIFY)
+		{
+			m_notAckNotifications++;
+			SPELLipcMessage ack = VOID_MESSAGE;
+			ack.setSender("CTX");
+			ack.setReceiver(m_model.getProcId());
+			ack.setType(MSG_TYPE_ONEWAY);
+			ack.setId(ExecutorMessages::ACKNOWLEDGE);
+			ack.set(MessageField::FIELD_MSG_SEQUENCE,msg.get(MessageField::FIELD_MSG_SEQUENCE));
+			sendMessageToExecutor(ack);
+
+			if (m_notAckNotifications == 5)
+			{
+				forcePause();
+				m_notAckNotifications = 0;
+			}
+		}
+		else
+		{
+			forcePause();
+		}
+		break;
+
+	case CLI_BACKGROUND:
+		if (msg.getType() == MSG_TYPE_NOTIFY)
+		{
+			SPELLipcMessage ack = VOID_MESSAGE;
+			ack.setSender("CTX");
+			ack.setReceiver(m_model.getProcId());
+			ack.setType(MSG_TYPE_ONEWAY);
+			ack.setId(ExecutorMessages::ACKNOWLEDGE);
+			ack.set(MessageField::FIELD_MSG_SEQUENCE,msg.get(MessageField::FIELD_MSG_SEQUENCE));
+			sendMessageToExecutor(ack);
+		}
+		break;
+
+	case CLI_CONNECTED:
+		if (hasControllingClient())
+		{
+			m_controllingClient->sendMessageToClient(msg);
+		}
+		else
+		{
+			LOG_ERROR("Cannot forward message, no controlling client! " + msg.getId());
+			LOG_ERROR("Msg: " + msg.dataStr());
+			forcePause();
+		}
+		break;
 	}
 }
 
@@ -725,7 +898,38 @@ void SPELLexecutor::forwardMessageToClient( const SPELLipcMessage& msg )
 SPELLipcMessage SPELLexecutor::forwardRequestToClient( const SPELLipcMessage& msg )
 {
 	SPELLipcMessage resp = VOID_MESSAGE;
-	resp = m_controllingClient->sendRequestToClient(msg);
+
+	switch(m_clientConnection)
+	{
+	case CLI_ERROR:
+		LOG_ERROR("Cannot forward request, no controlling client! " + msg.getId());
+		forcePause();
+		resp = SPELLipcHelper::createErrorResponse( MessageId::MSG_PEER_LOST, msg );
+		resp.set(MessageField::FIELD_ERROR, "Cannot forward " + msg.getId());
+		resp.set(MessageField::FIELD_REASON, "No controlling client available");
+		resp.set(MessageField::FIELD_FATAL, PythonConstants::False );
+    	LOG_ERROR("Executor request end in peer error");
+    	break;
+	case CLI_CONNECTED:
+		if (hasControllingClient())
+		{
+			resp = m_controllingClient->sendRequestToClient(msg);
+		}
+		else
+		{
+			LOG_ERROR("Cannot forward request, no controlling client! " + msg.getId());
+			forcePause();
+			resp = SPELLipcHelper::createErrorResponse( MessageId::MSG_PEER_LOST, msg );
+			resp.set(MessageField::FIELD_ERROR, "Cannot forward " + msg.getId());
+			resp.set(MessageField::FIELD_REASON, "No controlling client available");
+			resp.set(MessageField::FIELD_FATAL, PythonConstants::False );
+	    	LOG_ERROR("Executor request end in peer error");
+		}
+		break;
+	case CLI_BACKGROUND:
+	case CLI_NO_CLIENT:
+		break;
+	}
 	return resp;
 }
 
@@ -740,26 +944,32 @@ void SPELLexecutor::executorStatusChanged( const SPELLexecutorStatus& status,
 	m_model.setStatus(status);
 	m_executorStatusEvent.set();
 
-	SPELLcontext::instance().notifyExecutorOperation( m_model.getInstanceId(), m_model.getParentInstanceId(),
-													  -1, CLIENT_MODE_UNKNOWN, status,
-													  EXEC_OP_STATUS, "", error, reason);
+	SPELLexecutorOperation op;
+	op.instanceId = m_model.getInstanceId();
+	op.parentId = m_model.getParentInstanceId();
+	op.originId = m_model.getOriginId();
+	op.groupId = m_model.getGroupId();
+	op.status = status;
+	op.type = SPELLexecutorOperation::EXEC_OP_STATUS;
+
+	SPELLcontext::instance().notifyExecutorOperation( op );
 }
 
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::registerNotifier( SPELLexecutorListener* listener )
+void SPELLexecutor::registerNotifier( std::string id, SPELLexecutorListener* listener )
 {
-	m_ipc.registerExecutorNotifier( listener );
+	m_ipc.registerExecutorNotifier( id, listener );
 	//TODO check if need to add client in exec (ipc msg)
 }
 
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::deregisterNotifier( SPELLexecutorListener* listener )
+void SPELLexecutor::deregisterNotifier( std::string id )
 {
-	m_ipc.deregisterExecutorNotifier( listener );
+	m_ipc.deregisterExecutorNotifier( id );
 	//TODO check if need to remove client in exec (ipc msg)
 }
 
@@ -783,6 +993,7 @@ SPELLipcMessage SPELLexecutor::executorLogin( const SPELLipcMessage& msg )
 	// Create the response
 	SPELLipcMessage response = SPELLipcHelper::createResponse( ExecutorMessages::RSP_NOTIF_EXEC_OPEN, msg );
 	LOG_INFO("Executor login options: " + m_model.getInstanceId());
+	LOG_INFO("    Connection: " + ISTR(m_clientConnection));
 	response.set( MessageField::FIELD_ARGS, m_model.getArguments() );
 	LOG_INFO("    Arguments: " + m_model.getArguments());
 	std::string oMode = SPELLdataHelper::openModeToString(m_model.getOpenMode());
@@ -792,6 +1003,10 @@ SPELLipcMessage SPELLexecutor::executorLogin( const SPELLipcMessage& msg )
 	LOG_INFO("    Condition: " + m_model.getCondition());
 	response.set( MessageField::FIELD_PARENT_PROC, m_model.getParentInstanceId() );\
 	LOG_INFO("    Parent   : " + m_model.getParentInstanceId());
+	response.set( MessageField::FIELD_GROUP_ID, m_model.getGroupId() );
+	LOG_INFO("    Group    : " + m_model.getGroupId());
+	response.set( MessageField::FIELD_ORIGIN_ID, m_model.getOriginId() );
+	LOG_INFO("    Origin   : " + m_model.getOriginId());
 
 	if (m_controllingClient)
 	{
@@ -801,10 +1016,22 @@ SPELLipcMessage SPELLexecutor::executorLogin( const SPELLipcMessage& msg )
 	}
 	else
 	{
-		LOG_WARN("    No controlling client!");
+		if (m_clientConnection == CLI_BACKGROUND)
+		{
+			LOG_WARN("    Executor in background!");
+			response.set( MessageField::FIELD_GUI_CONTROL, "<BACKGROUND>" );
+			response.set( MessageField::FIELD_GUI_CONTROL_HOST, "" );
+		}
+		else
+		{
+			LOG_WARN("    No controlling client!");
+		}
 	}
-	// The response will be deleted by IPC layer!
 
+	// Get the context configuration from the login parameters
+	SPELLcontext::instance().fillExecutorDefaults(response);
+
+    // The response will be deleted by IPC layer!
 	if (m_reconnecting)
 	{
 		// Attach the process manager to the executor process
@@ -820,7 +1047,6 @@ SPELLipcMessage SPELLexecutor::executorLogin( const SPELLipcMessage& msg )
 		if (!resp.isVoid() && resp.getType() != MSG_TYPE_ERROR )
 		{
 			std::string statusStr = resp.get( MessageField::FIELD_EXEC_STATUS );
-			LOG_INFO("Executor status changed: " + statusStr );
 			SPELLexecutorStatus st = SPELLdataHelper::stringToExecutorStatus( statusStr );
 			if (st == STATUS_ERROR )
 			{
@@ -862,7 +1088,6 @@ void SPELLexecutor::executorNotification( const SPELLipcMessage& msg )
 		if (dataType == MessageValue::DATA_TYPE_STATUS)
 		{
 			std::string statusStr = msg.get( MessageField::FIELD_EXEC_STATUS );
-			LOG_INFO("Executor status changed: " + statusStr );
 
 			SPELLexecutorStatus st = SPELLdataHelper::stringToExecutorStatus( statusStr );
 			if (st == STATUS_ERROR )
@@ -881,6 +1106,32 @@ void SPELLexecutor::executorNotification( const SPELLipcMessage& msg )
 			{
 				executorStatusChanged( st );
 			}
+		}
+		else if (dataType == MessageValue::DATA_TYPE_LINE)
+		{
+			std::string id = msg.get( MessageField::FIELD_STAGE_ID );
+			std::string tl = msg.get( MessageField::FIELD_STAGE_TL );
+
+			getModel().setStack(msg.get( MessageField::FIELD_CSP ), msg.get( MessageField::FIELD_CODE_NAME ) );
+
+			// Force an additional status notification upon line notifications where
+			// the stage title changes
+			if (getModel().getStageId() != id)
+			{
+				getModel().setStage(id,tl);
+				SPELLexecutorOperation op;
+				op.instanceId = m_model.getInstanceId();
+				op.originId = m_model.getOriginId();
+				op.groupId = m_model.getGroupId();
+				op.stageId = id;
+				op.stageTitle = tl;
+				op.type = SPELLexecutorOperation::EXEC_OP_SUMMARY;
+				SPELLcontext::instance().notifyExecutorOperation( op );
+			}
+		}
+		else if (dataType == MessageValue::DATA_TYPE_CALL || dataType == MessageValue::DATA_TYPE_RETURN)
+		{
+			getModel().setStack(msg.get( MessageField::FIELD_CSP ), msg.get( MessageField::FIELD_CODE_NAME ) );
 		}
 		break;
 	}

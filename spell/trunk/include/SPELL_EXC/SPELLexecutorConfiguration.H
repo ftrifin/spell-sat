@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor configuration parameters
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -74,8 +74,21 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		~SPELLexecutorConfig();
 
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLexecutorConfig( const SPELLexecutorConfig& refConfig );
+
+
+
     // STATIC ////////////////////////////////////////////////////////////////
     // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Operator= Overload
+		**////////////////////////////////////////////////////////////////////
+		SPELLexecutorConfig& operator=( SPELLexecutorConfig& refConfig );
+
 
 		//////////////////////////////////////////////////////////////////////
 		/** Reset values to defaults.
@@ -87,7 +100,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		const bool getRunInto() const {
+		const bool isRunInto() const {
 			return m_runInto;
 		};
 
@@ -96,7 +109,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		const bool getByStep() const {
+		const bool isByStep() const {
 			return m_byStep;
 		};
 
@@ -105,7 +118,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		const bool getBrowsableLib() const {
+		const bool isBrowsableLib() const {
 			return m_browsableLib;
 		};
 
@@ -119,11 +132,20 @@ public: //--------------------------------------------------------------------
 		};
 
 		//////////////////////////////////////////////////////////////////////
+		/** Obtain the execution delay value.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const int getPromptWarningDelay() const {
+			return m_promptWarningDelay;
+		};
+
+		//////////////////////////////////////////////////////////////////////
 		/** Obtain the automatic flag value.
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		const bool getAutomatic() const {
+		const bool isAutomatic() const {
 			return m_automatic;
 		};
 
@@ -132,7 +154,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		const bool getVisible() const {
+		const bool isVisible() const {
 			return m_visible;
 		};
 
@@ -141,9 +163,10 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		const bool getBlocking() const {
+		const bool isBlocking() const {
 			return m_blocking;
 		};
+
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the executor arguments.
@@ -155,11 +178,38 @@ public: //--------------------------------------------------------------------
 		};
 
 		//////////////////////////////////////////////////////////////////////
+		/** Obtain the parent executor.
+		 *
+		 * \returns The parent executor id
+		**////////////////////////////////////////////////////////////////////
+		const std::string getParentProcId() const {
+			return m_parentProcId;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the group id
+		 *
+		 * \returns The group id
+		**////////////////////////////////////////////////////////////////////
+		const std::string getGroupId() const {
+			return m_groupId;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the origin id
+		 *
+		 * \returns The origin id
+		**////////////////////////////////////////////////////////////////////
+		const std::string getOriginId() const {
+			return m_originId;
+		};
+
+		//////////////////////////////////////////////////////////////////////
 		/** Obtain the force TC confirmation flag
 		 *
 		 * \returns The flag value
 		**////////////////////////////////////////////////////////////////////
-		bool getForceTcConfirm() const {
+		bool isForceTcConfirm() const {
 			return m_forceTcConfirm;
 		};
 
@@ -195,9 +245,10 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The status.
 		**////////////////////////////////////////////////////////////////////
-		const bool getWatchEnabled() const {
+		const bool isWatchEnabled() const {
 			return m_watchVariables;
 		};
+
 
 		//////////////////////////////////////////////////////////////////////
 		/** Set the run-into flag.
@@ -233,6 +284,15 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setExecDelay( const int delay ) {
 			m_execDelay = delay;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the prompt warning delay.
+		 *
+		 * \param delay IN: the delay to be used.
+		**////////////////////////////////////////////////////////////////////
+		void setPromptWarningDelay( const int delay ) {
+			m_promptWarningDelay = delay;
 		};
 
 		//////////////////////////////////////////////////////////////////////
@@ -272,6 +332,31 @@ public: //--------------------------------------------------------------------
 		};
 
 		//////////////////////////////////////////////////////////////////////
+		/** Set the browsable lib flag.
+		 *
+		 * \param enabled IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setParentProcId( const std::string& procId ) {
+			m_parentProcId = procId;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the group identifier
+		 *
+		**////////////////////////////////////////////////////////////////////
+		void setGroupId( const std::string& groupId ) {
+			m_groupId = groupId;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the origin identifier
+		 *
+		**////////////////////////////////////////////////////////////////////
+		void setOriginId( const std::string& originId ) {
+			m_originId = originId;
+		};
+
+		//////////////////////////////////////////////////////////////////////
 		/** Set the force TC confirmation flag
 		 *
 		 * \param force IN: the flag
@@ -296,23 +381,108 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setSaveStateMode( const std::string& saveModeStr )
 		{
-			if (saveModeStr == ExecutorConstants::SAVE_ON_LINE)
-			{
-				m_saveStateMode = MODE_ON_LINE;
-			}
-			else if (saveModeStr == ExecutorConstants::SAVE_ON_STEP)
-			{
-				m_saveStateMode = MODE_ON_STEP;
-			}
-			else if (saveModeStr == ExecutorConstants::SAVE_ON_DEMAND)
-			{
-				m_saveStateMode = MODE_ON_HOLD;
-			}
-			else
-			{
-				m_saveStateMode = MODE_UNINIT;
-			}
+			m_saveStateMode = StringToWorkingMode(saveModeStr);
 		}
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the controlling client key if any.
+		 *
+		 * \returns the controlling client.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getControlClient() const {
+			return m_controlClient;
+		};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the controlling client key
+		 *
+		 * \param ctrlGui IN: Control client key
+		**////////////////////////////////////////////////////////////////////
+		void setControlClient( std::string ctrlKey ) {
+			m_controlClient = ctrlKey;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if there is controlling client
+		**////////////////////////////////////////////////////////////////////
+		bool hasControlClient() {
+			return (m_controlClient != "");
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the Control Host.
+		 *
+		 * \returns The Control Houst.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getControlHost() const {
+			return m_controlHost;
+		};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set Control Host
+		 *
+		 * \param ctrlHost IN: Control Host
+		**////////////////////////////////////////////////////////////////////
+		void setControlHost( std::string ctrlHost ) {
+			m_controlHost = ctrlHost;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the procedure headless flag
+		 *
+		 * \returns True if the procedure will run in headless mode
+		**////////////////////////////////////////////////////////////////////
+		bool isHeadless() const {
+			return m_headless;
+		};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the procedure headless flag
+		 *
+		 * \param Headless IN: Headless flag
+		**////////////////////////////////////////////////////////////////////
+		void setHeadless(bool headless) {
+			m_headless = headless;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get Max verbosity
+		 *
+		 * \returns int Max verbosity
+		**////////////////////////////////////////////////////////////////////
+		const int getMaxVerbosity() const {
+			return m_maxVerbosity;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set Max Verbosity
+		 *
+		 * \param maxVerbosity IN: Max Verbosity
+		**////////////////////////////////////////////////////////////////////
+		void setMaxVerbosity( int maxVerbosity ) {
+			m_maxVerbosity = maxVerbosity;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get context name
+		 *
+		 * \returns the context name
+		**////////////////////////////////////////////////////////////////////
+		const std::string getContextName() const {
+			return m_contextName;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set context name
+		 *
+		 * \param name IN: the context name
+		**////////////////////////////////////////////////////////////////////
+		void setContextName( const std::string& name ) {
+			m_contextName = name;
+		};
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -333,10 +503,18 @@ private: //-------------------------------------------------------------------
     // LIFECYCLE /////////////////////////////////////////////////////////////
     // METHODS ///////////////////////////////////////////////////////////////
     // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** Parent procedure if any */
+		std::string					 m_parentProcId;
+		/** Group ID if any, empty if there is no parent procedure */
+		std::string					 m_groupId;
+		/** Origin ID if any */
+		std::string					 m_originId;
 		/** True if By-Step feature is enabled */
 		bool                         m_byStep;
 		/** Holds the execution time delay */
 		int                          m_execDelay;
+		/** Holds the prompt warning delay */
+		int							 m_promptWarningDelay;
 		/** True if the Run-Into feature is enabled */
 		bool                         m_runInto;
 		/** True if the user library is browsable */
@@ -357,6 +535,16 @@ private: //-------------------------------------------------------------------
 		bool                         m_watchVariables;
 		/** True if all TCs should be confirmed */
 		bool                         m_forceTcConfirm;
+		/** Identifier of the controlling client if any */
+		std::string 				m_controlClient;
+		/** Host of the controlling GUI */
+		std::string 				m_controlHost;
+		/** Headless (background) flag */
+		bool 						m_headless;
+		/** Max Verbosity */
+		int							m_maxVerbosity;
+		/** Context name */
+		std::string                 m_contextName;
 };
 
 /*@}*/

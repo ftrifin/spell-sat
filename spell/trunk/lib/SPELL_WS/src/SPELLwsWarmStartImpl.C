@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the warm start mechanism controller
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -112,11 +112,11 @@ void SPELLwsWarmStartImpl::cleanup()
 //=============================================================================
 // METHOD    : SPELLwsWarmStartImpl::notifyCall()
 //=============================================================================
-void SPELLwsWarmStartImpl::notifyCall( PyFrameObject* newFrame )
+void SPELLwsWarmStartImpl::notifyCall( const std::string& id, PyFrameObject* newFrame )
 {
-	DEBUG("[WS] Notify call on " + PYCREPR(newFrame) + ", recursion depth " + ISTR(m_recursionDepth));
+	DEBUG("[WS] Notify call on " + PYCREPR(newFrame) + ", recursion depth " + ISTR(m_recursionDepth) +", id=" + id);
 	// Add the frame to the list of frames
-	addFrame( newFrame );
+	addFrame( id, newFrame );
 }
 
 //=============================================================================
@@ -195,6 +195,7 @@ void SPELLwsWarmStartImpl::saveState()
 	unsigned int frameCount = m_frames.size();
 	for( unsigned int index = 0; index < frameCount; index++)
 	{
+		m_storage->storeObject(SSTRPY(m_frames[index]->getCodeId()));
 		m_frames[index]->saveState();
 	}
 
@@ -255,7 +256,8 @@ PyFrameObject* SPELLwsWarmStartImpl::restoreState()
 		{
 			// In recursion depth zero, use the original frame
 			// to copy the globals from
-			m_topFrame = new SPELLwsFrame( m_startup, m_frames.size(), prevFrame );
+			std::string frameId = PYSSTR(m_storage->loadObject());
+			m_topFrame = new SPELLwsFrame( frameId, m_startup, m_frames.size(), prevFrame );
 			m_frames.push_back(m_topFrame);
 			// For the head frame, store its address in the interpreter thread state
 			if (m_recursionDepth == 0)
@@ -337,7 +339,7 @@ PyFrameObject* SPELLwsWarmStartImpl::fixState()
 	for( unsigned int index = 0; index < frameCount; index++)
 	{
 		bool isHead = (index == (frameCount-1));
-		DEBUG("[WS] Fix state on frame index " + ISTR(index));
+		DEBUG("[WS] Fix state on frame index " + ISTR(index) + " frame=" + PYCREPR(m_frames[index]));
 		m_topFrame = m_frames[index];
 		m_topFrame->fixState(newState, isHead);
 	}
@@ -349,14 +351,14 @@ PyFrameObject* SPELLwsWarmStartImpl::fixState()
 //=============================================================================
 // METHOD    : SPELLwsWarmStartImpl::addFrame()
 //=============================================================================
-void SPELLwsWarmStartImpl::addFrame( PyFrameObject* frame )
+void SPELLwsWarmStartImpl::addFrame( const std::string& id, PyFrameObject* frame )
 {
 	DEBUG("[WS] Adding new frame");
 	// Dont actually add it if it is the head (this happens after fixing the state)
 	if ( m_topFrame == NULL || frame != m_topFrame->getFrameObject() )
 	{
 		DEBUG("[WS] Adding frame manager for " + PYCREPR(frame));
-		m_topFrame = new SPELLwsFrame( m_startup, m_frames.size(), frame );
+		m_topFrame = new SPELLwsFrame( id, m_startup, m_frames.size(), frame );
 		m_frames.push_back(m_topFrame);
 		m_recursionDepth++;
 	}
@@ -388,7 +390,6 @@ void SPELLwsWarmStartImpl::removeTopFrame()
 void SPELLwsWarmStartImpl::setGlobalsFilter( PyObject* filterKeys )
 {
 	s_filterKeys = PySet_New( filterKeys );
-	DEBUG("WS FILTER KEYS " + ISTR(PySet_Size(s_filterKeys)));
 }
 
 //=============================================================================

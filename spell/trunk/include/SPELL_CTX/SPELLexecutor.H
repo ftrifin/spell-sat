@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor manager and controller
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -32,7 +32,7 @@
 #include "SPELL_CTX/SPELLexecutorIPC.H"
 #include "SPELL_CTX/SPELLexecutorModel.H"
 #include "SPELL_CTX/SPELLexecutorListener.H"
-#include "SPELL_CTX/SPELLexecutorConfiguration.H"
+#include "SPELL_CTX/SPELLexecutorStartupParams.H"
 #include "SPELL_CTX/SPELLclient.H"
 // Project includes ----------------------------------------------------------
 #include "SPELL_PRC/SPELLprocessManager.H"
@@ -67,7 +67,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Constructor.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutor( const SPELLexecutorConfiguration& config, SPELLclient* controllingClient );
+		SPELLexecutor( const SPELLexecutorStartupParams& config, SPELLclient* controllingClient );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
@@ -151,9 +151,19 @@ public: //--------------------------------------------------------------------
 	    void setControllingClient( SPELLclient* client );
 
 	    //////////////////////////////////////////////////////////////////////
+	    /** Set the procedure to headless (background) mode
+	    **////////////////////////////////////////////////////////////////////
+	    void setBackground();
+
+	    //////////////////////////////////////////////////////////////////////
+	    /** Check whether the procedure is in headless (background) mode
+	    **////////////////////////////////////////////////////////////////////
+	    bool isBackground() { return m_clientConnection == CLI_BACKGROUND; };
+
+	    //////////////////////////////////////////////////////////////////////
 	    /** Remove the controlling client
 	    **////////////////////////////////////////////////////////////////////
-	    void removeControllingClient();
+	    void removeControllingClient( bool clientLost );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check if it has controlling client
@@ -183,12 +193,12 @@ public: //--------------------------------------------------------------------
 	    //////////////////////////////////////////////////////////////////////
 	    /** Register executor notifier for monitoring mode
 	    **////////////////////////////////////////////////////////////////////
-	    void registerNotifier( SPELLexecutorListener* listener );
+	    void registerNotifier( std::string id, SPELLexecutorListener* listener );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Deregister executor notifier
 	    **////////////////////////////////////////////////////////////////////
-	    void deregisterNotifier( SPELLexecutorListener* listener );
+	    void deregisterNotifier( std::string id );
 
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -237,6 +247,11 @@ protected: //-----------------------------------------------------------------
 	    **////////////////////////////////////////////////////////////////////
 	    SPELLipcMessage forwardRequestToClient( const SPELLipcMessage& msg );
 
+	    //////////////////////////////////////////////////////////////////////
+	    /** Force an executor pause
+	    **////////////////////////////////////////////////////////////////////
+	    void forcePause();
+
 		//====================================================================
 		// INTERNAL PROCESS CONTROL METHODS
 		//====================================================================
@@ -279,6 +294,16 @@ private: //-------------------------------------------------------------------
 	// EXCEPTIONS ////////////////////////////////////////////////////////////
 	// ENUMS /////////////////////////////////////////////////////////////////
 	// TYPES /////////////////////////////////////////////////////////////////
+
+		typedef enum ClientConnection_
+		{
+			CLI_CONNECTED,
+			CLI_NO_CLIENT,
+			CLI_ERROR,
+			CLI_BACKGROUND
+
+		} ClientConnection;
+
 	// STATIC ////////////////////////////////////////////////////////////////
 	// LIFECYCLE /////////////////////////////////////////////////////////////
 	// METHODS ///////////////////////////////////////////////////////////////
@@ -291,12 +316,16 @@ private: //-------------------------------------------------------------------
 		bool m_reconnecting;
 		/** True if the executor logged in */
 		bool m_loggedIn;
+		/** Counts number of notifications not acknlowledged */
+		unsigned int m_notAckNotifications;
 		/** Holds the procedure information */
 		SPELLexecutorModel m_model;
 		/** Holds the IPC executor proxy */
 		SPELLexecutorIPC m_ipc;
 		/** Holds the controlling client */
 		SPELLclient* m_controllingClient;
+		/** Mode of the controlling client if any  */
+		ClientConnection m_clientConnection;
 		/** Holds the process status */
 		SPELLprocessStatus m_processStatus;
 		/** Holds the executor status */

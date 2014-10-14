@@ -6,7 +6,7 @@
 //
 // DATE      : Oct 28, 2010
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -90,7 +90,7 @@ public interface ISyntaxFormatter
 	 * @param layout
 	 *            The layout containing the text to be formatted.
 	 **************************************************************************/
-	public void applyScheme(TextLayout layout, int rowIndex, boolean highlighted);
+	public void applyScheme(TextLayout layout, int rowIndex, boolean selected, boolean highlighted);
 
 	/***************************************************************************
 	 * Apply the syntax scheme to the given text layout

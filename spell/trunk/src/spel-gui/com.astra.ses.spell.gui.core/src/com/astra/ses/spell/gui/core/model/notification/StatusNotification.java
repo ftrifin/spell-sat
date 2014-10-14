@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,7 +48,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.model.notification;
 
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * @brief Data structure used for status notifications.
@@ -56,21 +56,6 @@ import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
  ******************************************************************************/
 public class StatusNotification extends NotificationData
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Holds the procedure status */
 	private ExecutorStatus	m_status;
 

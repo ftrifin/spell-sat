@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -189,7 +189,7 @@ public class SyntaxParser implements ISyntaxParser
 	 * (org.eclipse.swt.graphics.TextLayout, int)
 	 */
 	@Override
-	public void parseSyntax(TextLayout layout, int rowIndex, boolean highlighted )
+	public void parseSyntax(TextLayout layout, int rowIndex, boolean selected, boolean highlighted )
 	{
 		// Obtain the text to parse
 		String text = layout.getText();
@@ -197,9 +197,21 @@ public class SyntaxParser implements ISyntaxParser
 		if (text == null || text.length() == 0)
 			return;
 		// Default style
-		layout.setStyle(m_scheme.getDefaultStyle(), 0, text.length());
 		
-		if (highlighted) return;
+		if (selected)
+		{
+			layout.setStyle(m_scheme.getSelectedStyle(), 0, text.length());
+			return;
+		}
+		else if (highlighted)
+		{
+			layout.setStyle(m_scheme.getHighlightedStyle(), 0, text.length());
+			return;
+		}
+		else
+		{
+			layout.setStyle(m_scheme.getDefaultStyle(), 0, text.length());
+		}
 
 		// Create a source for the tokenizer with the text
 		StringSource source = new StringSource(text);
@@ -544,7 +556,8 @@ public class SyntaxParser implements ISyntaxParser
 			{
 				if (isCriticalFunction(word))
 				{
-					toApply = m_scheme.getStyle(TokenTypes.CRITICAL);
+					//toApply = m_scheme.getStyle(TokenTypes.CRITICAL);
+					toApply = m_scheme.getStyle(TokenTypes.SPELL);
 				}
 				else
 				{

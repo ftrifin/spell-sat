@@ -5,7 +5,7 @@
 // DESCRIPTION: Call stack model.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -119,6 +119,14 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcallstackIF.
 		**////////////////////////////////////////////////////////////////////
+		void setRecoveryMode()
+		{
+			m_recoveryMode = true;
+		}
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLcallstackIF.
+		**////////////////////////////////////////////////////////////////////
 		void setStage( const std::string& id, const std::string& title );
 
 		//////////////////////////////////////////////////////////////////////
@@ -191,6 +199,11 @@ private: //-------------------------------------------------------------------
     // METHODS ///////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////
+		/** Recalculate full stack
+		**////////////////////////////////////////////////////////////////////
+		void rebuildFullStack();
+
+		//////////////////////////////////////////////////////////////////////
 		/** Clear all the stack information.
 		**////////////////////////////////////////////////////////////////////
 		void clearStack();
@@ -210,6 +223,8 @@ private: //-------------------------------------------------------------------
 		bool				   m_notify;
 		/** True if in error state */
 		bool                   m_errorState;
+		/** True if doing error recovery */
+		bool                   m_recoveryMode;
 		/** Step over mode */
 		SPELLstepOverMode      m_soMode;
 		/** Previous step over mode, required for transient modes */
@@ -220,8 +235,10 @@ private: //-------------------------------------------------------------------
 		std::string            m_stageTitle;
 		/** Holds the current stack string */
 		std::string            m_stack;
-		/** Holds the full stack string */
+		/** Holds the full stack */
 		std::vector<std::string> m_fullStack;
+		/** Holds the full stack string */
+		std::string            m_fullStackString;
 		/** Holds the current line number */
 		unsigned int           m_currentLine;
 		/** Holds the current code name string */
