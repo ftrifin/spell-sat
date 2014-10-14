@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,6 +61,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
@@ -69,30 +70,29 @@ import com.astra.ses.spell.gui.Activator;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.DisplayData;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.utils.Logger;
+import com.astra.ses.spell.gui.interfaces.IPresentationPanel;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
 import com.astra.ses.spell.gui.model.commands.ToggleByStep;
 import com.astra.ses.spell.gui.model.commands.ToggleRunInto;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 import com.astra.ses.spell.gui.preferences.keys.GuiColorKey;
-import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
 import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeModel;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
-import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
-import com.astra.ses.spell.gui.views.ProcedureView;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * @brief Composite which contains the set of controls used for changing pages
  * @date 09/10/07
  ******************************************************************************/
-public class PresentationPanel extends Composite implements IExecutionListener
+public class PresentationPanel extends Composite implements IPresentationPanel
 {
 	private static final String CMD_ID = "com.astra.ses.spell.gui.views.controls.CommandId";
 	private static final String PRESENTATION_INDEX = "com.astra.ses.spell.gui.views.controls.PresentationIndex";
@@ -100,7 +100,7 @@ public class PresentationPanel extends Composite implements IExecutionListener
 	
 	private static IConfigurationManager s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 
-	private ProcedureView m_view;
+	private IProcedureView m_view;
 	private Label m_stageDisplay;
 	private String m_currentStage;
 	private Text m_procDisplay;
@@ -133,7 +133,7 @@ public class PresentationPanel extends Composite implements IExecutionListener
 	/***************************************************************************
 	 * Constructor.
 	 **************************************************************************/
-	public PresentationPanel(ProcedureView view, IProcedure model, Composite parent, int style, int numPresentations)
+	public PresentationPanel(IProcedureView view, IProcedure model, Composite parent, int style, int numPresentations)
 	{
 		super(parent, style);
 
@@ -180,6 +180,19 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		setProcedureStatus(ExecutorStatus.UNINIT);
 		
 		m_model.getExecutionManager().addListener(this);
+		
+		//Set tab order
+		Control[] tabOrder = { leftBase };
+		this.setTabList(tabOrder);
+	}
+
+	/***************************************************************************
+	 * Get the panel control
+	 **************************************************************************/
+	@Override
+	public Composite getControl()
+	{
+		return this;
 	}
 
 	/***************************************************************************
@@ -250,6 +263,11 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		m_tcConfirm.setLayoutData(tg);
 
 		resetStage();
+		
+		//Set tab order
+		Control[] tabOrder = new Control[] {m_autoScroll, m_runInto, m_byStep };
+		stagePanel.setTabList(tabOrder);
+		 
 	}
 
 	/***************************************************************************
@@ -323,7 +341,7 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		GridData mg = new GridData();
 		mg.widthHint = 70;
 		m_modeDisplay.setLayoutData(mg);
-		if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
+		if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL))
 		{
 			m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_GREEN) );
 			m_modeDisplay.setText( "CTRL" );
@@ -333,21 +351,27 @@ public class PresentationPanel extends Composite implements IExecutionListener
 			m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_CYAN) );
 			m_modeDisplay.setText( "MON" );
 		}
+		
+		//Set tab order
+		Control[] tabOrder = new Control[] {m_presentationsPanel, m_btnIncrFont, m_btnDecrFont };
+		parent.setTabList(tabOrder);
 	}
 
-	/***************************************************************************
-	 * Dispose
-	 **************************************************************************/
-	public void dispose()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#dispose()
+     */
+	@Override
+    public void dispose()
 	{
 		m_model.getExecutionManager().removeListener(this);
 		super.dispose();
 	}
 	
-	/***************************************************************************
-	 * Add a presentation button
-	 **************************************************************************/
-	public void addPresentation(String title, String desc, Image icon, int pageIndex)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#addPresentation(java.lang.String, java.lang.String, org.eclipse.swt.graphics.Image, int)
+     */
+	@Override
+    public void addPresentation(String title, String desc, Image icon, int pageIndex)
 	{
 		Logger.debug("Added presentation '" + title + "' with index " + pageIndex, Level.GUI, this);
 		Button btn = new Button(m_presentationsPanel, SWT.TOGGLE);
@@ -367,13 +391,21 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		m_presentationButton.add(btn);
 	}
 
-	/***************************************************************************
-	 * Display a message
-	 **************************************************************************/
-	public void displayMessage(String message, Severity sev)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#displayMessage(java.lang.String, com.astra.ses.spell.gui.core.model.types.Severity)
+     */
+	@Override
+    public void displayMessage(String message, Severity sev)
 	{
-		String elements[] = message.split("\n");
-		m_procDisplay.setText(elements[elements.length - 1]);
+		if (message.contains("\n"))
+		{
+			String elements[] = message.split("\n");
+			m_procDisplay.setText(elements[0] + "...");
+		}
+		else
+		{
+			m_procDisplay.setText(message);
+		}
 		if (sev == Severity.INFO)
 		{
 			m_procDisplay.setBackground(m_okColor);
@@ -388,35 +420,38 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		}
 	}
 
-	/***************************************************************************
-	 * Reset all controls
-	 **************************************************************************/
-	public void reset()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#reset()
+     */
+	@Override
+    public void reset()
 	{
 		m_procDisplay.setText("");
 		m_procDisplay.setBackground(m_okColor);
 		resetStage();
 	}
 
-	/***************************************************************************
-	 * Reset all controls
-	 **************************************************************************/
-	public void setEnabled(boolean enabled)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#setEnabled(boolean)
+     */
+	@Override
+    public void setEnabled(boolean enabled)
 	{
 		m_byStep.setEnabled(enabled);
 		m_runInto.setEnabled(enabled);
 		m_autoScroll.setEnabled(enabled);
 		m_tcConfirm.setEnabled(enabled);
-		if (enabled && m_clientMode == ClientMode.CONTROLLING)
+		if (enabled && m_clientMode == ClientMode.CONTROL)
 		{
 			setProcedureStatus(m_currentStatus);
 		}
 	}
 
-	/***************************************************************************
-	 * Set current stage
-	 **************************************************************************/
-	public void setStage(String id, String title)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#setStage(java.lang.String, java.lang.String)
+     */
+	@Override
+    public void setStage(String id, String title)
 	{
 		if (id != null && !id.isEmpty())
 		{
@@ -432,19 +467,21 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		}
 	}
 
-	/***************************************************************************
-	 * Reset the current stage
-	 **************************************************************************/
-	public void resetStage()
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#resetStage()
+     */
+	@Override
+    public void resetStage()
 	{
 		m_currentStage = null;
 		m_stageDisplay.setText("");
 	}
 
-	/***************************************************************************
-	 * Select the given presentation
-	 **************************************************************************/
-	public void selectPresentation(int index)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#selectPresentation(int)
+     */
+	@Override
+    public void selectPresentation(int index)
 	{
 		// Ensure the button is enabled (it wont be in case of programmatic call
 		// to this method)
@@ -459,14 +496,15 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		m_view.showPresentation(index);
 	}
 
-	/***************************************************************************
-	 * Callback procedure model configuration changes
-	 **************************************************************************/
-	public void notifyModelConfigured(IProcedure model)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#notifyModelConfigured(com.astra.ses.spell.gui.procs.interfaces.model.IProcedure)
+     */
+	@Override
+    public void notifyModelConfigured(IProcedure model)
 	{
 		IExecutionInformation info = model.getRuntimeInformation();
-		IStepOverControl ctrl = model.getController().getStepOverControl();
-		m_runInto.setSelection(ctrl.getMode().equals(StepOverMode.STEP_INTO_ALWAYS));
+		boolean isRunInto = model.getExecutionManager().isRunInto();
+		m_runInto.setSelection(isRunInto);
 		m_byStep.setSelection(info.isStepByStep());
 		if (info.isForceTcConfirmation())
 		{
@@ -481,29 +519,27 @@ public class PresentationPanel extends Composite implements IExecutionListener
 	}
 		
 
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	public void setClientMode(ClientMode mode)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#setClientMode(com.astra.ses.spell.gui.core.model.types.ClientMode)
+     */
+	@Override
+    public void setClientMode(ClientMode mode)
 	{
 		m_clientMode = mode;
 	}
 
-	/***************************************************************************
-	 * Callback for procedure status change. Depending on the status, some
-	 * buttons are enabled and other are disabled.
-	 * 
-	 * @param status
-	 *            The procedure status
-	 **************************************************************************/
-	public void setProcedureStatus(ExecutorStatus status)
+	/* (non-Javadoc)
+     * @see com.astra.ses.spell.gui.views.controls.IPresentationPanel#setProcedureStatus(com.astra.ses.spell.gui.core.model.types.ExecutorStatus)
+     */
+	@Override
+    public void setProcedureStatus(ExecutorStatus status)
 	{
 		// Procedure control buttons enablement
 		m_currentStatus = status;
 		if ((m_clientMode != null) && (!isDisposed()))
 		{
 			boolean controlling = false;
-			controlling = m_clientMode.equals(ClientMode.CONTROLLING);
+			controlling = m_clientMode.equals(ClientMode.CONTROL);
 			// Code execution tracking buttons enablement
 			boolean trackingEnabled = false;
 			switch (m_currentStatus)
@@ -525,12 +561,6 @@ public class PresentationPanel extends Composite implements IExecutionListener
 	}
 
 	@Override
-    public void onCodeChanged() {}
-
-	@Override
-    public void onLineChanged(ICodeLine line) {}
-
-	@Override
     public void onItemsChanged(List<ICodeLine> lines) {}
 
 	@Override
@@ -545,13 +575,13 @@ public class PresentationPanel extends Composite implements IExecutionListener
 				{
 					if (delaySec > 2 && delaySec < 10)
 					{
-						m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_YELLOW));
+						//m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_YELLOW));
 						m_modeDisplay.setToolTipText("Processing delay is " + delaySec + " seconds");
 						m_modeDisplay.setMessage("Processing delay is " + delaySec + " seconds");
 					}
 					else if (delaySec>10)
 					{
-						m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
+						//m_modeDisplay.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
 						m_modeDisplay.setToolTipText("Processing delay is " + delaySec + " seconds");
 						m_modeDisplay.setMessage("Processing delay is " + delaySec + " seconds");
 					}
@@ -560,14 +590,14 @@ public class PresentationPanel extends Composite implements IExecutionListener
 						m_modeDisplay.setToolTipText("No relevant processing delay");
 						m_modeDisplay.setMessage("No relevant processing delay");
 						
-						if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING))
-						{
-							m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_GREEN) );
-						}
-						else
-						{
-							m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_CYAN) );
-						}
+//						if (m_model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL))
+//						{
+//							m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_GREEN) );
+//						}
+//						else
+//						{
+//							m_modeDisplay.setBackground( Display.getDefault().getSystemColor(SWT.COLOR_CYAN) );
+//						}
 					}
 					m_modeDisplay.redraw();
 				}
@@ -575,4 +605,12 @@ public class PresentationPanel extends Composite implements IExecutionListener
 		}
     }
 
+	@Override
+    public void onCodeChanged(ICodeModel model) {} 
+
+	@Override
+    public void onLineChanged(ICodeLine line) {}
+
+	@Override
+    public void onLinesChanged(List<ICodeLine> lines) {}
 }

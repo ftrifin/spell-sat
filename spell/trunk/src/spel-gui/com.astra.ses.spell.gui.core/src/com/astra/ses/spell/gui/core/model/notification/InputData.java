@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -64,12 +64,13 @@ public class InputData extends NotificationData
 	private boolean m_error;
 	private Vector<String> m_options;
 	private Vector<String> m_expected;
+	private String m_defaultAnswer;
 	private PromptDisplayType m_promptDisplayType;
 	private boolean m_justNotification;
 	private Scope m_scope;
 	private SPELLmessage m_promptMessage;
 
-	public InputData(SPELLmessage msg, String procId, String text, Scope scope, boolean numeric, boolean justNotification)
+	public InputData(SPELLmessage msg, String procId, String text, Scope scope, String defaultAnswer, boolean numeric, boolean justNotification)
 	{
 		super(procId, "");
 		m_text = text;
@@ -84,10 +85,11 @@ public class InputData extends NotificationData
 		m_justNotification = justNotification;
 		m_scope = scope;
 		m_promptMessage = msg;
+		m_defaultAnswer = defaultAnswer;
 	}
 
 	public InputData(SPELLmessage msg, String procId, String text, Scope scope, Vector<String> options, Vector<String> expected,
-	        boolean justNotification, PromptDisplayType type)
+			String defaultAnswer, boolean justNotification, PromptDisplayType type)
 	{
 		super(procId, "");
 		m_text = text;
@@ -102,6 +104,7 @@ public class InputData extends NotificationData
 		m_justNotification = justNotification;
 		m_scope = scope;
 		m_promptMessage = msg;
+		m_defaultAnswer = defaultAnswer;
 	}
 
 	/***************************************************************************
@@ -132,6 +135,16 @@ public class InputData extends NotificationData
 	public Scope getScope()
 	{
 		return m_scope;
+	}
+
+	/***************************************************************************
+	 * Obtain the default answer if any
+	 * 
+	 * @return The prompt scope
+	 **************************************************************************/
+	public String getDefault()
+	{
+		return m_defaultAnswer;
 	}
 
 	/***************************************************************************

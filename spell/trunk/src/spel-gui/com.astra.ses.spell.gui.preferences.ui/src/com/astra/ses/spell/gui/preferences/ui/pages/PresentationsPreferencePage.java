@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -63,9 +63,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 
-import com.astra.ses.spell.gui.preferences.Activator;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
-import com.astra.ses.spell.gui.preferences.ui.Fragment;
 
 public class PresentationsPreferencePage extends BasicPreferencesPage
 {
@@ -108,8 +106,7 @@ public class PresentationsPreferencePage extends BasicPreferencesPage
 		GridData expandButton = new GridData(GridData.FILL_HORIZONTAL);
 		expandButton.verticalAlignment = SWT.TOP;
 
-		ImageDescriptor imgDes = Activator.imageDescriptorFromPlugin(
-		        Fragment.FRAGMENT_UI, "icons/arrow_up.png");
+		ImageDescriptor imgDes = Resources.getImage(Resources.IMG_ARROW_UP);
 		final Button up = new Button(container, SWT.PUSH);
 		up.setText("UP");
 		up.setImage(imgDes.createImage());
@@ -125,24 +122,21 @@ public class PresentationsPreferencePage extends BasicPreferencesPage
 		/*
 		 * Rest of the list control buttons
 		 */
-		imgDes = Activator.imageDescriptorFromPlugin(Fragment.FRAGMENT_UI,
-		        "icons/arrow_down.png");
+		imgDes = Resources.getImage(Resources.IMG_ARROW_DOWN);
 		final Button down = new Button(container, SWT.PUSH);
 		down.setText("DOWN");
 		down.setImage(imgDes.createImage());
 		down.setEnabled(false);
 		down.setLayoutData(GridDataFactory.copyData(expandButton));
 
-		imgDes = Activator.imageDescriptorFromPlugin(Fragment.FRAGMENT_UI,
-		        "icons/arrow_right.png");
+		imgDes = Resources.getImage(Resources.IMG_ARROW_RIGHT);;
 		final Button disable = new Button(container, SWT.PUSH);
 		disable.setText("Disable");
 		disable.setImage(imgDes.createImage());
 		disable.setEnabled(false);
 		disable.setLayoutData(GridDataFactory.copyData(expandButton));
 
-		imgDes = Activator.imageDescriptorFromPlugin(Fragment.FRAGMENT_UI,
-		        "icons/arrow_left.png");
+		imgDes = Resources.getImage(Resources.IMG_ARROW_LEFT);
 		final Button enable = new Button(container, SWT.PUSH);
 		enable.setText("Enable");
 		enable.setImage(imgDes.createImage());

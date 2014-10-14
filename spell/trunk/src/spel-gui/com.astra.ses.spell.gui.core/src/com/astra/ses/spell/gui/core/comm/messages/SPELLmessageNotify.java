@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -57,8 +57,8 @@ import com.astra.ses.spell.gui.core.model.notification.NotificationData;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
 import com.astra.ses.spell.gui.core.model.types.ExecutionMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ItemType;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class SPELLmessageNotify extends SPELLmessageRequest
 {

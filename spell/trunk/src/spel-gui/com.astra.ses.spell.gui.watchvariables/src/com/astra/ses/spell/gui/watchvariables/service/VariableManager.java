@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-07-30
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,51 +49,39 @@
 package com.astra.ses.spell.gui.watchvariables.service;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Display;
 
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
+import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableListener;
 import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableManager;
-import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableWatchListener;
-import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableWatcher;
+import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableView;
 import com.astra.ses.spell.gui.watchvariables.interfaces.IWatchVariablesProxy;
-import com.astra.ses.spell.gui.watchvariables.notification.ScopeNotification;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableNotification;
-import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 
 /*******************************************************************************
  * 
  * Variable manager
  * 
  ******************************************************************************/
-public class VariableManager implements IVariableManager, IVariableWatcher
+public class VariableManager implements IVariableManager, IVariableListener
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
 
-	// PRIVATE -----------------------------------------------------------------
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private IProcedure						  m_procedure;
 	/** Holds the list of listeners */
-	private ArrayList<IVariableWatchListener> m_listeners;
+	private ArrayList<IVariableView>          m_listeners;
 	/** Holds the list of currently used variables */
-	private VariableData[]					  m_variables;
+	private Map<String,VariableData>     	  m_variables;
 	/** Watch variables proxy */
 	private IWatchVariablesProxy m_proxy = null;
-	/** Current mode */
-	private WhichVariables m_mode;
 
 	/***************************************************************************
 	 * Constructor
@@ -102,25 +90,30 @@ public class VariableManager implements IVariableManager, IVariableWatcher
 	{
 		m_proxy = proxy;
 		m_procedure = proc;
-		m_listeners = new ArrayList<IVariableWatchListener>();
-		m_variables = null;
-		m_proxy.addVariableWatcher(proc.getProcId(), this);
-		m_mode = WhichVariables.AVAILABLE_ALL;
+		m_listeners = new ArrayList<IVariableView>();
+		m_variables = new TreeMap<String,VariableData>();
+		m_proxy.addListener(proc.getProcId(), this);
 	}
-
+	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-	public VariableData[] getVariables()
+	public Map<String,VariableData> getVariables()
 	{
 		return m_variables;
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void updateModel( IProgressMonitor monitor )
 	{
 		if (!checkValidStatus()) return;
 		try
 		{
-			m_variables = m_proxy.retrieveVariables(m_procedure.getProcId(), m_mode, monitor);
+			m_variables = m_proxy.retrieveVariables(m_procedure.getProcId(), monitor);
 		}
 		catch(Exception ex)
 		{
@@ -130,75 +123,63 @@ public class VariableManager implements IVariableManager, IVariableWatcher
 		}
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-	public VariableData registerVariableWatch(String varName, boolean global)
-	{
-		if (!checkValidStatus()) return null;
-
-		VariableData result = null;
-		try
-		{
-			result = m_proxy.registerVariableWatch(m_procedure.getProcId(), varName, global);
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-		}
-		return result;
-	}
-
-	@Override
-	public VariableData getVariable(String varName)
-	{
-		for(VariableData var : m_variables)
-		{
-			if (var.name.equals(varName)) return var;
-		}
-		return null;
-	}
-
-	@Override
-	public void unregisterVariableWatch(String varName, boolean global)
+	public void setEnabled( boolean enable )
 	{
 		if (!checkValidStatus()) return;
-
 		try
 		{
-			m_proxy.unregisterVariableWatch(m_procedure.getProcId(), varName, global);
+			m_proxy.setEnabled(m_procedure.getProcId(), enable);
 		}
-		catch (Exception ex)
+		catch(Exception ex)
 		{
+			MessageDialog.openError(Display.getDefault().getActiveShell(), "Cannot enable or disable the variable watch mechanism", ex.getLocalizedMessage());
 			ex.printStackTrace();
 		}
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-	public void clearAllWatches()
+	public boolean isEnabled()
 	{
-		if (!checkValidStatus()) return;
-
 		try
 		{
-			m_proxy.watchNothing(m_procedure.getProcId());
+			return m_proxy.isEnabled(m_procedure.getProcId());
 		}
-		catch (Exception ex)
+		catch(Exception ex)
 		{
+			MessageDialog.openError(Display.getDefault().getActiveShell(), "Cannot check if the variable watch mechanism is enabled", ex.getLocalizedMessage());
 			ex.printStackTrace();
 		}
+		return false;
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-	public void addWatchListener(IVariableWatchListener listener)
+	public void addListener(IVariableView listener)
 	{
 		m_listeners.add(listener);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-	public void removeWatchListener(IVariableWatchListener listener)
+	public void removeListener(IVariableView listener)
 	{
 		m_listeners.remove(listener);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public boolean changeVariable(String varName, String valueExpression,
 	        boolean global)
@@ -207,7 +188,6 @@ public class VariableManager implements IVariableManager, IVariableWatcher
 		try
 		{
 			m_proxy.changeVariable(m_procedure.getProcId(), varName, valueExpression, global);
-			getVariable(varName).value = valueExpression;
 		}
 		catch (Exception ex)
 		{
@@ -230,9 +210,12 @@ public class VariableManager implements IVariableManager, IVariableWatcher
 		ExecutorStatus st = m_procedure.getRuntimeInformation().getStatus();
 		switch (st)
 		{
-		case FINISHED:
-		case ERROR:
-		case ABORTED:
+		case RUNNING:
+		case WAITING:
+		case LOADED:
+		case RELOADING:
+		case UNINIT:
+		case UNKNOWN:
 			valid = false;
 			break;
 		default:
@@ -242,55 +225,100 @@ public class VariableManager implements IVariableManager, IVariableWatcher
 		return valid;
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void setMode(WhichVariables mode)
+    public void variableChanged(VariableNotification data)
     {
-		m_mode = mode;
-    }
-
-	@Override
-    public void callbackVariableScopeChange(ScopeNotification data)
-    {
-	    notifyVariableScopeChange(data);
-    }
-
-	@Override
-    public void callbackVariableChange(VariableNotification data)
-    {
+		if (m_variables == null) m_variables = new TreeMap<String,VariableData>();
+		List<VariableData> added = new LinkedList<VariableData>();
+		List<VariableData> updated = new LinkedList<VariableData>();
+		List<VariableData> removed = new LinkedList<VariableData>();
+		for(VariableData var : data.getAddedVariables())
+		{
+			m_variables.put(var.getName(),var);
+			added.add(var);
+		}
 		for(VariableData var : data.getChangedVariables())
 		{
-			getVariable(var.type).value = var.type;
-			getVariable(var.value).value = var.value;
+			m_variables.get(var.getName()).updateFrom(var);
+			updated.add(m_variables.get(var.getName()));
 		}
-	    notifyVariableChange(data);
+		for(VariableData var : data.getDeletedVariables())
+		{
+			removed.add(m_variables.remove(var.getName()));
+		}
+	    notifyVariableChange(added,updated,removed);
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void callbackConnectionLost()
+    public void scopeChanged(VariableNotification data)
+    {
+		try
+        {
+			if (m_variables == null)
+			{
+				m_variables = new TreeMap<String,VariableData>();
+			}
+			else
+			{
+				m_variables.clear();
+			}
+			for(VariableData var : data.getChangedVariables())
+			{
+				m_variables.put(var.getName(),var);
+			}
+			notifyScopeChange(data);
+        }
+        catch (Exception e)
+        {
+	        e.printStackTrace();
+        }
+    }
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public void connectionLost()
     {
 	    m_variables = null;
 	    notifyConnectionLost();
     }
 
-	private void notifyVariableScopeChange(ScopeNotification data)
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	private void notifyScopeChange(VariableNotification data)
 	{
-		for (IVariableWatchListener listener : m_listeners)
+		for (IVariableView listener : m_listeners)
 		{
 			listener.scopeChanged(data);
 		}
 	}
 
-	private void notifyVariableChange(VariableNotification data)
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	private void notifyVariableChange( List<VariableData> added, List<VariableData> updated, List<VariableData> removed)
 	{
-		for (IVariableWatchListener listener : m_listeners)
+		for (IVariableView listener : m_listeners)
 		{
-			listener.variableChanged(data);
+			listener.variablesChanged(added,updated,removed);
 		}
 	}
 
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	private void notifyConnectionLost()
 	{
-		for (IVariableWatchListener listener : m_listeners)
+		for (IVariableView listener : m_listeners)
 		{
 			listener.connectionLost();
 		}

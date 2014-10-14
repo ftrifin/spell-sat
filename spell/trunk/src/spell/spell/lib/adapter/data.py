@@ -5,7 +5,7 @@
 ## DESCRIPTION: Hook for the C++ data containers
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -29,7 +29,14 @@
 #*******************************************************************************
 # SPELL Imports
 #*******************************************************************************
-import libSPELL_DTA
+import sys
+_dta_failed = True
+
+try:
+    import libSPELL_DTA
+    _dta_failed=False
+except ImportError,ex:
+    sys.stderr.write("FATAL: unable to import DTA interface\n")
 
 #*******************************************************************************
 # Local Imports
@@ -45,6 +52,10 @@ import libSPELL_DTA
 
 __all__ = ['DataContainer,Var']
 
-DataContainer = libSPELL_DTA.DataContainer
-
-Var = libSPELL_DTA.Var
+if not _dta_failed:
+    global DataContainer,Var
+    DataContainer = libSPELL_DTA.DataContainer
+    Var = libSPELL_DTA.Var
+else:
+    DataContainer = {}
+    Var = {}

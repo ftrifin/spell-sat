@@ -5,7 +5,7 @@
 // DESCRIPTION: Definition of the executor operations
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,7 +29,10 @@
 
 // FILES TO INCLUDE //////////////////////////////////////////////////////////
 // Local includes ------------------------------------------------------------
+#include "SPELL_CTX/SPELLclientMode.H"
+#include "SPELL_EXC/SPELLexecutorStatus.H"
 // Project includes ----------------------------------------------------------
+#include "SPELL_IPC/SPELLipcMessage.H"
 
 /** \addtogroup SPELL_CTX */
 /*@{*/
@@ -44,17 +47,44 @@
  ** \brief
  **
 **////////////////////////////////////////////////////////////////////////////
-typedef enum SPELLexecutorOperation_
+class SPELLexecutorOperation
 {
-	EXEC_OP_OPEN,
-	EXEC_OP_CLOSE,
-	EXEC_OP_KILL,
-	EXEC_OP_ATTACH,
-	EXEC_OP_DETACH,
-	EXEC_OP_STATUS,
-	EXEC_OP_CRASH
-}
-SPELLexecutorOperation;
+public:
+
+	typedef enum Type_
+	{
+		EXEC_OP_OPEN,
+		EXEC_OP_CLOSE,
+		EXEC_OP_KILL,
+		EXEC_OP_ATTACH,
+		EXEC_OP_DETACH,
+		EXEC_OP_STATUS,
+		EXEC_OP_SUMMARY,
+		EXEC_OP_CRASH,
+		EXEC_OP_UNKNOWN
+	}
+	Type;
+
+
+	SPELLexecutorOperation();
+	std::string toString() const;
+	void completeMessage( SPELLipcMessage& msg ) const;
+
+public:
+	std::string instanceId;
+	std::string parentId;
+	std::string groupId;
+	std::string originId;
+	int clientKey;
+	SPELLclientMode clientMode;
+	Type type;
+	SPELLexecutorStatus status;
+	std::string condition;
+	std::string errorMessage;
+	std::string errorReason;
+	std::string stageId;
+	std::string stageTitle;
+};
 
 /*@}*/
 #endif

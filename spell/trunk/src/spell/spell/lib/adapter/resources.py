@@ -5,7 +5,7 @@
 ## DESCRIPTION: Resource management interface
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -179,12 +179,12 @@ class ResourceInterface(Configurable,Interface):
         self.rscCallbacks.append(callbackClass)        
 
     #==========================================================================
-    def _getResourceStatus(self, resource, config = {} ):
+    def _getResourceStatus(self, resourceName, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return None
 
     #==========================================================================
-    def _isResourceOK(self, resource, config = {} ):
+    def _isResourceOK(self, resourceName, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return False
 

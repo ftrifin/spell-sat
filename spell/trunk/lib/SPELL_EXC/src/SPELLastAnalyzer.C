@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the AST analyzer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -117,7 +117,7 @@ void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, un
 		info.maxLineNo = lineno;
 	}
 	// If the line is not new and we have an open par, mark it as multiple
-	else if (node->n_type == LPAR || node->n_type == LSQB )
+	else if (node->n_type == LPAR || node->n_type == LSQB || node->n_type == LBRACE )
 	{
 		// If it is the first open par, mark the starting line number
 		if (parDepth == 0)
@@ -147,7 +147,7 @@ void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, un
 	// the close par is the same as the open par, AND the depth is 1, the line is simple.
 	// If this is the case (the line exists and its value is MULTIPLE already)
 	// mark it back to NONE
-	else if (node->n_type == RPAR || node->n_type == RSQB )
+	else if (node->n_type == RPAR || node->n_type == RSQB || node->n_type == RBRACE )
 	{
 		if (lineno == m_openLineNo)
 		{
@@ -177,7 +177,7 @@ void SPELLastAnalyzer::findNodeLines( struct _node* node, unsigned int depth, un
 		findNodeLines( &node->n_child[index], depth+1, parDepth, info );
 	}
 
-	if (node->n_type == RPAR || node->n_type == RSQB )
+	if (node->n_type == RPAR || node->n_type == RSQB || node->n_type == RBRACE )
 	{
 		parDepth--;
 	}
@@ -206,7 +206,7 @@ bool SPELLastAnalyzer::isBlockStart( unsigned int lineno )
 	{
 		return (it->second == START_MULTIPLE);
 	}
-	return true;
+	return false;
 }
 
 //============================================================================

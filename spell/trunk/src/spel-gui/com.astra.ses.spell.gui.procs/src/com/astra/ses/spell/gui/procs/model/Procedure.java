@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-07-30
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -50,18 +50,15 @@ package com.astra.ses.spell.gui.procs.model;
 
 import java.util.Map;
 
-import com.astra.ses.spell.gui.core.extensionpoints.IProcedureRuntimeExtension;
-import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
-import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
-import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
+import com.astra.ses.spell.gui.procs.interfaces.model.IDependenciesManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation;
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionStatusManager;
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController;
+import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureRuntimeProcessor;
 import com.astra.ses.spell.gui.procs.interfaces.model.ISourceCodeProvider;
-import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 
 /*******************************************************************************
  * 
@@ -70,24 +67,8 @@ import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformation
  * handled by the user * Breakpoints, run into mode, step by step execution
  * 
  ******************************************************************************/
-public class Procedure implements IProcedure
+public class Procedure extends ProcedureBase 
 {
-	// =========================================================================
-	// STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	/** Holds the procedure identifier */
-	private String m_instanceId;
-	/** Procedure properties */
-	private Map<ProcProperties, String> m_properties;
 	/** Execution information */
 	private IExecutionInformationHandler m_executionInformation;
 	/** Execution controller */
@@ -97,20 +78,70 @@ public class Procedure implements IProcedure
 	/** Source provider */
 	private ISourceCodeProvider m_sourceCodeProvider;
 	/** Holds the runtime processor */
-	private IProcedureRuntimeExtension m_runtimeProcessor;
+	private IProcedureRuntimeProcessor m_runtimeProcessor;
+	/** Holds the dependencies manager */
+	private IDependenciesManager m_dependencies;
 
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
 	public Procedure(String instanceId, Map<ProcProperties, String> properties, ClientMode mode)
 	{
-		m_instanceId = instanceId;
-		m_properties = properties;
-		m_sourceCodeProvider = new SourceCodeProvider();
-		m_procedureController = new ProcedureController(this);
-		m_executionInformation = new ExecutionInformationHandler(mode,this);
-		m_executionStatusManager = new ExecutionStatusManager(instanceId,this);
-		m_runtimeProcessor = new ProcedureRuntimeProcessor(this);
+		super(instanceId,properties);
+		m_sourceCodeProvider = createSourceCodeProvider();
+		m_procedureController = createProcedureController();
+		m_executionInformation = createExecutionInformation(mode);
+		m_executionStatusManager = createExecutionStatusManager();
+		m_runtimeProcessor = createRuntimeProcessor();
+		m_dependencies = createDependenciesManager();
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected ISourceCodeProvider createSourceCodeProvider()
+	{
+		return new SourceCodeProvider();
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IProcedureController createProcedureController()
+	{
+		return new ProcedureController(this);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IExecutionStatusManager createExecutionStatusManager()
+	{
+		return new ExecutionStatusManager(getProcId(),this);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IExecutionInformationHandler createExecutionInformation( ClientMode mode )
+	{
+		return new ExecutionInformationHandler(mode,this);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IProcedureRuntimeProcessor createRuntimeProcessor()
+	{
+		return new ProcedureRuntimeProcessor(this);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	protected IDependenciesManager createDependenciesManager()
+	{
+		return new DependenciesManager(this);
 	}
 
 	/***************************************************************************
@@ -135,45 +166,9 @@ public class Procedure implements IProcedure
 	 * 
 	 **************************************************************************/
 	@Override
-	public IProcedureRuntimeExtension getRuntimeProcessor()
+	public IProcedureRuntimeProcessor getRuntimeProcessor()
 	{
 		return m_runtimeProcessor;
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getProcId()
-	{
-		return m_instanceId;
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getProcName()
-	{
-		return this.getProperty(ProcProperties.PROC_NAME);
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getParent()
-	{
-		return getRuntimeInformation().getParent();
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@Override
-	public String getProperty(ProcProperties property)
-	{
-		return m_properties.get(property);
 	}
 
 	/***************************************************************************
@@ -183,6 +178,15 @@ public class Procedure implements IProcedure
 	public IExecutionInformation getRuntimeInformation()
 	{
 		return m_executionInformation;
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public IDependenciesManager getDependenciesManager()
+	{
+		return m_dependencies;
 	}
 
 	/***************************************************************************
@@ -210,30 +214,6 @@ public class Procedure implements IProcedure
 	public void onClose()
 	{
 		m_executionStatusManager.dispose();
-	}
-
-	/***************************************************************************
-	 * 
-	 **************************************************************************/
-	@SuppressWarnings("rawtypes")
-	@Override
-	public Object getAdapter(Class adapter)
-	{
-		Object result = null;
-		if (adapter.equals(ExecutorInfo.class))
-		{
-			IExecutorInfo info = new ExecutorInfo(m_instanceId);
-			// TODO info.setParent(getParent().getProcId());
-			getRuntimeInformation().visit(info);
-			result = info;
-		}
-		else if (adapter.equals(ExecutorConfig.class))
-		{
-			ExecutorConfig cfg = new ExecutorConfig(getProcId());
-			getRuntimeInformation().visit(cfg);
-			result = cfg;
-		}
-		return result;
 	}
 
 	/***************************************************************************

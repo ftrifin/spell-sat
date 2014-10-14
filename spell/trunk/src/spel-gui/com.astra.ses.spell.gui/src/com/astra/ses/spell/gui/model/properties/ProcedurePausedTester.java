@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -56,9 +56,10 @@ import org.eclipse.ui.PlatformUI;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 import com.astra.ses.spell.gui.views.ProcedureView;
 
 public class ProcedurePausedTester extends PropertyTester
@@ -75,13 +76,13 @@ public class ProcedurePausedTester extends PropertyTester
 		IWorkbenchPage page = window.getActivePage();
 		if (page == null) return false;
 		IWorkbenchPart part = page.getActivePart();
-		if ((part != null)&&(part instanceof ProcedureView))
+		if ((part != null)&&(part instanceof IProcedureView))
 		{
 			if (s_proc == null)
 			{
 				s_proc = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
 			}
-			ProcedureView view = (ProcedureView) part;
+			IProcedureView view = (IProcedureView) part;
 			String procId = view.getProcId();
 			// Must be connected
 			if (!s_proc.canOperate()) return false;
@@ -92,7 +93,7 @@ public class ProcedurePausedTester extends PropertyTester
 			ExecutorStatus st = proc.getRuntimeInformation().getStatus();
 			if (!st.equals(ExecutorStatus.PAUSED)) return false;
 			// We must be controlling
-			if (!proc.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING)) { return false; }
+			if (!proc.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL)) { return false; }
 			return true;
 		}
 		return false;

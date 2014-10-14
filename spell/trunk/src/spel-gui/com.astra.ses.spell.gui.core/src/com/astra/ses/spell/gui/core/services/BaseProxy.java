@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -232,7 +232,7 @@ abstract class BaseProxy extends BaseService implements IBaseProxy, ICommListene
 
 			if (!isConnected()) return null;
 
-			Logger.debug("Request: " + request.getId(), Level.COMM, this);
+			//Logger.debug("Request: " + request.getId(), Level.COMM, this);
 
 			if (timeout > 0)
 			{
@@ -243,7 +243,7 @@ abstract class BaseProxy extends BaseService implements IBaseProxy, ICommListene
 				response = m_interface.sendRequest(request);
 			}
 			checkRequestFailure(request, response);
-			Logger.debug("Response received for " + request.getId(), Level.COMM, this);
+			//Logger.debug("Response received for " + request.getId(), Level.COMM, this);
 		}
 		catch (RequestException ex)
 		{
@@ -335,7 +335,7 @@ abstract class BaseProxy extends BaseService implements IBaseProxy, ICommListene
 		getIPC().connect();
 		Logger.debug("Login on listener", Level.COMM, this);
 		login();
-		Logger.debug("Connected", Level.COMM, this);
+		Logger.debug("Login success", Level.COMM, this);
 	}
 
 	/***************************************************************************
@@ -395,17 +395,17 @@ abstract class BaseProxy extends BaseService implements IBaseProxy, ICommListene
 	public SPELLmessageResponse receiveRequest(SPELLmessageRequest msg)
 	{
 		SPELLmessageResponse response = processIncomingRequest(msg);
-		// If the message is not processed by this proxy, try with listeners
-		if (response == null)
+		// Send it also to listeners. If the proxy gave a response
+		// use this one; otherwise get the first response available
+		// while iterating on the listeners.
+		for(ICommListener listener : m_subListeners)
 		{
-			for(ICommListener listener : m_subListeners)
+			SPELLmessageResponse listenerResponse = listener.receiveRequest(msg);
+			// We only admit one listener processing the request
+			if((listenerResponse != null)&&(response == null)) 
 			{
-				response = listener.receiveRequest(msg);
-				// We only admit one listener processing the request
-				if (response != null) 
-				{
-					break;
-				}
+				response = listenerResponse;
+				break;
 			}
 		}
 		

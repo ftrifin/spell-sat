@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -67,6 +67,11 @@ import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -74,18 +79,26 @@ import org.eclipse.swt.widgets.Listener;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
+import com.astra.ses.spell.gui.presentation.code.CodeModelProxy;
 import com.astra.ses.spell.gui.presentation.code.controls.menu.CodeViewerMenuManager;
+import com.astra.ses.spell.gui.presentation.code.dialogs.ItemInfoDialog;
 import com.astra.ses.spell.gui.presentation.code.dialogs.SearchDialog;
+import com.astra.ses.spell.gui.presentation.code.renderer.BpRenderer;
+import com.astra.ses.spell.gui.presentation.code.renderer.DataRenderer;
+import com.astra.ses.spell.gui.presentation.code.renderer.LineRenderer;
+import com.astra.ses.spell.gui.presentation.code.renderer.SourceRenderer;
+import com.astra.ses.spell.gui.presentation.code.renderer.StatusRenderer;
 import com.astra.ses.spell.gui.presentation.code.search.CodeSearch;
 import com.astra.ses.spell.gui.presentation.code.search.CodeSearch.SearchMatch;
 import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
 import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeModel;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * @brief This viewer uses a table for showing the procedure code and the
@@ -107,27 +120,25 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 		public void notifyItem(ItemNotification data, String csPosition);
 	}
 
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-
 	private static IConfigurationManager s_cfg = null;
 
 	/** Autoscroll flag */
 	private boolean m_autoScroll;
 	/** Procedure model */
 	private IProcedure m_procedure;
+	/** Code proxy */
+	private CodeModelProxy m_proxy;
 	/** Holds the code search mechanism */
 	private CodeSearch m_search;
-	/**
-	 * Holds the procedure status. Used to know which status transitions take
-	 * place
-	 */
-	private IProcedure m_input;
+	/** ItemInfo dialog */
+	private ItemInfoDialog m_infoDialog;
+	/** Navigation bar */
+	private StackControl m_navBar;
+	/** Holds the procedure status. Used to know which status transitions take place */
 	private ICodeLine m_currentLine = null;
 	private SourceRenderer[] m_renderers;
+	/** Rendering buffer */
+	private UpdateBuffer m_buffer;
 
 	/***************************************************************************
 	 * Constructor.
@@ -146,8 +157,21 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 			s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
 		}
 
+		m_buffer = new UpdateBuffer(this);
+		m_buffer.start();
+		
+		m_navBar = new StackControl(parent, SWT.BORDER, model, this);
+		m_navBar.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
+		GridLayout lo = new GridLayout();
+		lo.numColumns = 6;
+		lo.makeColumnsEqualWidth = false;
+		lo.marginHeight = 1;
+		m_navBar.setLayout( lo );
+		
 		m_procedure = model;
-
+		m_proxy = new CodeModelProxy(model.getExecutionManager());
+		m_infoDialog = null;
+		
 		m_autoScroll = true;
 		getGrid().setHeaderVisible(true);
 		getGrid().setLinesVisible(false);
@@ -176,6 +200,27 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 			}
 		});
 
+		getGrid().addMouseListener(new MouseAdapter()
+		{
+			public void mouseDoubleClick(MouseEvent e)
+			{
+				Point p = new Point(e.x, e.y);
+				GridItem item = getGrid().getItem(p);
+				if (item != null)
+				{
+					int itemIndex = getGrid().indexOf(item);
+					ICodeLine line = m_proxy.getLine(itemIndex);
+
+					if (line.hasNotifications() && m_infoDialog == null)
+					{
+						m_infoDialog = new ItemInfoDialog(getGrid().getShell(), m_procedure, line);
+						m_infoDialog.open();
+						m_infoDialog = null;
+					}
+				}
+			}
+		});
+
 		getGrid().getColumn(CodeViewerColumn.BREAKPOINT.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
 		getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
 		getGrid().getColumn(CodeViewerColumn.CODE.ordinal()).addControlListener(new ColumnSizer(getGrid(), CodeViewerColumn.RESULT));
@@ -185,7 +230,7 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 		/*
 		 * Popup menu manager
 		 */
-		new CodeViewerMenuManager(this, m_procedure);
+		new CodeViewerMenuManager(this, m_procedure, m_proxy);
 
 		m_search = new CodeSearch(this);
 
@@ -202,43 +247,125 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 		});
 	}
 
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	 void displayCodeFirst()
+	{
+		if (m_proxy.stackFirst())
+		{
+			onCodeChanged(m_proxy.getCurrentCode());
+		}
+	}
+	 
+	 
+	 /***************************************************************************
+	 * 
+	 **************************************************************************/
+	 void displayCode( int pos )
+	{
+		if (m_proxy.stackTo(pos))
+		{
+			onCodeChanged(m_proxy.getCurrentCode());
+		}
+	}
+	 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	 void displayCodeLast()
+	{
+		if (m_proxy.stackTop())
+		{
+			onCodeChanged(m_proxy.getCurrentCode());
+		}
+	}
+	 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	 void displayCodeLeft()
+	{
+		if (m_proxy.stackDown())
+		{
+			onCodeChanged(m_proxy.getCurrentCode());
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	void displayCodeRight()
+	{
+		if (m_proxy.stackUp())
+		{
+			onCodeChanged(m_proxy.getCurrentCode());
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private void scheduleUpdate( ICodeLine line )
+	{
+		m_buffer.scheduleUpdate(line);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private void scheduleUpdate( List<ICodeLine> lines )
+	{
+		m_buffer.scheduleUpdate(lines);
+	}
+
 	/***************************************************************************
 	 * Dispose resources
 	 **************************************************************************/
 	public void dispose()
 	{
-		m_input.getExecutionManager().removeListener(this);
+		m_buffer.stopUpdate();
+		m_procedure.getExecutionManager().removeListener(this);
+		m_navBar.dispose();
 		s_cfg.removePropertyChangeListener(this);
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public IProcedure getModel()
 	{
-		return m_input;
+		return m_procedure;
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	private void applyItemHeight()
 	{
 		getGrid().setItemHeight(m_renderers[0].getFontSize() + 8);
 	}
 
-	public void setModel(IProcedure input)
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void setModel()
 	{
 		Logger.debug("Set model", Level.GUI, this);
-		m_input = input;
 		m_renderers = new SourceRenderer[5];
-		m_renderers[0] = new BpRenderer(input);
-		m_renderers[1] = new LineRenderer(input);
-		m_renderers[2] = new SourceRenderer(input);
-		m_renderers[3] = new DataRenderer(input);
-		m_renderers[4] = new StatusRenderer(input);
+		m_renderers[0] = new BpRenderer(m_procedure,m_proxy);
+		m_renderers[1] = new LineRenderer(m_procedure,m_proxy);
+		m_renderers[2] = new SourceRenderer(m_procedure,m_proxy);
+		m_renderers[3] = new DataRenderer(m_procedure,m_proxy);
+		m_renderers[4] = new StatusRenderer(m_procedure,m_proxy);
 		for (CodeViewerColumn col : CodeViewerColumn.values())
 		{
 			getGrid().getColumn(col.ordinal()).setCellRenderer(m_renderers[col.ordinal()]);
 		}
-		input.getExecutionManager().addListener(this);
+		m_procedure.getExecutionManager().addListener(this);
 		applyItemHeight();
-		super.setInput(input);
-		showLastLine();
+		super.setInput(m_proxy);
 	}
 
 	/***************************************************************************
@@ -250,12 +377,20 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 	}
 
 	/***************************************************************************
+	 * Check the autoscroll
+	 **************************************************************************/
+	public boolean isAutoScroll()
+	{
+		return m_autoScroll;
+	}
+
+	/***************************************************************************
 	 * Gain the focus
 	 **************************************************************************/
 	public void setFocus()
 	{
 		getGrid().setFocus();
-		if (m_autoScroll) showLastLine();
+		showCurrentLine();
 	}
 
 	/***************************************************************************
@@ -276,7 +411,7 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 			getGrid().setItemHeight(m_renderers[0].getFontSize() + 8);
 			getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
 			getGrid().redraw();
-			showLastLine();
+			showCurrentLine();
 		}
 	}
 
@@ -413,7 +548,7 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 	 **************************************************************************/
 	public void showLine(int lineNo, boolean select)
 	{
-		if (getGrid().isDisposed()) return;
+		if (getGrid().isDisposed() || !getGrid().isVisible()) return;
 		int numLines = getGrid().getItemCount();
 		if (lineNo > 0 && numLines > lineNo)
 		{
@@ -451,27 +586,32 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 	/***************************************************************************
 	 * Center the table view on the currently executed line.
 	 **************************************************************************/
-	public void showLastLine()
+	public void showCurrentLine()
 	{
-		if (!m_autoScroll)
-			return;
-
-		int currentLine = m_procedure.getExecutionManager().getCurrentLineNo();
-
-		Logger.debug("Show last line: " + currentLine, Level.GUI, this);
-
+		if (!m_autoScroll) return;
+		int currentLine = m_proxy.getCurrentLineNo();
 		showLine(currentLine, false);
 	}
 
+	/***************************************************************************
+	 * Update the executor status
+	 **************************************************************************/
 	public void setExecutorStatus(ExecutorStatus st)
 	{
-		showLastLine();
+		// If the executor status is not PAUSED or equivalent so that the
+		// source code is kept the same, disable the stack control buttons
+		m_navBar.updateCodeNavigation( st, m_proxy );
+
+		// Set the status in the renderers so that the background changes
 		for (SourceRenderer r : m_renderers)
 		{
 			r.setExecutorStatus(st);
 		}
 	}
 
+	/***************************************************************************
+	 * Force a refresh of the item notifications
+	 **************************************************************************/
 	public void forceRefresh()
 	{
 		GridVisibleRange range = getGrid().getVisibleRange();
@@ -485,16 +625,19 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 
 		for(int index=firstIndex; index < lastIndex; index++)
 		{
-			ICodeLine line = m_input.getExecutionManager().getLine(index);
+			ICodeLine line = m_proxy.getLine(index);
 			if (line.hasNotifications())
 			{
 				line.calculateSummary();
 			}
-			update(line,null);
+			scheduleUpdate(line);
 		}
-		showLastLine();
+		showCurrentLine();
 	}
 
+	/***************************************************************************
+	 * Reset the column widths to defaults
+	 **************************************************************************/
 	public void resetColumnWidths()
 	{
 		int totalWidth = 0;
@@ -518,6 +661,9 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 		}
 	}
 	
+	/***************************************************************************
+	 * Force a control resize event
+	 **************************************************************************/
 	public void forceControlEvent( Control ctrl )
 	{
 		for(Listener lst : ctrl.getListeners(SWT.Resize))
@@ -530,28 +676,87 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 		}
 	}
 
+	/***************************************************************************
+	 * Notifications from the procedure code model
+	 **************************************************************************/
 	@Override
-	public void onLineChanged(final ICodeLine line)
+	public void onLinesChanged(final List<ICodeLine> lines )
 	{
 		if (getGrid().isDisposed()) return;
 		Display.getDefault().syncExec(new Runnable()
 		{
 			public void run()
 			{
+				if (lines == null || lines.isEmpty()) return;
+				
+				// Schedule the update of all lines in the viewer, so that
+				// all these lines reflect the executed flag correctly, etc.
+				scheduleUpdate(lines);
+				
+				ICodeLine line = lines.get(lines.size()-1); 
+				// Ensure the code in place still matches the line to update 
+				// it may not be the case with source code changes
+				if (!m_proxy.getCurrentCodeName().equals(line.getParentCodeId()))
+				{
+					return;
+				}
+				m_navBar.updateCodeNavigation( null, m_proxy );
 				if (m_currentLine != null)
 				{
-					update(m_currentLine, null);
+					scheduleUpdate(m_currentLine);
 				}
 				m_currentLine = line;
-				update(line, null);
-				if (m_autoScroll)
+				scheduleUpdate(line);
+				if (m_proxy.getStackDepth() == m_proxy.getViewDepth())
 				{
-					showLine(line.getLineNo(), false);
+					if (m_autoScroll)
+					{
+						showLine(line.getLineNo(), false);
+					}
 				}
 			}
 		});
 	}
 
+	/***************************************************************************
+	 * Notifications from the procedure code model
+	 **************************************************************************/
+	@Override
+	public void onLineChanged(final ICodeLine line )
+	{
+		if (getGrid().isDisposed()) return;
+		Display.getDefault().syncExec(new Runnable()
+		{
+			public void run()
+			{
+				if (line == null) return;
+				// Ensure the code in place still matches the line to update 
+				// it may not be the case with source code changes
+				if (!m_proxy.getCurrentCodeName().equals(line.getParentCodeId()))
+				{
+					return;
+				}
+				m_navBar.updateCodeNavigation( null, m_proxy );
+				if (m_currentLine != null)
+				{
+					scheduleUpdate(m_currentLine);
+				}
+				m_currentLine = line;
+				scheduleUpdate(line);
+				if (m_proxy.getStackDepth() == m_proxy.getViewDepth())
+				{
+					if (m_autoScroll)
+					{
+						showLine(line.getLineNo(), false);
+					}
+				}
+			}
+		});
+	}
+
+	/***************************************************************************
+	 * Notifications from the procedure code model
+	 **************************************************************************/
 	@Override
     public void onItemsChanged( final List<ICodeLine> lines )
     {
@@ -560,38 +765,51 @@ public class CodeViewer extends GridTableViewer implements IExecutionListener, I
 		{
 			public void run()
 			{
+				scheduleUpdate(lines);
 				for(ICodeLine line : lines)
 				{
-					update(line,null);
+					if (m_infoDialog != null && m_infoDialog.getLine() == line)
+					{
+						m_infoDialog.onNotification();
+						break;
+					}
 				}
 			}
 		});
     }
 
+	/***************************************************************************
+	 * Notifications from the procedure code model
+	 **************************************************************************/
 	@Override
-	public void onCodeChanged()
+	public void onCodeChanged( final ICodeModel code )
 	{
 		if (getGrid().isDisposed()) return;
 		Display.getDefault().syncExec(new Runnable()
 		{
 			public void run()
 			{
-				List<ICodeLine> source = m_procedure.getExecutionManager().getLines();
+				m_navBar.updateCodeNavigation( null, m_proxy );
+				List<ICodeLine> source = code.getLines();
 				List<String> plainSource = new LinkedList<String>();
-				for (ICodeLine line : source)
-					plainSource.add(line.getSource());
-				m_renderers[CodeViewerColumn.CODE.ordinal()].onNewSource(m_procedure.getExecutionManager().getCodeId(),
-				        plainSource.toArray(new String[0]));
+				for (ICodeLine line : source) plainSource.add(line.getSource());
+				m_renderers[CodeViewerColumn.CODE.ordinal()].onNewSource(code.getCodeId(), plainSource.toArray(new String[0]));
 				refresh();
-				getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();
-				showLastLine();
+				getGrid().getColumn(CodeViewerColumn.LINE_NO.ordinal()).pack();  
+				showCurrentLine();
 			}
 		});
 	}
 
+	/***************************************************************************
+	 * Notifications from the procedure code model
+	 **************************************************************************/
 	@Override 
     public void onProcessingDelayChanged(long delay) {}
 
+	/***************************************************************************
+	 * Notifications from the configuration property changes
+	 **************************************************************************/
 	@Override
 	public void propertyChange(PropertyChangeEvent event)
 	{

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -65,6 +65,8 @@ public class TextParagraph
 	private long	        m_sequence;
 	/** Holds the message scope */
 	private Scope	        m_scope;
+	/** Holds the message timestamp */
+	private String          m_timestamp;
 
 	/***************************************************************************
 	 * Constructor
@@ -74,13 +76,13 @@ public class TextParagraph
 	 * @param type
 	 *            Paragraph type
 	 **************************************************************************/
-	public TextParagraph(ParagraphType type, Scope scope, String text,
-	        long sequence)
+	public TextParagraph(ParagraphType type, Scope scope, String text, String timestamp, long sequence)
 	{
 		m_type = type;
 		m_text = text.split("\n");
 		m_sequence = sequence;
 		m_scope = scope;
+		m_timestamp = timestamp;
 	}
 
 	/***************************************************************************
@@ -121,6 +123,16 @@ public class TextParagraph
 	public String[] getText()
 	{
 		return m_text;
+	}
+
+	/***************************************************************************
+	 * Obtain the paragraph timestamp
+	 * 
+	 * @return The paragraph timestamp
+	 **************************************************************************/
+	public String getTimestamp()
+	{
+		return m_timestamp;
 	}
 
 	/***************************************************************************

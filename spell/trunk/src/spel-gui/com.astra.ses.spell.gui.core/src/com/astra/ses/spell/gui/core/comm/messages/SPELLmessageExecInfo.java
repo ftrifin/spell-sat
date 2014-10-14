@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -57,10 +57,14 @@ import com.astra.ses.spell.gui.core.interfaces.IMessageId;
 import com.astra.ses.spell.gui.core.interfaces.IMessageValue;
 import com.astra.ses.spell.gui.core.interfaces.IProcedureClient;
 import com.astra.ses.spell.gui.core.model.server.ProcedureClient;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.core.model.types.Severity;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class SPELLmessageExecInfo extends SPELLmessageRequest
 {
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public SPELLmessageExecInfo(String procId)
 	{
 		super(IMessageId.REQ_EXEC_INFO);
@@ -69,106 +73,136 @@ public class SPELLmessageExecInfo extends SPELLmessageRequest
 		setReceiver(IMessageValue.CONTEXT_RECEIVER);
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	public static void fillExecInfo(IExecutorInfo model, SPELLmessage response)
 	{
-		String status = "UKNKNOWN";
-		IProcedureClient cClient = null;;
-		String condition = "";
-		String mode = "";
-		List<IProcedureClient> mClients = new ArrayList<IProcedureClient>();
-		String parent = null;
-		String actionLabel = "";
-		String name = "";
-		boolean actionEnabled = false;
-		boolean automatic = true;
-		boolean visible = true;
-		boolean blocking = true;
+		extractBasics(response,model);
+		
+		extractClientInformation(response,model);
+		
+		extractGroupInformation(response,model);
+		
+		extractOpenMode(response,model);
 
+		extractUserAction(response, model);
+		
+		extractAsRunInformation(response,model);
+		
+		extractStageInformation(response,model);
+
+		extractStackInformation(response,model);
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractBasics( SPELLmessage msg, IExecutorInfo model )
+	{
 		try
 		{
-			name = response.get(IMessageField.FIELD_PROC_NAME);
-		}
-		catch (MessageException ex)
-		{
-			ex.printStackTrace();
-		}
-
-		try
-		{
-			status = response.get(IMessageField.FIELD_EXEC_STATUS);
-		}
-		catch (MessageException ex)
-		{
-			ex.printStackTrace();
-		}
-
-		try
-		{
-			condition = response.get(IMessageField.FIELD_CONDITION);
-		}
-		catch (MessageException ex)
-		{
-			ex.printStackTrace();
-		}
-
-		try
-		{
-			String client = response.get(IMessageField.FIELD_GUI_CONTROL);
-			if ((client != null)&&(!client.trim().isEmpty()))
+			model.setName(msg.get(IMessageField.FIELD_PROC_NAME));
+			model.setStatus(ExecutorStatus.valueOf(msg.get(IMessageField.FIELD_EXEC_STATUS)));
+			if (msg.hasKey(IMessageField.FIELD_CONDITION))
 			{
-				String cClientHost = response.get(IMessageField.FIELD_GUI_CONTROL_HOST);
-				if (cClientHost.trim().isEmpty())
-				{
-					cClientHost = "(unknown host)";
-				}
-				cClient = new ProcedureClient(client, cClientHost);
+				model.setCondition(msg.get(IMessageField.FIELD_CONDITION));
+			}
+			if (msg.hasKey(IMessageField.FIELD_PARENT_PROC))
+			{
+				model.setParent(msg.get(IMessageField.FIELD_PARENT_PROC));
+				model.setParentCallingLine(Integer.parseInt(msg.get(IMessageField.FIELD_PARENT_PROC_LINE)));
 			}
 		}
-		catch (MessageException ex)
+		catch (Exception ex)
 		{
 			ex.printStackTrace();
 		}
-
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractClientInformation( SPELLmessage msg, IExecutorInfo model )
+	{
 		try
 		{
-			String list = response.get(IMessageField.FIELD_GUI_LIST);
-			if ((list != null)&&(!list.trim().isEmpty()))
+			String client = msg.get(IMessageField.FIELD_GUI_CONTROL);
+			if ((client != null) && (!client.trim().isEmpty()))
+			{
+				if (client.equals("<BACKGROUND>"))
+				{
+					model.setBackground(true);
+				}
+				else
+				{
+					model.setBackground(false);
+					String cClientHost = msg.get(IMessageField.FIELD_GUI_CONTROL_HOST);
+					if (cClientHost.trim().isEmpty())
+					{
+						cClientHost = "(unknown host)";
+					}
+					model.setControllingClient(new ProcedureClient(client, cClientHost));
+				}
+			}
+
+			String list = msg.get(IMessageField.FIELD_GUI_LIST);
+			List<IProcedureClient> mClients = new ArrayList<IProcedureClient>();
+			if ((list != null) && (!list.trim().isEmpty()))
 			{
 				String[] mClientList = list.split(",");
-				for(String mClient : mClientList)
+				for (String mClient : mClientList)
 				{
 					String[] pair = mClient.split(":");
-					if (pair.length==2)
+					if (pair.length == 2)
 					{
-						mClients.add( new ProcedureClient(pair[1], pair[0]));
+						mClients.add(new ProcedureClient(pair[1], pair[0]));
 					}
 					else
 					{
-						mClients.add( new ProcedureClient(pair[0], "(unknown)"));
+						mClients.add(new ProcedureClient(pair[0], "(unknown)"));
 					}
 				}
 			}
+			model.setMonitoringClients(mClients.toArray( new IProcedureClient[0] ));
 		}
 		catch (MessageException ex)
 		{
 			ex.printStackTrace();
 		}
-
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractGroupInformation( SPELLmessage msg, IExecutorInfo model )
+	{
 		try
 		{
-			if (response.hasKey(IMessageField.FIELD_PARENT_PROC))
+			if (msg.hasKey(IMessageField.FIELD_GROUP_ID))
 			{
-				parent = response.get(IMessageField.FIELD_PARENT_PROC);
+				model.setGroupId(msg.get(IMessageField.FIELD_GROUP_ID));
+			}
+
+			if (msg.hasKey(IMessageField.FIELD_ORIGIN_ID))
+			{
+				model.setOriginId(msg.get(IMessageField.FIELD_ORIGIN_ID));
 			}
 		}
-		catch (MessageException ex)
+		catch (Exception ex)
 		{
 			ex.printStackTrace();
 		}
+	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractOpenMode( SPELLmessage msg, IExecutorInfo model )
+	{
 		try
 		{
-			mode = response.get(IMessageField.FIELD_OPEN_MODE);
+			String mode = msg.get(IMessageField.FIELD_OPEN_MODE);
 			String elements[] = mode.split(",");
 			for (String elem : elements)
 			{
@@ -180,28 +214,34 @@ public class SPELLmessageExecInfo extends SPELLmessageRequest
 				String value = attr[1].trim();
 				if (elem.indexOf(IMessageValue.OPEN_MODE_AUTOMATIC) != -1)
 				{
-					automatic = value.equals("True");
+					model.setAutomatic(value.equals("True"));
 				}
 				else if (elem.indexOf(IMessageValue.OPEN_MODE_VISIBLE) != -1)
 				{
-					visible = value.equals("True");
+					model.setVisible(value.equals("True"));
 				}
 				else if (elem.indexOf(IMessageValue.OPEN_MODE_BLOCKING) != -1)
 				{
-					blocking = value.equals("True");
+					model.setBlocking(value.equals("True"));
 				}
 			}
 		}
-		catch (MessageException ex)
+		catch (Exception ex)
 		{
 			ex.printStackTrace();
 		}
+	}
 
-		if (response.hasKey(IMessageField.FIELD_ACTION_LABEL))
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractUserAction( SPELLmessage msg, IExecutorInfo model )
+	{
+		if (msg.hasKey(IMessageField.FIELD_ACTION_LABEL))
 		{
 			try
 			{
-				actionLabel = response.get(IMessageField.FIELD_ACTION_LABEL);
+				model.setUserAction(msg.get(IMessageField.FIELD_ACTION_LABEL));
 			}
 			catch (MessageException ex)
 			{
@@ -209,13 +249,11 @@ public class SPELLmessageExecInfo extends SPELLmessageRequest
 			}
 		}
 
-		if (response.hasKey(IMessageField.FIELD_ACTION_ENABLED))
+		if (msg.hasKey(IMessageField.FIELD_ACTION_SEVERITY))
 		{
 			try
 			{
-				String actionEnabledStr = response
-				        .get(IMessageField.FIELD_ACTION_ENABLED);
-				actionEnabled = actionEnabledStr.equals("True");
+				model.setUserActionSeverity( Severity.valueOf(msg.get(IMessageField.FIELD_ACTION_SEVERITY) ));
 			}
 			catch (MessageException ex)
 			{
@@ -223,28 +261,87 @@ public class SPELLmessageExecInfo extends SPELLmessageRequest
 			}
 		}
 
-		model.setCondition(condition);
-		model.setMonitoringClients(mClients.toArray( new IProcedureClient[0] ));
-		model.setControllingClient(cClient);
-		model.setAutomatic(automatic);
-		model.setVisible(visible);
-		model.setBlocking(blocking);
-		model.setStatus(ExecutorStatus.valueOf(status));
-		model.setParent(parent);
-		model.setUserAction(actionLabel);
-		model.setUserActionEnabled(actionEnabled);
-		model.setName( name );
-		/*
-		 * Client mode is inferred If the cClient is the same as the procId of
-		 * the message, then mode is CONTROLLING If the procIc is in the
-		 * monitoring clients list, then mode is MONITORING Else the mode is
-		 * UNKNOWN
-		 */
-		/*
-		 * String id = response.getKey(); ClientMode clientMode =
-		 * ClientMode.UNKNOWN; if (cClient.equals(id)) { clientMode =
-		 * ClientMode.CONTROLLING; } else { clientMode = ClientMode.MONITORING;
-		 * } model.setMode(clientMode);
-		 */
+		if (msg.hasKey(IMessageField.FIELD_ACTION_ENABLED))
+		{
+			try
+			{
+				model.setUserActionEnabled(msg.get(IMessageField.FIELD_ACTION_ENABLED).equals("true"));
+			}
+			catch (MessageException ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractAsRunInformation( SPELLmessage msg, IExecutorInfo model )
+	{
+		if (msg.hasKey(IMessageField.FIELD_ASRUN_NAME))
+		{
+			try
+			{
+				String asrunName = msg.get(IMessageField.FIELD_ASRUN_NAME);
+				int idx = asrunName.lastIndexOf("/");
+				String aux = asrunName;
+				if (idx != -1)
+				{
+					aux = asrunName.substring(idx+1);
+				}
+				idx = aux.indexOf("_");
+				idx = aux.indexOf("_", idx+1);
+				String timeId = aux.substring(0,idx);
+				model.setAsRunName(asrunName);
+				model.setTimeId(timeId);
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractStageInformation( SPELLmessage msg, IExecutorInfo model )
+	{
+		if (msg.hasKey(IMessageField.FIELD_STAGE_ID))
+		{
+			String stageId = null;
+			String stageTl = null;
+			try
+			{
+				stageId = msg.get(IMessageField.FIELD_STAGE_ID);
+				stageTl = msg.get(IMessageField.FIELD_STAGE_TL);
+				model.setStage(stageId, stageTl);
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private static void extractStackInformation( SPELLmessage msg, IExecutorInfo model )
+	{
+		if (msg.hasKey(IMessageField.FIELD_CSP))
+		{
+			try
+			{
+				String csp = msg.get(IMessageField.FIELD_CSP);
+				String code = msg.get(IMessageField.FIELD_CODE_NAME);
+				model.setStack(csp, code);
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+			}
+		}
 	}
 }

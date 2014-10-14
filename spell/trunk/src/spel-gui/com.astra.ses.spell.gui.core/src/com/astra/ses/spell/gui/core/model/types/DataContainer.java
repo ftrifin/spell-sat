@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,7 +61,7 @@ public class DataContainer
 	/** Holds the container name */
 	private String m_name;
 	/** Holds the variables */
-	private Map<String,TypedVariable> m_variables;
+	private Map<String,DataVariable> m_variables;
 	/** Holds the variable creation order */
 	private List<String> m_varOrder;
 
@@ -72,7 +72,7 @@ public class DataContainer
 	{
 		m_procId = procId;
 		m_name = name;
-		m_variables = new TreeMap<String,TypedVariable>();
+		m_variables = new TreeMap<String,DataVariable>();
 		m_varOrder = new ArrayList<String>();
 	}
 
@@ -83,13 +83,22 @@ public class DataContainer
 	{
 		m_procId = other.m_procId;
 		m_name = other.m_name;
-		m_variables = new TreeMap<String,TypedVariable>();
+		m_variables = new TreeMap<String,DataVariable>();
 		m_varOrder = new ArrayList<String>();
 		m_varOrder.addAll( other.m_varOrder );
 		for( String key : other.m_variables.keySet() )
 		{
 			m_variables.put(key, other.m_variables.get(key).copy() );
 		}
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public boolean isTyped()
+	{
+		if (m_variables.isEmpty()) return true;
+		return m_variables.values().iterator().next().getType().equals(ValueType.UNTYPED);
 	}
 
 	/***************************************************************************
@@ -120,7 +129,7 @@ public class DataContainer
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	public TypedVariable getVariable( String name )
+	public DataVariable getVariable( String name )
 	{
 		return m_variables.get(name);
 	}
@@ -130,7 +139,7 @@ public class DataContainer
 	 **************************************************************************/
 	public boolean hasChanges()
 	{
-		for(TypedVariable var : m_variables.values())
+		for(DataVariable var : m_variables.values())
 		{
 			if (var.isModified()) return true;
 		}
@@ -158,7 +167,7 @@ public class DataContainer
 	 **************************************************************************/
 	public void save()
 	{
-		for(TypedVariable var : m_variables.values())
+		for(DataVariable var : m_variables.values())
 		{
 			var.save();
 		}
@@ -170,7 +179,7 @@ public class DataContainer
 	public void revert()
 	{
 		List<String> toRemove = new ArrayList<String>();
-		for(TypedVariable var : m_variables.values())
+		for(DataVariable var : m_variables.values())
 		{
 			var.revert();
 			if (var.isNew())
@@ -188,9 +197,9 @@ public class DataContainer
 	/***************************************************************************
 	 * Get the variables contained
 	 **************************************************************************/
-	public List<TypedVariable> getVariables()
+	public List<DataVariable> getVariables()
 	{
-		List<TypedVariable> list = new ArrayList<TypedVariable>();
+		List<DataVariable> list = new ArrayList<DataVariable>();
 		for( String name : m_varOrder )
 		{
 			list.add( m_variables.get(name) );
@@ -201,7 +210,7 @@ public class DataContainer
 	/***************************************************************************
 	 * Add a variable to the container
 	 **************************************************************************/
-	public void addVariable( String name, TypedVariable var )
+	public void addVariable( String name, DataVariable var )
 	{
 		m_varOrder.add(name);
 		m_variables.put(name,var);

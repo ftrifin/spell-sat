@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,13 +48,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.interfaces;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
-import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLlistenerLost;
 import com.astra.ses.spell.gui.core.exceptions.ContextError;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
@@ -62,11 +62,13 @@ import com.astra.ses.spell.gui.core.model.notification.InputData;
 import com.astra.ses.spell.gui.core.model.server.ClientInfo;
 import com.astra.ses.spell.gui.core.model.server.ContextInfo;
 import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
+import com.astra.ses.spell.gui.core.model.server.ExecutorDefaults;
 import com.astra.ses.spell.gui.core.model.server.ProcedureRecoveryInfo;
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.DataContainer;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
+import com.astra.ses.spell.gui.types.ExecutorCommand;
 
 
 
@@ -76,11 +78,6 @@ public interface IContextProxy extends IBaseProxy
 	 * Attach to context
 	 **************************************************************************/
 	public void attach(ContextInfo ctxInfo) throws Exception;
-
-	/***************************************************************************
-	 * Detach to from context on server
-	 **************************************************************************/
-	public void detach() throws Exception;
 
 	/***************************************************************************
 	 * Close a context on the server
@@ -113,13 +110,18 @@ public interface IContextProxy extends IBaseProxy
 	public ContextInfo getInfo();
 
 	/***************************************************************************
+	 * Obtain the current time as seen by the context
+	 **************************************************************************/
+	public Date getCurrentTime();
+	
+	/***************************************************************************
 	 * Launch a new executor in the context
 	 * 
 	 * @param procedureId
 	 *            The procedure identifier
 	 * @return Executor status information
 	 **************************************************************************/
-	public void openExecutor(String procedureId, String condition, Map<String, String> arguments) throws ContextError;
+	public void openExecutor(String procedureId, String condition, Map<String, String> arguments, boolean background ) throws ContextError;
 
 	/***************************************************************************
 	 * Launch a new executor in the context
@@ -169,7 +171,7 @@ public interface IContextProxy extends IBaseProxy
 	 *            Procedure (executor) identifier
 	 * @return True if success
 	 **************************************************************************/
-	public boolean detachFromExecutor(String procId);
+	public boolean detachFromExecutor(String procId, boolean background);
 
 	/***************************************************************************
 	 * Remove the controlling client of a given executor
@@ -194,26 +196,7 @@ public interface IContextProxy extends IBaseProxy
 	 *            Procedure (executor) identifier
 	 * @return Executor details
 	 **************************************************************************/
-	public IExecutorInfo getExecutorInfo(String procId);
-
-	/***************************************************************************
-	 * Dump interpreter information
-	 **************************************************************************/
-	public void dumpInterpreterInformation( String instanceId );
-
-	/***************************************************************************
-	 * Save interpreter information
-	 **************************************************************************/
-	public void saveInterpreterInformation( String instanceId );
-
-	/***************************************************************************
-	 * Obtain executor information
-	 * 
-	 * @param procId
-	 *            Procedure (executor) identifier
-	 * @return Executor details
-	 **************************************************************************/
-	public void updateExecutorInfo(String procId, IExecutorInfo info) throws Exception;
+	public IExecutorInfo getExecutorInfo(String procId) throws Exception;
 
 	/***************************************************************************
 	 * Obtain other client information
@@ -229,7 +212,7 @@ public interface IContextProxy extends IBaseProxy
 	 * 
 	 * @return A list of procedure identifiers
 	 **************************************************************************/
-	public Map<String, String> getAvailableProcedures();
+	public Map<String, String> getAvailableProcedures( boolean refresh );
 
 	/***************************************************************************
 	 * Obtain the procedure code
@@ -280,6 +263,27 @@ public interface IContextProxy extends IBaseProxy
 	 **************************************************************************/
 	public void updateExecutorConfig(String procId, ExecutorConfig config) throws Exception;
 
+	
+	/***************************************************************************
+	 * Obtain context executor defaults
+	 * 
+	 * @param defaults
+	 *            Executor defaults object to be returned
+	 * @return Executor defauls
+	 * @throws Exception 
+	 **************************************************************************/	
+	public void getExecutorDefaults(ExecutorDefaults defaults) throws Exception;	
+
+	/***************************************************************************
+	 * Update executor defaults on context
+	 * 
+	 * @param procId
+	 *            Procedure identifier
+	 * @param config
+	 *            Configuration map
+	 **************************************************************************/	
+	void setExecutorDefaults(Map<String, String> defaults);	
+	
 	/***************************************************************************
 	 * Toggle a breakpoint at the given line for the given procedure (its id)
 	 * 
@@ -304,7 +308,19 @@ public interface IContextProxy extends IBaseProxy
 	 * @return the data container with keys and values
 	 **************************************************************************/
 	public DataContainer getInputFile( String path, IProgressMonitor monitor );
-	
+
+	/***************************************************************************
+	 * Save a data container from the procedure to a file
+	 * 
+	 * @param procId
+	 *            the procedure's id
+	 * @param name 
+	 * 			  name of the container
+	 * @param path 
+	 * 			  path of the target file
+	 **************************************************************************/
+	public void saveDataContainer(String procId, String name, String path );
+
 	/***************************************************************************
 	 * Retrieve the given data container from a procedure
 	 * 

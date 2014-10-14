@@ -5,7 +5,7 @@
 // DESCRIPTION: Inter process communication, data definitions
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -70,14 +70,6 @@ SPELLipcMessageType;
 #define IPC_REQUEST_MAX_RETRIES 3
 /** Error timeouts */
 #define IPC_ERROR_TIMEOUT_ECODE 900
-/** For variable messages */
-#define VARIABLE_SEPARATOR '\4'
-/** For variable messages */
-#define VARIABLE_PROPERTY_SEPARATOR '\5'
-/** For variable messages */
-#define VARIABLE_SEPARATOR_STR "\4"
-/** For variable messages */
-#define VARIABLE_PROPERTY_SEPARATOR_STR "\5"
 
 /** Define the message identifiers */
 namespace MessageId
@@ -131,6 +123,8 @@ namespace MessageField
 	static const std::string FIELD_MSG_SEQUENCE("Sequence");
 	/** Hols a time identifier */
 	static const std::string FIELD_TIME_ID("TimeId");
+	/** Time messages */
+	static const std::string FIELD_DRIVER_TIME("DriverTime");
 };
 
 /** Defines values for the message fields */
@@ -194,7 +188,7 @@ namespace IPCinternals
 	/** Separator for file and data lines */
 	static const std::string CODE_SEPARATOR("%C%");
 	/** Separator for items in notifications */
-	static const std::string ARG_SEPARATOR(",,");
+	//static const std::string ARG_SEPARATOR(",,"); //moved to notifications
 	/** Separator for keys and values in prompts */
 	static const std::string KEY_SEPARATOR(":");
 	/** Separator for options in prompts */

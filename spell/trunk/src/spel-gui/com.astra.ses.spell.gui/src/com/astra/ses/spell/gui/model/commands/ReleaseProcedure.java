@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -69,7 +69,7 @@ import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
  */
 public class ReleaseProcedure extends AbstractHandler
 {
-	public static final String	ID	= "com.astra.ses.spell.gui.commands.ReleaseProcedure";
+	public static final String ID = "com.astra.ses.spell.gui.commands.ReleaseProcedure";
 
 	/***************************************************************************
 	 * The constructor.
@@ -82,26 +82,22 @@ public class ReleaseProcedure extends AbstractHandler
 	 * The command has been executed, so extract extract the needed information
 	 * from the application context.
 	 **************************************************************************/
-	public CommandResult execute(ExecutionEvent event)
-	        throws ExecutionException
+	public CommandResult execute(ExecutionEvent event) throws ExecutionException
 	{
-		IWorkbenchWindow window = PlatformUI.getWorkbench()
-		        .getActiveWorkbenchWindow();
-		IRuntimeSettings runtime = (IRuntimeSettings) ServiceManager
-		        .get(IRuntimeSettings.class);
-		String procId = (String) runtime
-		        .getRuntimeProperty(RuntimeProperty.ID_PROCEDURE_SELECTION);
-		boolean doRelease = MessageDialog.openConfirm(window.getShell(),
-		        "Release procedure " + procId,
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		IRuntimeSettings runtime = (IRuntimeSettings) ServiceManager.get(IRuntimeSettings.class);
+		String procId = (String) runtime.getRuntimeProperty(RuntimeProperty.ID_PROCEDURE_SELECTION);
+		boolean doRelease = MessageDialog.openConfirm(window.getShell(), "Release procedure " + procId,
 		        "Do you really want to detach from this procedure?");
+		boolean doBackground = MessageDialog.openConfirm(window.getShell(), "Background mode",
+		        "Do you want to leave this procedure running in background?\n\nWarning: once in background mode, the procedure will continue operating without controlling client!");
 		if (doRelease)
 		{
-			ReleaseProcedureJob job = new ReleaseProcedureJob(procId);
+			ReleaseProcedureJob job = new ReleaseProcedureJob(procId, doBackground);
 			CommandHelper.executeInProgress(job, false, false);
 			if (job.result != CommandResult.SUCCESS)
 			{
-				MessageDialog.openError(window.getShell(), "Detach error",
-				        job.message);
+				MessageDialog.openError(window.getShell(), "Detach error", job.message);
 			}
 			return job.result;
 		}

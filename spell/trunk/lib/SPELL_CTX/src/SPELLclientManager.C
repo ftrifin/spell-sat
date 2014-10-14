@@ -5,7 +5,7 @@
 // DESCRIPTION: Client manager implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -377,11 +377,20 @@ void SPELLclientManager::setExecutorController( SPELLclient* client, SPELLexecut
 //=============================================================================
 // METHOD: SPELLclientManager::
 //=============================================================================
-void SPELLclientManager::removeExecutorController( SPELLclient* client, SPELLexecutor* exec, bool notifyExecutor )
+void SPELLclientManager::removeExecutorController( SPELLclient* client, SPELLexecutor* exec, bool notifyExecutor, bool error )
 {
 	client->removeProcedure( exec->getModel().getInstanceId() );
 	if (notifyExecutor)
 	{
-		exec->removeControllingClient();
+		exec->removeControllingClient(error);
 	}
+}
+
+//=============================================================================
+// METHOD: SPELLclientManager::
+//=============================================================================
+void SPELLclientManager::setExecutorInBackground( SPELLclient* client, SPELLexecutor* exec )
+{
+	client->removeProcedure( exec->getModel().getInstanceId() );
+	exec->setBackground();
 }

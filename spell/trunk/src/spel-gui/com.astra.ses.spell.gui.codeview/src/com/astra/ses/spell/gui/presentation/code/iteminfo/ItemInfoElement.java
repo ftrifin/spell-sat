@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 7, 2012
 //
-// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.

@@ -1,36 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.2"?>
 <plugin>
-   <extension-point id="com.astra.ses.spell.gui.extensions.ProcedureView" name="Procedure View" schema="schema/com.astra.ses.spell.gui.extensions.ProcedureView.exsd"/>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ProcedureIO"
-         name="Procedure input/output extension"
-         point="com.astra.ses.spell.gui.extensions.ProcedureIO">
-      <listener
-            class="com.astra.ses.spell.gui.procs.extensions.ProcedureInputExtension"
-            description="Extension for Procedure Manager"
-            name="Procedure Input extension">
-      </listener>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ProcedureOperations"
-         name="Procedure Operations extension"
-         point="com.astra.ses.spell.gui.extensions.ProcedureOperations">
-      <listener
-            class="com.astra.ses.spell.gui.procs.extensions.ProcedureOperationsExtension"
-            description="Extension for Procedure Manager"
-            name="Procedure operations extension">
-      </listener>
-   </extension>
-   <extension
-         id="com.astra.ses.spell.gui.extensions.ProcedureRuntime"
-         name="Procedure runtime extension"
-         point="com.astra.ses.spell.gui.extensions.ProcedureRuntime">
-      <listener
-            class="com.astra.ses.spell.gui.procs.extensions.ProcedureRuntimeExtension"
-            description="Extension for Procedure Manager"
-            name="Procedure runtime extension">
-      </listener>
-   </extension>
 
 </plugin>

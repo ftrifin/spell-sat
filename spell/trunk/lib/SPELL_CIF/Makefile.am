@@ -5,7 +5,7 @@
 ## DESCRIPTION: Automake rules
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -31,5 +31,5 @@ libSPELL_CIF_la_SOURCES = \
                 src/SPELLcif.C \
                 src/SPELLcifPython.C \
                 src/SPELLcifHelper.C \
-                src/SPELLasRun.C 
- 
+                src/SPELLasRun.C \
+		src/SPELLnotifications.C

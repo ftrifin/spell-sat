@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,41 +48,18 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.model.shell;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-
-import com.astra.ses.spell.gui.core.interfaces.BaseExtensions;
-import com.astra.ses.spell.gui.core.interfaces.IShellListener;
 import com.astra.ses.spell.gui.core.interfaces.IShellManager;
+import com.astra.ses.spell.gui.core.interfaces.listeners.IShellListener;
 
 /*******************************************************************************
  * Shell extension plugins loader class
  ******************************************************************************/
-public class ShellExtension extends BaseExtensions
+public class ShellExtension 
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the singleton instance */
 	private static ShellExtension	  s_instance	  = null;
-	/** Holds the extension plugin id */
-	private static final String	      EXTENSION_SHELL	= "com.astra.ses.spell.gui.extensions.ShellManager";
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	/** Holds the set of loaded extensions (only the first one is taken) */
-	private Collection<IShellManager>	m_shellEx;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
+	/** Holds the implementation of the shell manager */
+	private IShellManager m_shellManager;
 
 	/***************************************************************************
 	 * Singleton accessor
@@ -103,16 +80,7 @@ public class ShellExtension extends BaseExtensions
 	 **************************************************************************/
 	protected ShellExtension()
 	{
-		m_shellEx = new ArrayList<IShellManager>();
-	}
-
-	/***************************************************************************
-	 * Load the plugins providing the extension
-	 **************************************************************************/
-	@Override
-	public void loadExtensions()
-	{
-		loadExtensions(EXTENSION_SHELL, m_shellEx, IShellManager.class);
+		m_shellManager = null;
 	}
 
 	/***************************************************************************
@@ -122,7 +90,17 @@ public class ShellExtension extends BaseExtensions
 	 **************************************************************************/
 	public boolean haveShell()
 	{
-		return !m_shellEx.isEmpty();
+		return (m_shellManager != null);
+	}
+
+	/***************************************************************************
+	 * Check if there is any plugin providing the shell extension
+	 * 
+	 * @return True if there is such a plugin
+	 **************************************************************************/
+	public void setShell( IShellManager shell )
+	{
+		m_shellManager = shell;
 	}
 
 	/***************************************************************************
@@ -135,9 +113,7 @@ public class ShellExtension extends BaseExtensions
 	{
 		if (haveShell())
 		{
-			Iterator<IShellManager> it = m_shellEx.iterator();
-			IShellManager mgr = it.next();
-			mgr.addShellListener(lst);
+			m_shellManager.addShellListener(lst);
 		}
 	}
 
@@ -151,9 +127,10 @@ public class ShellExtension extends BaseExtensions
 	{
 		if (haveShell())
 		{
-			Iterator<IShellManager> it = m_shellEx.iterator();
-			IShellManager mgr = it.next();
-			mgr.removeShellListener(lst);
+			if (haveShell())
+			{
+				m_shellManager.removeShellListener(lst);
+			}
 		}
 	}
 
@@ -167,9 +144,7 @@ public class ShellExtension extends BaseExtensions
 	{
 		if (haveShell())
 		{
-			Iterator<IShellManager> it = m_shellEx.iterator();
-			IShellManager mgr = it.next();
-			mgr.shellInput(input);
+			m_shellManager.shellInput(input);
 		}
 	}
 }

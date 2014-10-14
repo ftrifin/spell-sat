@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for task management
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -387,7 +387,11 @@ class StartProc_Helper(WrapperHelper):
             LOG("Initial child status is error: " + repr([error,reason]), LOG_ERROR)
             raise DriverException(error,reason)
         
-        self._notifyValue("Procedure", self.__procId, self.__status, "Procedure loaded")
+        loadedStatus = NOTIF_STATUS_OK
+        if blocking: 
+            loadedStatus = NOTIF_STATUS_PR
+        
+        self._notifyValue("Procedure", self.__procId, loadedStatus, "Procedure loaded")
 
         # If the child procedure is started in blocking mode we shall monitor
         # it until it reaches the status ERROR/ABORTED/FINISHED. Otherwise,

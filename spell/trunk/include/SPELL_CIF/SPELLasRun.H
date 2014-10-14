@@ -5,7 +5,7 @@
 // DESCRIPTION: As-Run file interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -143,6 +143,13 @@ public: //--------------------------------------------------------------------
 		void writeAnswer( const std::string& stack, const std::string& msg, unsigned int scope );
 
 		//////////////////////////////////////////////////////////////////////
+		/** Start a child procedure
+		 *
+		 * \param asrun IN: corresponding asrun file
+		**////////////////////////////////////////////////////////////////////
+		void writeChildProc( const std::string& stack, const std::string& asrun, const std::string& arguments, const std::string& openMode );
+
+		//////////////////////////////////////////////////////////////////////
 		/** Write item status data.
 		 *
 		 * \param stack IN: stack information
@@ -163,7 +170,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \param stack IN: the call stack information
 		**////////////////////////////////////////////////////////////////////
-		void writeLine( const std::string& stack, long sequence );
+		void writeLine( const std::string& stack );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Call info data.
@@ -171,13 +178,13 @@ public: //--------------------------------------------------------------------
 		 * \param stack IN: the stack information at the moment of the notification
 		 *
 		**////////////////////////////////////////////////////////////////////
-		void writeCall( const std::string& stack, long sequence );
+		void writeCall( const std::string& stack );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Return info data.
 		 *
 		**////////////////////////////////////////////////////////////////////
-		void writeReturn( long sequence );
+		void writeReturn();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Error info data.
@@ -186,6 +193,13 @@ public: //--------------------------------------------------------------------
 		 * \param reason IN: error reason
 		**////////////////////////////////////////////////////////////////////
 		void writeErrorInfo( const std::string& error, const std::string& reason );
+
+		//////////////////////////////////////////////////////////////////////
+		/** User action logging
+		**////////////////////////////////////////////////////////////////////
+		void writeUserActionSet( const std::string& stack, const std::string& label, const unsigned int severity );
+		void writeUserActionUnset(const std::string& stack );
+		void writeUserActionEnable( const std::string& stack, bool enable );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get the AsRUN file name.
@@ -232,21 +246,15 @@ private: //-------------------------------------------------------------------
 		 *
 		 * \param info IN: the AsRUN information already in the right format.
 		**////////////////////////////////////////////////////////////////////
-		void toAsRun( const std::string& info );
-
-		//////////////////////////////////////////////////////////////////////
-		/** Writes the given string to the AsRUN file and flushes it.
-		 *
-		 * \param info IN: the AsRUN information already in the right format.
-		 * \param sequence IN: sequence number
-		**////////////////////////////////////////////////////////////////////
-		void toAsRun( const std::string& info, long sequence );
+		void toAsRun( const std::string& info, bool increaseSequence );
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 		/** Holds the output stream for the AsRUN file. */
 		std::ofstream    m_file;
 		/** Holds the AsRUN file name */
 		std::string      m_fileName;
+		/** Sequence counter */
+		unsigned long    m_sequence;
 };
 
 /*@}*/

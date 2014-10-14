@@ -5,7 +5,7 @@
 // DESCRIPTION: Inter process communication, data definitions for executor process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -73,8 +73,13 @@ namespace MessageId
 	static const std::string MSG_ID_ADD_CLIENT("MSG_ADD_CLIENT");
 	/** Remove client from executor */
 	static const std::string MSG_ID_REMOVE_CLIENT("MSG_REMOVE_CLIENT");
+	/** Set headless (background) mode */
+	static const std::string MSG_ID_BACKGROUND("MSG_BACKGROUND");
 	/** Set callstack node depth */
 	static const std::string MSG_ID_NODE_DEPTH("MSG_SHOW_NODE_DEPTH");
+	/** Message for enabling or disabling variable analysis */
+	static const std::string MSG_ID_WVARIABLES_ENABLE("MSG_WVARIABLES_ENABLE");
+	static const std::string MSG_ID_WVARIABLES_DISABLE("MSG_WVARIABLES_DISABLE");
 };
 
 /** Defines message fields */
@@ -86,6 +91,10 @@ namespace MessageField
 	static const std::string FIELD_SCOPE("Scope");
 	/** Holds the procedure id */
 	static const std::string  FIELD_PROC_ID("ProcId");
+	/** Holds the group id */
+	static const std::string  FIELD_GROUP_ID("GroupId");
+	/** Holds the origin id */
+	static const std::string  FIELD_ORIGIN_ID("OriginId");
 	/** Holds the instance id, used in the instance request */
 	static const std::string  FIELD_INSTANCE_ID("InstanceId");
 	/** Subprocedure identifier */
@@ -94,10 +103,14 @@ namespace MessageField
 	static const std::string  FIELD_OPEN_MODE("OpenMode");            // Open requests
 	/** Free answer to a question */
 	static const std::string FIELD_ANSWER("Answer");
+	/** Default option for prompts */
+	static const std::string FIELD_DEFAULT("Default");
 	/** Procedure name */
 	static const std::string FIELD_PROC_NAME("ProcName");
 	/** Executor parent proc if any */
 	static const std::string FIELD_PARENT_PROC("ParentId");
+	/** Executor parent proc calling line if any */
+	static const std::string FIELD_PARENT_PROC_LINE("ParentLine");
 	/** Call stack position */
 	static const std::string FIELD_CSP("Csp");
 	/** Stage id */
@@ -171,18 +184,22 @@ namespace MessageField
 	//# WATCH OF VARIABLES
 	//################################################################################
 
-	/** Which variable to get */
-	static const std::string FIELD_VARIABLE_GET("VarGet");
-	/** Variable name for watch */
+	/** Variable names */
 	static const std::string FIELD_VARIABLE_NAME("VarName");
-	/** Variable value for watch */
+	/** Variable values */
 	static const std::string FIELD_VARIABLE_VALUE("VarValue");
-	/** Variable type for watch */
+	/** Variable types */
 	static const std::string FIELD_VARIABLE_TYPE("VarType");
-	/** Variable global flag for watch */
+	/** Variable global flags */
 	static const std::string FIELD_VARIABLE_GLOBAL("VarGlobal");
-	/** Variable registered flag for watch */
-	static const std::string FIELD_VARIABLE_REGISTERED("VarRegistered");
+	/** Variable deleted flags */
+	static const std::string FIELD_VARIABLE_DELETE("VarDelete");
+	/** Variable added flags */
+	static const std::string FIELD_VARIABLE_ADDED("VarAdded");
+	/** Variable scope name */
+	static const std::string FIELD_VARIABLE_SCOPE("VarScope");
+	/** Variable analysis enabled */
+	static const std::string FIELD_WVARIABLES_ENABLED("WVarEnabled");
 
 	//################################################################################
 	//# DICTIONARY EDITING
@@ -280,31 +297,34 @@ namespace MessageValue
 	// Number of status codes
 	static const int NumStatus = sizeof(StatusStr) / sizeof(std::string);
 
+//TODO Remove from here and move to Notifications Class
+
 //###############################################################################
 //# UI notification type values
 	/** Notification data type item */
-	static const std::string DATA_NOTIF_TYPE_ITEM("ITEM");
+//	static const std::string DATA_NOTIF_TYPE_ITEM("ITEM");
 	/** Notification data type value */
-	static const std::string DATA_NOTIF_TYPE_VAL("VALUE");
+//	static const std::string DATA_NOTIF_TYPE_VAL("VALUE");
 	/** Notification data type verification */
-	static const std::string DATA_NOTIF_TYPE_VERIF("VERIFICATION");
+//	static const std::string DATA_NOTIF_TYPE_VERIF("VERIFICATION");
 	/** Notification data type execution */
-	static const std::string DATA_NOTIF_TYPE_EXEC("EXECUTION");
+//	static const std::string DATA_NOTIF_TYPE_EXEC("EXECUTION");
 	/** Notification data type system */
-	static const std::string DATA_NOTIF_TYPE_SYS("SYSTEM");
+//	static const std::string DATA_NOTIF_TYPE_SYS("SYSTEM");
 	/** Notification data type time */
-	static const std::string DATA_NOTIF_TYPE_TIME("TIME");
+//	static const std::string DATA_NOTIF_TYPE_TIME("TIME");
 
 //###############################################################################
 //# UI notification status values
 	/** Success operation */
-	static const std::string DATA_NOTIF_STATUS_OK("SUCCESS");
+//	static const std::string DATA_NOTIF_STATUS_OK("SUCCESS");
 	/** In progress operation */
-	static const std::string DATA_NOTIF_STATUS_PR("IN PROGRESS");
+//	static const std::string DATA_NOTIF_STATUS_PR("IN PROGRESS");
 	/** Failed operation */
-	static const std::string DATA_NOTIF_STATUS_FL("FAILED");
+//	static const std::string DATA_NOTIF_STATUS_FL("FAILED");
 	/** Skipped operation */
-	static const std::string DATA_NOTIF_STATUS_SP("SKIPPED");
+//	static const std::string DATA_NOTIF_STATUS_SP("SKIPPED");
+
 
 //###############################################################################
 //# Execution mode values
@@ -333,9 +353,6 @@ namespace MessageValue
 	static const std::string AVAILABLE_ALL("AVAILABLE_ALL");
 	static const std::string AVAILABLE_GLOBALS("AVAILABLE_GLOBALS");
 	static const std::string AVAILABLE_LOCALS("AVAILABLE_LOCALS");
-	static const std::string REGISTERED_ALL("REGISTERED_ALL");
-	static const std::string REGISTERED_GLOBALS("REGISTERED_GLOBALS");
-	static const std::string REGISTERED_LOCALS("REGISTERED_LOCALS");
 };
 
 /** Defines requests and messages regarding the executor process */
@@ -370,29 +387,17 @@ namespace ExecutorMessages
 	//################################################################################
 
 	/** Request for retrieving variable names */
-	static const std::string REQ_VARIABLE_NAMES("REQ_VARIABLE_NAMES");
+	static const std::string REQ_GET_VARIABLES("REQ_GET_VARIABLES");
 	/** Response */
-	static const std::string RSP_VARIABLE_NAMES("RSP_VARIABLE_NAMES");
-
-	/** Request for registering variable watch */
-	static const std::string REQ_VARIABLE_WATCH("REQ_VARIABLE_WATCH");
-	/** Response */
-	static const std::string RSP_VARIABLE_WATCH("RSP_VARIABLE_WATCH");
-
-	/** Request for unregistering variable watch */
-	static const std::string REQ_VARIABLE_NOWATCH("REQ_VARIABLE_NOWATCH");
-	/** Response */
-	static const std::string RSP_VARIABLE_NOWATCH("RSP_VARIABLE_NOWATCH");
-
-	/** Request for unregistering all watches */
-	static const std::string REQ_WATCH_NOTHING("REQ_WATCH_NOTHING");
-	/** Response */
-	static const std::string RSP_WATCH_NOTHING("RSP_WATCH_NOTHING");
-
+	static const std::string RSP_GET_VARIABLES("RSP_GET_VARIABLES");
 	/** Request for changing variables */
 	static const std::string REQ_CHANGE_VARIABLE("REQ_CHANGE_VARIABLE");
 	/** Response */
 	static const std::string RSP_CHANGE_VARIABLE("RSP_CHANGE_VARIABLE");
+	/** Request to check if variable analysis is enabled */
+	static const std::string REQ_WVARIABLES_ENABLED("REQ_WVARIABLES_ENABLED");
+	/** Response */
+	static const std::string RSP_WVARIABLES_ENABLED("RSP_WVARIABLES_ENABLED");
 
 	//################################################################################
 	//# DICTIONARY EDITING
@@ -412,19 +417,11 @@ namespace ExecutorMessages
 	//# SPECIALS
 	//################################################################################
 
-	/** Request for saving state on demand */
-	static const std::string REQ_SAVE_STATE("REQ_SAVE_STATE");
-	/** Response */
-	static const std::string RSP_SAVE_STATE("RSP_SAVE_STATE");
-
 	/** Oneway message for variable change notifications */
 	static const std::string MSG_VARIABLE_CHANGE("MSG_VARIABLE_CHANGE");
 
 	/** Oneway message for variable scope change notifications */
 	static const std::string MSG_SCOPE_CHANGE("MSG_SCOPE_CHANGE");
-
-	/** Dump interpreter information */
-	static const std::string MSG_DUMP_INTERPRETER("MSG_DUMP_INTERPRETER");
 
 	//################################################################################
 	//# REQUESTS TO CONTEXT

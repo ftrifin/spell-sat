@@ -141,7 +141,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="SPELL_UTIL"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="SPELL_WRP"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="SPELL_WS"/>
-						<entry excluding="src|SPELL_CFG|SPELL_CIF|SPELL_CIFC|SPELL_CIFS|SPELL_CTX|SPELL_EXC|SPELL_IPC|SPELL_LST|SPELL_PRC|SPELL_PRD|SPELL_SDB|SPELL_SSH|SPELL_SYN|SPELL_UTIL|SPELL_WRP|SPELL_WS" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+						<entry excluding="src|SPELL_ALI|SPELL_CFG|SPELL_CIF|SPELL_CIFC|SPELL_CIFS|SPELL_CTX|SPELL_EXC|SPELL_IPC|SPELL_ISA|SPELL_LST|SPELL_PRC|SPELL_PRD|SPELL_SDB|SPELL_SSH|SPELL_SYN|SPELL_UTIL|SPELL_WRP|SPELL_WS" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

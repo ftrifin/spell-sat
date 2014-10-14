@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,7 +48,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.core.model.files;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
@@ -66,7 +66,7 @@ public class LogFile extends BasicServerFile
 	 * 
 	 * @param source
 	 **************************************************************************/
-	public LogFile(String procId, String path, ArrayList<String> lines)
+	public LogFile(String procId, String path, List<String> lines)
 	{
 		super(path,lines);
 		m_procId = procId;
@@ -77,7 +77,7 @@ public class LogFile extends BasicServerFile
 	 * 
 	 * @param source
 	 **************************************************************************/
-	public void parse(ArrayList<String> lines)
+	public void parse(List<String> lines)
 	{
 		int count = 1;
 		for (String line : lines)

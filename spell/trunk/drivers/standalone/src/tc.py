@@ -5,7 +5,7 @@
 ## DESCRIPTION: Telecommand interface of the driver connection layer
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -32,6 +32,7 @@ from spell.lib.exception import *
 from spell.lang.constants import *
 from spell.lib.registry import REGISTRY
 from spell.lang.modifiers import *
+from spell.lang.functions import Prompt
 
 #*******************************************************************************
 # Local imports
@@ -74,12 +75,18 @@ class TcInterface(superClass):
         superClass.cleanup(self)
         LOG("Cleanup standalone TC interface")
     
-    #==========================================================================
-    def _createTcItem(self, mnenonic, description = "" ):
-        item = REGISTRY['SIM'].getTCitem(mnenonic)
-        item._setDescription(description)
-        return item
-    
+    #===========================================================================
+    def __getitem__(self, key):
+        # If the telecommand mnemonic is composed of several words:
+        words = key.split()
+        mnemonic = key
+        if len(words)>1 and words[0].upper() == 'C':
+            mnemonic = words[1]
+        else:
+            mnemonic = key
+        LOG("Return simulated item '" + mnemonic + "'")
+        return REGISTRY['SIM'].getTCitem(mnemonic)
+
     #==========================================================================
     def _sendCommand(self, tcItem, config = {} ):
         LOG("Sending command: " + repr(tcItem.name()))
@@ -144,24 +151,40 @@ class TcInterface(superClass):
 
         LOG(" --> Executing list")
         item._setExecutionStageStatus("Execution", "Ongoing")
-        for simpleItem in item.getElements()[1:]:
+        
+        itemList = item.getElements()[1:]
+        
+        for simpleItem in itemList:
             idx = simpleItem.find("@")
             name = simpleItem[idx+1:]
             LOG(" --> Executing list command " + name)
-            REGISTRY['SIM'].executeCommand(name)
+            resendCommand = True
+            while resendCommand:
+                try:
+                    REGISTRY['SIM'].executeCommand(name)
+        
+                    item._setExecutionStageStatus("Uplinked","Passed", elementId = simpleItem)
+                    item._setExecutionStageStatus("Idle","Passed", elementId = simpleItem)
+        
+                    if (name == 'TC_FAIL'):
+                        item._setExecutionStageStatus("Execution","Failed", elementId = simpleItem)
+                        item._setCompleted(False, elementId = simpleItem)
+                        item._setExecutionStageStatus("Execution", "Failed")
+                        raise DriverException("Command failure")
+                    else:
+                        item._setExecutionStageStatus("Execution","Success", elementId = simpleItem)
+                        item._setCompleted(True, elementId = simpleItem)
+                        
+                    resendCommand = False
+                    
+                except DriverException,ex:
 
-            item._setExecutionStageStatus("Uplinked","Passed", elementId = simpleItem)
-            item._setExecutionStageStatus("Idle","Passed", elementId = simpleItem)
-
-            if (item.name() == 'TC_FAIL'):
-                item._setExecutionStageStatus("Execution","Failed", elementId = simpleItem)
-                item._setCompleted(False, elementId = simpleItem)
-                item._setExecutionStageStatus("Execution", "Failed")
-                raise DriverException("Command failure")
-            else:
-                item._setExecutionStageStatus("Execution","Success", elementId = simpleItem)
-                item._setCompleted(True, elementId = simpleItem)
-
+                    msg = "Execution of command " + name + " failed.\nDo you want to resend it?"
+                    resendCommand = Prompt(msg,Type=YES_NO, Scope=SCOPE_PROC)
+                    
+                    if not resendCommand:
+                        raise ex
+                
         item._setExecutionStageStatus("Execution", "Finished")
         item._setCompleted(True)
         return True

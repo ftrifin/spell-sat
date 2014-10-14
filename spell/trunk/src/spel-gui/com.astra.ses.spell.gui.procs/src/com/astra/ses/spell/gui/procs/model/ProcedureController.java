@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-07-30
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,7 +48,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.model;
 
-import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
 import com.astra.ses.spell.gui.core.exceptions.CommandFailed;
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
@@ -56,18 +55,16 @@ import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.notification.InputData;
 import com.astra.ses.spell.gui.core.model.server.ExecutorConfig;
-import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
-import com.astra.ses.spell.gui.procs.ProcExtensions;
-import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
+import com.astra.ses.spell.gui.procs.ProcedureNotifications;
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController;
-import com.astra.ses.spell.gui.procs.interfaces.model.IStepOverControl;
-import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
+import com.astra.ses.spell.gui.types.ExecutorCommand;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * 
@@ -84,8 +81,6 @@ public class ProcedureController implements IProcedureController
 	/** Holds the procedure model */
 	private IProcedure m_model;
 	private InputData m_promptData;
-	/** Holds the step over control */
-	private IStepOverControl m_so;
 
 	/*
 	 * Static block to retrieve the context proxy
@@ -101,7 +96,6 @@ public class ProcedureController implements IProcedureController
 	public ProcedureController(IProcedure model)
 	{
 		m_model = model;
-		m_so = new StepOverControl();
 		m_promptData = null;
 	}
 
@@ -129,7 +123,7 @@ public class ProcedureController implements IProcedureController
 	public void issueCommand(ExecutorCommand cmd, String[] args)
 	{
 		ExecutorStatus status = getInfo().getStatus();
-		if (!cmd.validate(status))
+		if (!cmd.validate(null,status))
 		{
 			throw new CommandFailed("Cannot execute command, invalid procedure status");
 		}
@@ -165,10 +159,9 @@ public class ProcedureController implements IProcedureController
 		{
 			Logger.debug("Refreshing execution model", Level.PROC, this);
 			String procId = m_model.getProcId();
-			IExecutorInfo info = new ExecutorInfo(procId);
 			try
 			{
-				s_proxy.updateExecutorInfo(procId, info);
+				IExecutorInfo info = s_proxy.getExecutorInfo(procId);
 				getInfo().copyFrom(info);
 				Logger.debug("Execution model updated", Level.PROC, this);
 			}
@@ -225,8 +218,9 @@ public class ProcedureController implements IProcedureController
 		// Send the request
 		try
 		{
-			s_proxy.toggleBreakpoint(m_model.getProcId(), m_model.getExecutionManager().getCodeId(), lineNumber, type);
-			m_model.getExecutionManager().setBreakpoint(lineNumber-1, type);
+			
+			s_proxy.toggleBreakpoint(m_model.getProcId(), m_model.getExecutionManager().getCurrentCode(), lineNumber, type);
+			m_model.getExecutionManager().setBreakpoint(lineNumber, type);
 		}
 		catch (Exception e)
 		{
@@ -240,7 +234,7 @@ public class ProcedureController implements IProcedureController
 	@Override
 	public void gotoLine(int lineNumber) throws CommandFailed
 	{
-		m_model.getExecutionManager().getCurrentLine().resetExecuted();
+		m_model.getExecutionManager().beforeGoto();
 		releaseExecutorCommand(ExecutorCommand.GOTO, new String[] { "", String.valueOf(lineNumber) });
 	}
 
@@ -250,8 +244,18 @@ public class ProcedureController implements IProcedureController
 	@Override
 	public void gotoLabel(String label) throws CommandFailed
 	{
-		m_model.getExecutionManager().getCurrentLine().resetExecuted();
+		m_model.getExecutionManager().beforeGoto();
 		releaseExecutorCommand(ExecutorCommand.GOTO, new String[] { label, "" });
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void moveStack( int level )
+	{
+		System.err.println("SEND STACK MOVE " + level);
+		s_proxy.viewNodeAtDepth(m_model.getProcId(), level);
 	}
 
 	/***************************************************************************
@@ -274,7 +278,7 @@ public class ProcedureController implements IProcedureController
 	public void setBrowsableLib(boolean showLib)
 	{
 		getInfo().setShowLib(showLib);
-		ProcExtensions.get().fireModelConfigured(m_model);
+		ProcedureNotifications.get().fireModelConfigured(m_model);
 	}
 
 	/***************************************************************************
@@ -291,7 +295,7 @@ public class ProcedureController implements IProcedureController
 			 * If there is a temporary breakpoint at the current line Then there
 			 * is need to remove it
 			 */
-			m_model.getExecutionManager().getCurrentLine().removeBreakpoint();
+			m_model.getExecutionManager().removeBreakpoint();
 			break;
 		default:
 			break;
@@ -307,7 +311,7 @@ public class ProcedureController implements IProcedureController
 		if (!m_model.isInReplayMode())
 		{
 			// Redirect the data to the consumers
-			ProcExtensions.get().fireProcedureError(m_model, data);
+			ProcedureNotifications.get().fireProcedureError(m_model, data);
 		}
 	}
 
@@ -317,17 +321,11 @@ public class ProcedureController implements IProcedureController
 	@Override
 	public void setRunInto(boolean runInto)
 	{
-		// Internal information model
-		if (runInto)
-		{
-			m_so.setMode(StepOverMode.STEP_INTO_ALWAYS);
-		}
-		else
-		{
-			m_so.setMode(StepOverMode.STEP_OVER_ALWAYS);
-		}
+		// Update the internal information model
+		m_model.getExecutionManager().setRunInto(runInto);
+		
 		// If we are controlling, perform the change request to the server
-		if (getInfo().getClientMode().equals(ClientMode.CONTROLLING))
+		if (getInfo().getClientMode().equals(ClientMode.CONTROL))
 		{
 			try
 			{
@@ -335,7 +333,7 @@ public class ProcedureController implements IProcedureController
 				ExecutorConfig config = new ExecutorConfig(m_model.getProcId());
 				getInfo().visit(config);
 				s_proxy.setExecutorConfiguration(m_model.getProcId(), config);
-				ProcExtensions.get().fireModelConfigured(m_model);
+				ProcedureNotifications.get().fireModelConfigured(m_model);
 			}
 			catch (Exception e)
 			{
@@ -353,7 +351,7 @@ public class ProcedureController implements IProcedureController
 		// Update the internal information model
 		getInfo().setExecutionDelay(msec);
 		// If we are controlling, perform the change request to the server
-		if (getInfo().getClientMode().equals(ClientMode.CONTROLLING))
+		if (getInfo().getClientMode().equals(ClientMode.CONTROL))
 		{
 			try
 			{
@@ -361,7 +359,7 @@ public class ProcedureController implements IProcedureController
 				ExecutorConfig config = new ExecutorConfig(m_model.getProcId());
 				getInfo().visit(config);
 				s_proxy.setExecutorConfiguration(m_model.getProcId(), config);
-				ProcExtensions.get().fireModelConfigured(m_model);
+				ProcedureNotifications.get().fireModelConfigured(m_model);
 			}
 			catch (Exception e)
 			{
@@ -369,6 +367,33 @@ public class ProcedureController implements IProcedureController
 			}
 		}
 	}
+	
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public void setPromptWarningDelay(int msec)
+	{
+		// Update the internal information model
+		getInfo().setPromptWarningDelay(msec);
+		// If we are controlling, perform the change request to the server
+		if (getInfo().getClientMode().equals(ClientMode.CONTROL))
+		{
+			try
+			{
+				// Send the request to configure the server
+				ExecutorConfig config = new ExecutorConfig(m_model.getProcId());
+				getInfo().visit(config);
+				s_proxy.setExecutorConfiguration(m_model.getProcId(), config);
+				ProcedureNotifications.get().fireModelConfigured(m_model);
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}	
 
 	/***************************************************************************
 	 * 
@@ -378,7 +403,7 @@ public class ProcedureController implements IProcedureController
 	{
 		getInfo().setStepByStep(value);
 		// If we are controlling, perform the change request to the server
-		if (getInfo().getClientMode().equals(ClientMode.CONTROLLING))
+		if (getInfo().getClientMode().equals(ClientMode.CONTROL))
 		{
 			try
 			{
@@ -386,7 +411,7 @@ public class ProcedureController implements IProcedureController
 				ExecutorConfig config = new ExecutorConfig(m_model.getProcId());
 				getInfo().visit(config);
 				s_proxy.setExecutorConfiguration(m_model.getProcId(), config);
-				ProcExtensions.get().fireModelConfigured(m_model);
+				ProcedureNotifications.get().fireModelConfigured(m_model);
 			}
 			catch (Exception e)
 			{
@@ -403,7 +428,7 @@ public class ProcedureController implements IProcedureController
 	{
 		getInfo().setForceTcConfirmation(value);
 		// If we are controlling, perform the change request to the server
-		if (getInfo().getClientMode().equals(ClientMode.CONTROLLING))
+		if (getInfo().getClientMode().equals(ClientMode.CONTROL))
 		{
 			try
 			{
@@ -411,7 +436,7 @@ public class ProcedureController implements IProcedureController
 				ExecutorConfig config = new ExecutorConfig(m_model.getProcId());
 				getInfo().visit(config);
 				s_proxy.setExecutorConfiguration(m_model.getProcId(), config);
-				ProcExtensions.get().fireModelConfigured(m_model);
+				ProcedureNotifications.get().fireModelConfigured(m_model);
 			}
 			catch (Exception e)
 			{
@@ -429,7 +454,7 @@ public class ProcedureController implements IProcedureController
 		m_promptData = inputData;
 		getInfo().setWaitingInput(true);
 		// Rredirect the data to the consumers
-		ProcExtensions.get().firePrompt(m_model);
+		ProcedureNotifications.get().firePrompt(m_model);
 	}
 
 	/***************************************************************************
@@ -441,7 +466,7 @@ public class ProcedureController implements IProcedureController
 		m_promptData = null;
 		getInfo().setWaitingInput(false);
 		// Redirect the data to the consumers
-		ProcExtensions.get().fireCancelPrompt(m_model);
+		ProcedureNotifications.get().fireCancelPrompt(m_model);
 	}
 
 	/***************************************************************************
@@ -453,146 +478,91 @@ public class ProcedureController implements IProcedureController
 		m_promptData = null;
 		getInfo().setWaitingInput(false);
 		// Redirect the data to the consumers
-		ProcExtensions.get().fireFinishPrompt(m_model);
+		ProcedureNotifications.get().fireFinishPrompt(m_model);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#abort
-	 * ()
-	 * =========================================================================
-	 */
+	 **************************************************************************/
 	@Override
 	public void abort()
 	{
 		releaseExecutorCommand(ExecutorCommand.ABORT);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#pause
-	 * ()
-	 * =========================================================================
-	 */
+	 **************************************************************************/
 	@Override
 	public void pause()
 	{
 		releaseExecutorCommand(ExecutorCommand.PAUSE);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#recover
-	 * ()
-	 * ========================================================================
-	 * ==
-	 */
+	 **************************************************************************/
+	@Override
+	public void interrupt()
+	{
+		releaseExecutorCommand(ExecutorCommand.INTERRUPT);
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void recover()
 	{
 		releaseExecutorCommand(ExecutorCommand.RECOVER);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#reload
-	 * ()
-	 * ========================================================================
-	 * ==
-	 */
+	 **************************************************************************/
 	@Override
 	public void reload()
 	{
 		releaseExecutorCommand(ExecutorCommand.RELOAD);
-		m_so.reset();
+		m_model.getExecutionManager().reset();
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#reload
-	 * ()
-	 * ========================================================================
-	 * ==
-	 */
-	@Override
-	public void save()
-	{
-		s_proxy.saveInterpreterInformation(m_model.getProcId());
-	}
-
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#run()
-	 * ==
-	 * ========================================================================
-	 */
+	 **************************************************************************/
 	@Override
 	public void run()
 	{
 		releaseExecutorCommand(ExecutorCommand.RUN);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.procs.interfaces.model.IProcedureController#skip
-	 * ()
-	 * ========================================================================
-	 * ==
-	 */
+	 **************************************************************************/
 	@Override
 	public void skip()
 	{
-		m_model.getExecutionManager().getCurrentLine().resetExecuted();
+		m_model.getExecutionManager().doSkip();
 		releaseExecutorCommand(ExecutorCommand.SKIP);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see IProcedureController#step()
-	 * ==========================================
-	 * ================================
-	 */
+	 **************************************************************************/
 	@Override
 	public void step()
 	{
-		m_so.setMode(StepOverMode.STEP_INTO_ONCE);
+		m_model.getExecutionManager().doStepInto();
 		releaseExecutorCommand(ExecutorCommand.STEP);
 	}
 
-	/*
-	 * ==========================================================================
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see IProcedureController#stepOver()
-	 * =========================================================================
-	 */
+	 **************************************************************************/
 	@Override
 	public void stepOver()
 	{
-		m_so.setMode(StepOverMode.STEP_OVER_ONCE);
+		m_model.getExecutionManager().doStepOver();
 		releaseExecutorCommand(ExecutorCommand.STEP_OVER);
 	}
 
@@ -633,10 +603,4 @@ public class ProcedureController implements IProcedureController
 	{
 		releaseExecutorCommand(cmd, new String[0]);
 	}
-
-	@Override
-    public IStepOverControl getStepOverControl()
-    {
-	    return m_so;
-    }
 }

@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,10 +61,12 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.RGB;
 
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Scope;
 import com.astra.ses.spell.gui.preferences.Activator;
+import com.astra.ses.spell.gui.preferences.initializer.elements.CommandsInfo;
+import com.astra.ses.spell.gui.preferences.initializer.elements.StatusInfo;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 import com.astra.ses.spell.gui.preferences.keys.GuiColorKey;
 import com.astra.ses.spell.gui.preferences.keys.PreferenceCategory;
@@ -73,6 +75,7 @@ import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 import com.astra.ses.spell.gui.preferences.keys.StatusColorKey;
 import com.astra.ses.spell.gui.preferences.model.PresentationsManager;
 import com.astra.ses.spell.gui.preferences.model.ServersManager;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /******************************************************************************
  * 
@@ -110,8 +113,10 @@ public class GUIPreferencesSaver
 
 			fileHeader(writer);
 			dumpProperties(prefStore, writer);
+			dumpConnectivity(prefStore, writer);
 			dumpPresentations(prefStore, writer);
 			dumpAppearance(prefStore, writer);
+			dumpProcPanel(prefStore, writer);
 			dumpServers(prefStore, writer);
 			fileFooter(writer);
 
@@ -170,6 +175,25 @@ public class GUIPreferencesSaver
 		}
 		writer.println("    </presentations>");
 		writer.println();
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private void dumpConnectivity(IPreferenceStore store, PrintWriter writer)
+	{
+		String authRepr = store.getString(PreferenceCategory.CONNECTIVITY.tag);
+		if (authRepr != null && !authRepr.trim().isEmpty())
+		{
+			AuthenticationData auth = AuthenticationData.valueOf(authRepr);
+			if (auth == null) return;
+			writer.println("    <connectivity>");
+			writer.println("        <user>" + auth.getUsername() + "</user>");
+			if (auth.getPassword()!=null) writer.println("        <pwd>" + auth.getPassword() + "</pwd>");
+			if (auth.getKeyFile()!=null) writer.println("        <key>" + auth.getKeyFile() + "</key>");
+			writer.println("    </connectivity>");
+			writer.println(" ");
+		}
 	}
 
 	/***************************************************************************
@@ -327,6 +351,39 @@ public class GUIPreferencesSaver
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
+	private void dumpProcPanel(IPreferenceStore store, PrintWriter writer)
+	{
+		writer.println("    <procpanel>");
+		
+		String label = store.getString(PreferenceCategory.COMMANDS.tag);
+		CommandsInfo commandsInfo = new CommandsInfo(label);
+		
+		String status = store.getString(PreferenceCategory.STATUS.tag);
+		StatusInfo statusInfo = new StatusInfo(status);
+		int pos = statusInfo.getLocation();
+		
+		// Writing components (i.e. commands and status)
+		int index=0;
+		for (String command : commandsInfo.getMap().keySet())
+		{
+			if ( index == pos )
+			{
+				writer.println("            <component id=" + StatusInfo.STATUS_ID + ">" + statusInfo.getLabel() + "</component>");
+			}			
+			writer.println("            <component id" + command + ">" + commandsInfo.getMap().get(command) + "</component>");			
+			index++;
+		}
+		// Writing status (if applies)
+		if ( index<=pos || pos==-1 ) {
+			writer.println("            <component>" + StatusInfo.STATUS_ID + "</component>");			
+		}
+		
+		writer.println("    </procpanel>");
+	}
+	
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	private void dumpServers(IPreferenceStore store, PrintWriter writer)
 	{
 		writer.println("    <servers>");
@@ -336,10 +393,7 @@ public class GUIPreferencesSaver
 		for (String id : serverIds)
 		{
 			ServerInfo info = manager.getServer(id);
-			dumpServer(info.getName(), info.getHost(),
-			        Integer.toString(info.getPort()),
-			        info.getRole().toString(), info.getTunnelUser(), info.getTunnelPassword(),
-			        writer);
+			dumpServer(info.getName(), info.getHost(), Integer.toString(info.getPort()), info.getRole().toString(), info.getAuthentication(),writer);
 		}
 		writer.println("    </servers>");
 	}
@@ -376,21 +430,20 @@ public class GUIPreferencesSaver
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
-	private void dumpServer(String name, String host, String port, String role,
-	        String user, String password, PrintWriter writer)
+	private void dumpServer(String name, String host, String port, String role, AuthenticationData auth, PrintWriter writer)
 	{
 		writer.println("        <server>");
 		writer.println("            <name>" + name + "</name>");
 		writer.println("            <host>" + host + "</host>");
 		writer.println("            <port>" + port + "</port>");
 		writer.println("            <role>" + role + "</role>");
-		if ((user != null) && (!user.isEmpty()))
+		if (auth != null)
 		{
-			writer.println("            <user>" + user + "</user>");
-		}
-		if ((password != null) && (!password.isEmpty()))
-		{
-			writer.println("            <pwd>" + password + "</pwd>");
+			writer.println("            <connectivity>");
+			writer.println("                <user>" + auth.getUsername() + "</user>");
+			if (auth.getPassword()!=null) writer.println("                <pwd>" + auth.getPassword() + "</pwd>");
+			if (auth.getKeyFile()!=null) writer.println("                <key>" + auth.getKeyFile() + "</key>");
+			writer.println("            </connectivity>");
 		}
 		writer.println("        </server>");
 	}

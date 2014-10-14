@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,7 +53,7 @@ public enum ProcProperties
 	PROC_NAME("name", false), PROC_DESC("description", true), PROC_FILE("file",
 	        false), PROC_DEVELOPED("developed", false), PROC_VERIFIED(
 	        "verified", false), PROC_VALIDATED("validated", false), PROC_HISTORY(
-	        "history", true), PROC_SPACECRAFT("spacecraft", false), PROC_SPECIFICATION(
+	        "revision history", true), PROC_SPACECRAFT("spacecraft", false), PROC_SPECIFICATION(
 	        "specification", false), PROC_CATEGORY("category", false);
 
 	private ProcProperties(String tag, boolean multiline)

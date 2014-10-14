@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 09:02
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -63,42 +63,18 @@ import com.trilead.ssh2.LocalPortForwarder;
  ******************************************************************************/
 public class Tunneler
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the server characteristics */
 	private ServerInfo	       m_serverInfo;
 	/** Keeps the local tunnel port */
 	private int	               m_localPort;
 	/** Keeps the remote tunnel port */
 	private int	               m_remotePort;
-	/** Keeps the user */
-	private String	           m_user;
-	/** Keeps the password */
-	private String	           m_pwd;
 	/** Holds the SSH connection */
 	private Connection	       m_connection;
 	/** Holds the port forwarder */
 	private LocalPortForwarder	m_fwd;
 	/** True if the tunnel is established */
 	private boolean	           m_connected	= false;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -113,8 +89,6 @@ public class Tunneler
 		m_serverInfo = info;
 		m_localPort = info.getPort();
 		m_remotePort = info.getPort();
-		m_user = info.getTunnelUser();
-		m_pwd = info.getTunnelPassword();
 	}
 
 	/***************************************************************************
@@ -132,17 +106,11 @@ public class Tunneler
 		Logger.debug("Opening SSH session", Level.COMM, this);
 		m_connection.connect();
 		Logger.debug("Authenticating", Level.COMM, this);
-		boolean isAuthenticated = m_connection.authenticateWithPassword(m_user,
-		        m_pwd);
-		if (isAuthenticated == false) throw new IOException(
-		        "Authentication failed.");
+		Authenticator.authenticate(m_connection, m_serverInfo.getAuthentication());
 		Logger.debug("Creating port forwarder", Level.COMM, this);
 		m_localPort = findFreePort(m_localPort + 1);
-		Logger.debug(
-		        "localhost:" + m_localPort + " -> " + m_serverInfo.getHost()
-		                + ":" + m_serverInfo.getPort(), Level.COMM, this);
-		m_fwd = m_connection.createLocalPortForwarder(m_localPort, "localhost",
-		        m_serverInfo.getPort());
+		Logger.debug("localhost:" + m_localPort + " -> " + m_serverInfo.getHost() + ":" + m_serverInfo.getPort(), Level.COMM, this);
+		m_fwd = m_connection.createLocalPortForwarder(m_localPort, "localhost", m_serverInfo.getPort());
 		m_serverInfo.setPort(m_localPort);
 		m_connected = true;
 		Logger.debug("Tunnel connected", Level.COMM, this);
@@ -161,7 +129,6 @@ public class Tunneler
 		}
 		catch (IOException e)
 		{
-			e.printStackTrace();
 		}
 		Logger.debug("Closing connection", Level.COMM, this);
 		m_connection.close();
@@ -189,6 +156,9 @@ public class Tunneler
 		return m_connection;
 	}
 
+	/***************************************************************************
+	 * Find a free port in the system
+	 **************************************************************************/
 	protected int findFreePort(int defaultPort)
 	{
 		int port = defaultPort;
@@ -200,7 +170,6 @@ public class Tunneler
 		}
 		catch (IOException ex)
 		{
-			ex.printStackTrace();
 		}
 		return port;
 	}

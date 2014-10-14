@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -75,15 +75,15 @@ import com.astra.ses.spell.gui.core.utils.Logger;
 public class InputReader extends Thread
 {
 	/** Buffer for building message data structures */
-	private ArrayList<Byte>	    m_inputData;
+	private ArrayList<Byte> m_inputData;
 	/** Holds the message length */
-	private int	                m_length;
+	private int m_length;
 	/** Holds the input stream for receiving messages */
-	private DataInputStream	    m_in;
+	private DataInputStream m_in;
 	/** Reference to the interface */
-	private CommInterfaceSocket	m_interface;
+	private CommInterfaceSocket m_interface;
 	/** True if the message input loop shall keep working */
-	private boolean	            m_working;
+	private boolean m_working;
 
 	/***********************************************************************
 	 * Constructor
@@ -111,12 +111,12 @@ public class InputReader extends Thread
 				{
 					byte b = m_in.readByte();
 					m_inputData.add(b);
-					while (m_inputData.size() >= CommInterfaceSocketConstants.PFX_LEN
-					        && getWorking())
+					while (m_inputData.size() >= CommInterfaceSocketConstants.PFX_LEN && getWorking())
 					{
-						if (m_length == 0) decodeLength();
-						if (m_inputData.size() < m_length
-						        + CommInterfaceSocketConstants.PFX_LEN) break;
+						if (m_length == 0)
+							decodeLength();
+						if (m_inputData.size() < m_length + CommInterfaceSocketConstants.PFX_LEN)
+							break;
 
 						byte[] packet = getPacket();
 						dispatch(packet);
@@ -129,30 +129,35 @@ public class InputReader extends Thread
 			}
 			catch (EOFException eof)
 			{
-				Logger.warning("Connection terminated", Level.COMM, this);
-				setWorking(false);
+				if (getWorking())
+				{
+					Logger.warning("Connection terminated", Level.COMM, this);
+					setWorking(false);
+					m_interface.commFailure("Lost connection with listener", "Connection terminated by peer");
+				}
+				else
+				{
+					Logger.info("Connection terminated", Level.COMM, this);
+				}
 				return;
 			}
 			catch (SocketException se)
 			{
 				// Id is different in Linux/Windows
-				if (!se.getLocalizedMessage().equals("Socket closed")
-				        && !se.getLocalizedMessage().equals("socket closed"))
+				if (!se.getLocalizedMessage().equals("Socket closed") && !se.getLocalizedMessage().equals("socket closed"))
 				{
 					System.err.println(se.getLocalizedMessage());
 					m_interface.commFailure(se.getLocalizedMessage(), "");
 				}
 				else
 				{
-					Logger.info("Connection terminated, socket closed",
-					        Level.COMM, this);
+					Logger.info("Connection terminated, socket closed", Level.COMM, this);
 				}
 			}
 			catch (Exception e)
 			{
 				e.printStackTrace();
-				m_interface.commFailure("Unknown COMM error.",
-				        e.getLocalizedMessage());
+				m_interface.commFailure("Unknown COMM error.", e.getLocalizedMessage());
 			}
 		}
 	}
@@ -178,7 +183,8 @@ public class InputReader extends Thread
 	 **********************************************************************/
 	private byte[] getPacket()
 	{
-		for (int c = 0; c < CommInterfaceSocketConstants.PFX_LEN; c++) m_inputData.remove(0);
+		for (int c = 0; c < CommInterfaceSocketConstants.PFX_LEN; c++)
+			m_inputData.remove(0);
 		byte[] bytes = new byte[m_inputData.size()];
 		int count = 0;
 		for (Byte b : m_inputData)
@@ -202,7 +208,8 @@ public class InputReader extends Thread
 		{
 			bytes[count] = b.byteValue();
 			count++;
-			if (count == 4) break;
+			if (count == 4)
+				break;
 		}
 		int length = 0;
 		for (int c = 0; c < 4; c++)
@@ -223,14 +230,12 @@ public class InputReader extends Thread
 			if (smsg != null)
 			{
 				String msgId = smsg.getSender() + "-" + smsg.getReceiver();
-				if (smsg instanceof SPELLmessageResponse
-				        || smsg instanceof SPELLmessageError)
+				if (smsg instanceof SPELLmessageResponse || smsg instanceof SPELLmessageError)
 				{
 					msgId += ":" + smsg.getSequence();
 					m_interface.incomingResponse(msgId, smsg);
 				}
-				else if (smsg instanceof SPELLmessageNotify
-				        || smsg instanceof SPELLmessagePrompt)
+				else if (smsg instanceof SPELLmessageNotify || smsg instanceof SPELLmessagePrompt)
 				{
 					m_interface.incomingMessage(msgId, smsg);
 				}
@@ -239,9 +244,7 @@ public class InputReader extends Thread
 					msgId += ":" + smsg.getSequence();
 					m_interface.incomingRequest(msgId, smsg);
 				}
-				else if (smsg instanceof SPELLmessageNotifyAsync
-				        || smsg instanceof SPELLmessageDisplay
-				        || smsg instanceof SPELLmessageOneway)
+				else if (smsg instanceof SPELLmessageNotifyAsync || smsg instanceof SPELLmessageDisplay || smsg instanceof SPELLmessageOneway)
 				{
 					m_interface.incomingMessage(msgId, smsg);
 				}
@@ -249,8 +252,7 @@ public class InputReader extends Thread
 				{
 					Logger.warning("Received EOC from server", Level.COMM, this);
 					setWorking(false);
-					m_interface.commFailure("Connection lost",
-					        "Server sent EOC");
+					m_interface.commFailure("Connection lost", "Server sent EOC");
 				}
 				else
 				{

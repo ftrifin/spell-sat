@@ -49,6 +49,7 @@ collaboration with GMV Aerospace And Defence S.A.
 
    <plugins>
       <plugin id="com.astra.ses.spell.gui"/>
+      <plugin id="com.astra.ses.spell.gui.types"/>
       <plugin id="com.astra.ses.spell.gui.callstack" fragment="true"/>
       <plugin id="com.astra.ses.spell.gui.codeview"/>
       <plugin id="com.astra.ses.spell.gui.commsocket"/>

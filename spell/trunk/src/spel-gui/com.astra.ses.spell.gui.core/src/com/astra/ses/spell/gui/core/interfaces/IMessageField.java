@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -74,13 +74,18 @@ public interface IMessageField
 	public static final String	FIELD_TOTAL_CHUNKS	      = "TotalChunks";
 	/** Field message sequence */
 	public static final String	FIELD_MSG_SEQUENCE	      = "Sequence";
+	/** UTC driver time */
+	public static final String	FIELD_DRIVER_TIME	      = "DriverTime";
 
 	// //////////////////////////////////////////////////////////////////////////
 	// Procedure-related message fields
 	// //////////////////////////////////////////////////////////////////////////
 
 	public static final String	FIELD_PROC_ID	          = "ProcId";
+	public static final String	FIELD_GROUP_ID	          = "GroupId";
+	public static final String	FIELD_ORIGIN_ID	          = "OriginId";
 	public static final String	FIELD_PARENT_PROC	      = "ParentId";
+	public static final String	FIELD_PARENT_PROC_LINE	  = "ParentLine";
 	public static final String	FIELD_SERVER_FILE_ID	  = "ServerFileId";
 	public static final String	FIELD_INSTANCE_ID	      = "InstanceId";
 	public static final String	FIELD_PROC_NAME	          = "ProcName";
@@ -88,6 +93,8 @@ public interface IMessageField
 	public static final String  FIELD_FILE_NAME           = "FileName";
 	public static final String  FIELD_FILE_PATH           = "FilePath";
 	public static final String  FIELD_DIR_NAME            = "DirName";
+	public static final String  FIELD_REFRESH             = "Refresh";
+	public static final String  FIELD_ASRUN_NAME		  = "AsRunName";
 
 	// //////////////////////////////////////////////////////////////////////////
 	// Execution-related message fields
@@ -111,15 +118,20 @@ public interface IMessageField
 	public static final String	FIELD_BREAKPOINT_LINE	  = "BreakpointLine";
 	public static final String	FIELD_BREAKPOINT_TYPE	  = "BreakpointType";
 	public static final String	FIELD_SCOPE	              = "Scope";
+	public static final String	FIELD_DEFAULT             = "Default";
 
 	// //////////////////////////////////////////////////////////////////////////
 	// Executor configuration-related message fields
 	// //////////////////////////////////////////////////////////////////////////
 	public static final String	FIELD_RUN_INTO	          = "RunInto";
 	public static final String	FIELD_EXEC_DELAY	      = "ExecDelay";
-	public static final String	FIELD_BY_STEP	          = "ByStep";
+	public static final String	FIELD_PROMPT_DELAY     	  = "PromptWarningDelay";
+ 	public static final String	FIELD_BY_STEP	          = "ByStep";
 	public static final String	FIELD_BROWSABLE_LIB	      = "BrowsableLib";
 	public static final String	FIELD_FORCE_TC_CONFIG     = "ForceTcConfirm";
+	public static final String	FIELD_WATCH_VARIABLES     = "WatchVariables";
+	public static final String	FIELD_MAX_VERBOSITY       = "MaxVerbosity";
+	public static final String	FIELD_SAVE_STATE_MODE     = "SaveStateMode";
 
 	// //////////////////////////////////////////////////////////////////////////
 	// Failure-related message fields
@@ -171,13 +183,6 @@ public interface IMessageField
 	public static final String	FIELD_EXEC_OP	          = "ExecOp";
 	public static final String	FIELD_CLIENT_OP	          = "CltOp";
 	public static final String	FIELD_CTX_OP	          = "CtxOp";
-
-	// //////////////////////////////////////////////////////////////////////////
-	// Alignment
-	// //////////////////////////////////////////////////////////////////////////
-	public static final String	FIELD_ALIGNMENT_STATUS    = "AlignmentStatus";
-	public static final String	FIELD_ALIGNMENT_LINE      = "AlignmentLine";
-	public static final String	FIELD_ALIGNMENT_DATE      = "ExecutionLine";
 
 	// //////////////////////////////////////////////////////////////////////////
 	// Data containers

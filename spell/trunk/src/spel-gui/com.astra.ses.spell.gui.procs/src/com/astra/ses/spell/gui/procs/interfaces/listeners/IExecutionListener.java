@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-03
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -51,6 +51,7 @@ package com.astra.ses.spell.gui.procs.interfaces.listeners;
 import java.util.List;
 
 import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeModel;
 
 /***************************************************************************
  * 
@@ -64,7 +65,12 @@ public interface IExecutionListener
 	/***********************************************************************
 	 * 
 	 **********************************************************************/
-	public void onCodeChanged();
+	public void onCodeChanged( ICodeModel model );
+
+	/***********************************************************************
+	 * 
+	 **********************************************************************/
+	public void onLinesChanged( List<ICodeLine> lines );
 
 	/***********************************************************************
 	 * 

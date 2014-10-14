@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -51,7 +51,6 @@ package com.astra.ses.spell.gui.core.model.server;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.astra.ses.spell.gui.core.model.types.ExecutorConfigKeys;
 
 public class ExecutorConfig
 {
@@ -67,6 +66,9 @@ public class ExecutorConfig
 	private boolean	m_showLib;
 	/** Tc confirmation flag */
 	private boolean m_tcConfirmation;
+	/** PromptWaringDelay */
+	private int m_promptWarningDelay;
+	
 
 	/***************************************************************************
 	 * Constructor
@@ -79,6 +81,7 @@ public class ExecutorConfig
 		m_execDelay = 0;
 		m_showLib = false;
 		m_tcConfirmation = false;
+		m_promptWarningDelay = 0;
 	}
 
 	/***************************************************************************
@@ -86,11 +89,13 @@ public class ExecutorConfig
 	 **************************************************************************/
 	public void copyFrom(ExecutorConfig config)
 	{
+		m_procId = config.m_procId;
 		m_runInto = config.m_runInto;
 		m_byStep = config.m_byStep;
 		m_execDelay = config.m_execDelay;
 		m_showLib = config.m_showLib;
 		m_tcConfirmation = config.m_tcConfirmation;
+		m_promptWarningDelay = config.m_promptWarningDelay;
 	}
 
 	/***************************************************************************
@@ -188,12 +193,27 @@ public class ExecutorConfig
 	{
 		Map<String, String> config = new TreeMap<String, String>();
 		
-		config.put(ExecutorConfigKeys.RUN_INTO, m_runInto ? "True" : "False");
-		config.put(ExecutorConfigKeys.BY_STEP, m_byStep ? "True" : "False");
-		config.put(ExecutorConfigKeys.BROWSABLE_LIB, m_showLib ? "True" : "False");
-		config.put(ExecutorConfigKeys.FORCE_TC_CONFIRM, m_tcConfirmation ? "True" : "False");
-		config.put(ExecutorConfigKeys.EXEC_DELAY, Integer.toString(m_execDelay));
+		config.put(ExecutorConfigKeys.RUN_INTO.getKey(), m_runInto ? "True" : "False");
+		config.put(ExecutorConfigKeys.BY_STEP.getKey(), m_byStep ? "True" : "False");
+		config.put(ExecutorConfigKeys.BROWSABLE_LIB.getKey(), m_showLib ? "True" : "False");
+		config.put(ExecutorConfigKeys.FORCE_TC_CONFIRM.getKey(), m_tcConfirmation ? "True" : "False");
+		config.put(ExecutorConfigKeys.EXEC_DELAY.getKey(), Integer.toString(m_execDelay));
+		config.put(ExecutorConfigKeys.PROMPT_DELAY.getKey(), Integer.toString(m_promptWarningDelay));
 		return config;
 	}
 
+	/***************************************************************************
+	 * Obtain the Prompt Warning Delay
+	 **************************************************************************/
+	public int getPromptWarningDelay() {
+		return m_promptWarningDelay;
+	} //getPromptWarningDelay
+
+	/***************************************************************************
+	 * Set the promptWarningDelay
+	 **************************************************************************/
+	public void setPromptWarningDelay(int m_promptWarningDelay) {
+		this.m_promptWarningDelay = m_promptWarningDelay;
+	} //setPromptWarningDelay
+	
 }

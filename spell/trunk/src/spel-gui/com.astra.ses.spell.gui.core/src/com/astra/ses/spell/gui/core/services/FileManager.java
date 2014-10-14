@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,6 +58,7 @@ import java.util.List;
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessage;
+import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageAsRunList;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDeleteFile;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageDeleteRecovery;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageFilePath;
@@ -65,8 +66,8 @@ import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetDataDirs;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageGetFilesInDir;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageRecoveryList;
 import com.astra.ses.spell.gui.core.interfaces.BaseService;
-import com.astra.ses.spell.gui.core.interfaces.IFileManager;
 import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
+import com.astra.ses.spell.gui.core.interfaces.IFileManager;
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.files.AsRunFile;
 import com.astra.ses.spell.gui.core.model.files.BasicServerFile;
@@ -84,7 +85,10 @@ public class FileManager extends BaseService implements IFileManager
 {
 	/** Service identifier */
 	public static final String	ID	         = "com.astra.ses.spell.gui.FileManager";
-
+	
+	/** Holds reference to the context proxy */
+	private IContextProxy m_proxy;
+	
 	/***************************************************************************
 	 * Constructor
 	 **************************************************************************/
@@ -92,8 +96,9 @@ public class FileManager extends BaseService implements IFileManager
 	{
 		super(ID);
 		Logger.debug("Created", Level.INIT, this);
+		m_proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 	}
-	
+
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
@@ -118,25 +123,55 @@ public class FileManager extends BaseService implements IFileManager
 		}
 		return path;
 	}
-	
+
 	/***************************************************************************
 	 * 
 	 **************************************************************************/
 	@Override
-	public IServerFile getServerFile(String path, ServerFileType typeId, IProgressMonitor monitor)
+	public String getServerFilePath( ServerFileType type, IProgressMonitor monitor )
+	{
+		IContextProxy proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
+		String path = null;
+		try
+		{
+			Logger.debug("Retrieving server file path for type: " + type, Level.COMM, this);
+			SPELLmessage msg = new SPELLmessageFilePath(type);
+			SPELLmessage response = proxy.sendRequest(msg);
+			if (response != null)
+			{
+				path = SPELLmessageFilePath.getPath(response);
+			}
+		}
+		catch (Exception ex)
+		{
+			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
+		}
+		return path;
+	}
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	@Override
+	public IServerFile getServerFile(String path, ServerFileType typeId, ProcessingLimits limits, IProgressMonitor monitor) throws Exception
 	{
 		Logger.debug("Downloading file '" + path + "'", Level.COMM, this);
-		IContextProxy proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
+		String targetDir = System.getenv("SPELL_DATA") + File.separator + "Runtime";
+		Logger.debug("Target: '" + targetDir+ "'", Level.COMM, this);
+
+		
 		IServerFile file = null;
 		try
 		{
-			ArrayList<String> lines = new ArrayList<String>();
+			File td = new File(targetDir);
+			if (!td.exists() || !td.isDirectory() || !td.canWrite())
+			{
+				throw new RuntimeException("Runtime directory does not exist or is not writable");
+			}
 			
-			String targetDir = System.getenv("SPELL_DATA") + File.separator + "Runtime";
-			Logger.debug("Target: '" + targetDir+ "'", Level.COMM, this);
+			List<String> lines = new ArrayList<String>();
 			
-			proxy.getFile(path, targetDir);
-
+			m_proxy.getFile(path, targetDir);
 			String filename = path;
 			int idx = path.lastIndexOf("/");
 			if (idx == -1)
@@ -159,6 +194,11 @@ public class FileManager extends BaseService implements IFileManager
 				{
 					lines.add(line);
 				}
+				if ( limits != null && lines.size()>limits.fileLineCount)
+				{
+					Logger.warning("Reached limit for server line count (" + lines.size() + ")", Level.PROC, this);
+					lines.clear();
+				}
 			}
 			while (line != null);
 
@@ -166,9 +206,21 @@ public class FileManager extends BaseService implements IFileManager
 			switch (typeId)
 			{
 			case ASRUN:
+				if ( limits != null && lines.size()>limits.processLineCount) 
+				{
+					Logger.warning("Reached limit for processing line count (" + lines.size() + ")", Level.PROC, this);
+					List<String> toProcess = lines.subList(0, 5);
+					toProcess.addAll(lines.subList(lines.size()-limits.processLineCount, lines.size()));
+					lines = toProcess;
+				}
 				file = new AsRunFile("", path, lines);
 				break;
 			case EXECUTOR_LOG:
+				if ( limits != null && lines.size()>limits.processLineCount) 
+				{
+					Logger.warning("Reached limit for processing line count (" + lines.size() + ")", Level.PROC, this);
+					lines = lines.subList(lines.size()-limits.processLineCount, lines.size());
+				}
 				file = new LogFile("", path, lines);
 				break;
 			case OTHER:
@@ -178,6 +230,7 @@ public class FileManager extends BaseService implements IFileManager
 		catch (Exception ex)
 		{
 			Logger.error(ex.getLocalizedMessage(), Level.PROC, this);
+			throw new RuntimeException("Unable to retrieve server file.\n\n" + ex.getLocalizedMessage() + "\n\nTarget directory: " + targetDir);
 		}
 		return file;
 	}
@@ -224,7 +277,7 @@ public class FileManager extends BaseService implements IFileManager
 	}
 
 	@Override
-	public List<String> getFileRecoveryList()
+	public List<String> getRecoveryFileList()
 	{
 		IContextProxy proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 
@@ -237,6 +290,30 @@ public class FileManager extends BaseService implements IFileManager
 			if (response != null)
 			{
 				list = SPELLmessageRecoveryList.getList(response);
+			}
+		}
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+			Logger.error(ex.getLocalizedMessage(), Level.COMM, this);
+		}
+		return list;
+	}
+
+	@Override
+	public List<String> getAsRunFileList()
+	{
+		IContextProxy proxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
+
+		List<String> list = new ArrayList<String>();
+		try
+		{
+			Logger.debug("Retrieving list of ASRUN files", Level.COMM, this);
+			SPELLmessage msg = new SPELLmessageAsRunList();
+			SPELLmessage response = proxy.sendRequest(msg);
+			if (response != null)
+			{
+				list = SPELLmessageAsRunList.getList(response);
 			}
 		}
 		catch (Exception ex)

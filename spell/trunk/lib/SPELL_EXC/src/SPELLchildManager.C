@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the child procedure manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -155,8 +155,10 @@ void SPELLchildManager::openChildProcedure( const std::string& procId,
     }
     LOG_INFO("[CM] Starting subprocedure " + suitableProc);
 
+    int callingLine = SPELLexecutor::instance().getCallstack().getCurrentLine();
+
     SPELLserverCif& cif = dynamic_cast<SPELLserverCif&>(SPELLexecutor::instance().getCIF());
-    std::string subProcInstance = cif.openSubprocedure( suitableProc, args, automatic, blocking, visible );
+    std::string subProcInstance = cif.openSubprocedure( suitableProc, callingLine, args, automatic, blocking, visible );
 
     if (subProcInstance != "")
     {

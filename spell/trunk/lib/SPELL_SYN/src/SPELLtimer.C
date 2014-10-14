@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the timer mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -72,11 +72,6 @@ SPELLtimer::~SPELLtimer()
     // Ensure we finish the thread
     m_counting = false;
     m_stopEvent.set();
-    try {
-        join();
-    }
-    catch(...) {};
-    DEBUG("[TMR] Timer destroyed: " + PSTR(this))
 }
 
 //=============================================================================
@@ -111,12 +106,11 @@ void SPELLtimer::run()
 //=============================================================================
 bool SPELLtimer::callTimerCallback()
 {
-    SPELLmonitor monitor(m_mutex);
     m_elapsed += m_period;
-    //DEBUG("[TMR] Calling timer callback for " + PSTR(this))
     bool result = m_listener.timerCallback(m_elapsed);
     if (result)
     {
+        SPELLmonitor monitor(m_mutex);
         m_counting = false;
         if (m_stopEvent.isClear())
         {
@@ -143,15 +137,10 @@ bool SPELLtimer::checkTimeout()
 //=============================================================================
 void SPELLtimer::cancel()
 {
-    DEBUG("[TMR] Cancelling timer thread IN" + PSTR(this))
-    SPELLmonitor monitor(m_mutex);
-    DEBUG("[TMR] Cancelling timer thread " + PSTR(this))
-    m_counting = false;
-    if (m_stopEvent.isClear())
-    {
-        m_stopEvent.set();
-    }
-    DEBUG("[TMR] Cancelling timer thread " + PSTR(this) + " done ")
+	DEBUG("[TMR] Cancelling timer thread IN" + PSTR(this))
+	setCounting(false);
+	cont();
+    DEBUG("[TMR] Cancelling timer thread " + PSTR(this) + " OUT ")
 }
 
 //=============================================================================

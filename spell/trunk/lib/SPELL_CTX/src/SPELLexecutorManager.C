@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -37,6 +37,7 @@
 #include "SPELL_UTIL/SPELLutils.H"
 #include "SPELL_UTIL/SPELLerror.H"
 #include "SPELL_CFG/SPELLconfiguration.H"
+#include "SPELL_IPC/SPELLipc_Context.H"
 #include "SPELL_IPC/SPELLipc_Executor.H"
 #include "SPELL_WRP/SPELLconstants.H"
 // System includes ---------------------------------------------------------
@@ -101,7 +102,7 @@ void SPELLexecutorManager::cleanup()
 //=============================================================================
 // METHOD: SPELLexecutorManager::startExecutor()
 //=============================================================================
-void SPELLexecutorManager::startExecutor( SPELLexecutorConfiguration& config, SPELLclient* controllingClient )
+void SPELLexecutorManager::startExecutor( SPELLexecutorStartupParams& config, SPELLclient* controllingClient )
 {
 	DEBUG( "[EMGR] Start executor TRY-IN");
 	//TODO check maximum number of executors
@@ -115,12 +116,19 @@ void SPELLexecutorManager::startExecutor( SPELLexecutorConfiguration& config, SP
 	// If the open mode does not include VISIBLE, do not pass the controlling client
 	// This way we force the GUI to attach to a proc when it is started in non-visible
 	SPELLexecutor* exec = NULL;
-	if ((config.getOpenMode() & OPEN_MODE_VISIBLE)>0)
+	if (config.getClientMode() == CLIENT_MODE_BACKGROUND )
 	{
+		DEBUG( "[EMGR] Start executor in background");
+		exec = new SPELLexecutor(config, NULL);
+	}
+	else if ((config.getOpenMode() & OPEN_MODE_VISIBLE)>0)
+	{
+		DEBUG( "[EMGR] Start executor controlled, visible mode");
 		exec = new SPELLexecutor(config, controllingClient);
 	}
 	else
 	{
+		DEBUG( "[EMGR] Start executor controlled, not visible");
 		exec = new SPELLexecutor(config, NULL);
 	}
 	try
@@ -156,7 +164,7 @@ void SPELLexecutorManager::reconnectExecutors()
 	{
 		std::string instanceId = *it;
 		SPELLexecutorPersistency pers = m_persisTable->getExecutorPersistency(instanceId);
-		SPELLexecutorConfiguration config( instanceId, pers.timeId, true );
+		SPELLexecutorStartupParams config( instanceId, pers.timeId, true );
 		config.setParentInstanceId(pers.parentId);
 		config.setIpcPort(pers.ipcPort);
 		config.setPID(pers.pid);
@@ -164,7 +172,7 @@ void SPELLexecutorManager::reconnectExecutors()
 		SPELLexecutor* exec = new SPELLexecutor(config,NULL);
 		try
 		{
-			LOG_WARN("Reconnecting executor " + instanceId );
+			LOG_WARN("Reconnecting executor " + instanceId + " listening on port " + ISTR(pers.ipcPort) );
 			exec->start();
 			m_pendingLogin.insert( std::make_pair( instanceId, exec ) );
 		}
@@ -181,7 +189,9 @@ void SPELLexecutorManager::reconnectExecutors()
 //=============================================================================
 void SPELLexecutorManager::callback_executorReconnected( const std::string& instanceId )
 {
+	LOG_WARN("#######################################");
 	LOG_WARN("Executor " + instanceId + " reconnected");
+	LOG_WARN("#######################################");
 	SPELLmonitor m(m_lock);
 	ExecutorMap::iterator it = m_pendingLogin.find(instanceId);
 	if (it != m_pendingLogin.end())
@@ -191,13 +201,15 @@ void SPELLexecutorManager::callback_executorReconnected( const std::string& inst
 		addExecutorModel( exec );
 		m_pendingLogin.erase(it);
 
-		SPELLcontext::instance().notifyExecutorOperation( exec->getModel().getInstanceId(),
-											 exec->getModel().getParentInstanceId(),
-											 -1,
-											 CLIENT_MODE_UNKNOWN,
-											 exec->getModel().getStatus(),
-											 EXEC_OP_OPEN,
-											 "" );
+		SPELLexecutorOperation op;
+		op.instanceId = exec->getModel().getInstanceId();
+		op.parentId = exec->getModel().getParentInstanceId();
+		op.groupId = exec->getModel().getGroupId();
+		op.originId = exec->getModel().getOriginId();
+		op.status = exec->getModel().getStatus();
+		op.type = SPELLexecutorOperation::EXEC_OP_OPEN;
+
+		SPELLcontext::instance().notifyExecutorOperation( op );
 	}
 }
 
@@ -206,7 +218,9 @@ void SPELLexecutorManager::callback_executorReconnected( const std::string& inst
 //=============================================================================
 void SPELLexecutorManager::callback_executorNotReconnected( const std::string& instanceId )
 {
+	LOG_ERROR("#######################################");
 	LOG_ERROR("Executor " + instanceId + " failed to reconnect");
+	LOG_ERROR("#######################################");
 	SPELLmonitor m(m_lock);
 	ExecutorMap::iterator it = m_pendingLogin.find(instanceId);
 	if (it != m_pendingLogin.end())
@@ -220,7 +234,7 @@ void SPELLexecutorManager::callback_executorNotReconnected( const std::string& i
 //=============================================================================
 // METHOD: SPELLexecutorManager::recoverExecutor()
 //=============================================================================
-void SPELLexecutorManager::recoverExecutor( SPELLexecutorConfiguration& config, SPELLclient* controllingClient )
+void SPELLexecutorManager::recoverExecutor( SPELLexecutorStartupParams& config, SPELLclient* controllingClient )
 {
 	//TODO check maximum number of executors
 	SPELLmonitor m(m_lock);
@@ -253,7 +267,7 @@ void SPELLexecutorManager::recoverExecutor( SPELLexecutorConfiguration& config, 
 //=============================================================================
 // METHOD: SPELLexecutorManager::deleteExecutorFiles()
 //=============================================================================
-void SPELLexecutorManager::deleteExecutorFiles( const SPELLexecutorConfiguration& config )
+void SPELLexecutorManager::deleteExecutorFiles( const SPELLexecutorStartupParams& config )
 {
 	SPELLcontextConfig& ctxConfig = SPELLconfiguration::instance().getContext(m_contextName);
 
@@ -417,26 +431,18 @@ void SPELLexecutorManager::removeInstanceNumber( const std::string& procId, int 
 //=============================================================================
 void SPELLexecutorManager::closeExecutor( const std::string& instanceId )
 {
-	try
+	SPELLmonitor m(m_lock);
+	SPELLexecutor* exec = getExecutor(instanceId);
+	if (exec)
 	{
-		SPELLmonitor m(m_lock);
-		SPELLexecutor* exec = getExecutor(instanceId);
-		if (exec)
-		{
-			exec->close();
-			removeInstanceNumber( exec->getModel().getProcId(), exec->getModel().getInstanceNum() );
-			removeExecutorModel( exec->getModel().getInstanceId() );
-			LOG_INFO("Executor successfully closed: " + instanceId);
-		}
-		else
-		{
-			LOG_ERROR("Unable to find executor, cannot close");
-		}
+		exec->close();
+		removeInstanceNumber( exec->getModel().getProcId(), exec->getModel().getInstanceNum() );
+		removeExecutorModel( exec->getModel().getInstanceId() );
+		LOG_INFO("Executor successfully closed: " + instanceId);
 	}
-	catch(SPELLcoreException& ex)
+	else
 	{
-		THROW_EXCEPTION("Failed to close executor (will kill instead)", ex.what(), SPELL_ERROR_PROCESS);
-		killExecutor(instanceId);
+		LOG_ERROR("Unable to find executor, cannot close");
 	}
 }
 
@@ -446,35 +452,6 @@ void SPELLexecutorManager::closeExecutor( const std::string& instanceId )
 void SPELLexecutorManager::executorLost( SPELLexecutor& executor )
 {
 	LOG_WARN( "[EMGR] Executor lost: " + executor.getModel().getInstanceId());
-	// Report clients
-	SPELLipcMessage error(MessageId::MSG_ID_WRITE);
-	error.setType( MSG_TYPE_WRITE );
-
-	error.set(MessageField::FIELD_TEXT, "[CONTEXT ERROR]: Lost network connection with executor " + executor.getModel().getProcId());
-	error.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_ERROR);
-	error.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
-	error.set(MessageField::FIELD_SCOPE, ISTR(LanguageConstants::SCOPE_SYS));
-
-	DEBUG( "[EMGR] Notify controlling client about executor lost");
-
-    if (executor.hasControllingClient())
-    {
-		SPELLclient* clt = executor.getControllingClient();
-    	clt->sendMessageToClient(error);
-    }
-
-	DEBUG( "[EMGR] Notify monitoring clients about executor lost");
-
-    std::list<int> monitors = SPELLclientManager::instance().getMonitoringClientsKeys(executor.getModel().getInstanceId());
-    for(std::list<int>::iterator mit = monitors.begin(); mit != monitors.end(); mit++)
-    {
-    	SPELLclient* mon = SPELLclientManager::instance().getClient( *mit );
-    	if (mon)
-    	{
-    		mon->sendMessageToClient(error);
-    	}
-    }
-	DEBUG( "[EMGR] Executor lost processed");
 }
 
 //=============================================================================
@@ -603,7 +580,7 @@ SPELLexecutorManager::ExecList SPELLexecutorManager::getExecutorList()
 //=============================================================================
 void SPELLexecutorManager::buildExecutorInfo( const std::string& procId, SPELLipcMessage& msg )
 {
-	DEBUG("[EMGR] Building executor information for " + procId );
+	LOG_INFO("Building executor information for " + procId );
 
 	SPELLexecutor* exec = getExecutor(procId);
 
@@ -614,13 +591,51 @@ void SPELLexecutorManager::buildExecutorInfo( const std::string& procId, SPELLip
 		SPELLclient* client = exec->getControllingClient();
 		msg.set( MessageField::FIELD_PROC_ID, procId );
 		msg.set( MessageField::FIELD_PARENT_PROC, exec->getModel().getParentInstanceId() );
+		msg.set( MessageField::FIELD_PARENT_PROC_LINE, ISTR(exec->getModel().getParentCallingLine()) );
+
+		// The group id of a main (without parent) procedure is the same as proc id.
+		std::string groupId = exec->getModel().getGroupId();
+		if (groupId == "") groupId = procId;
+		msg.set( MessageField::FIELD_GROUP_ID, groupId );
+		// The origin id is optional
+		msg.set( MessageField::FIELD_ORIGIN_ID, exec->getModel().getOriginId() );
 		msg.set( MessageField::FIELD_PROC_NAME, procName);
 		msg.set( MessageField::FIELD_ASRUN_NAME, exec->getModel().getAsRunFilename() );
 		SPELLexecutorStatus st = exec->getStatus();
 		msg.set( MessageField::FIELD_EXEC_STATUS, SPELLdataHelper::executorStatusToString(st) );
 		msg.set( MessageField::FIELD_CONDITION, exec->getModel().getCondition() );
-		DEBUG("[EMGR] Parent procedure  : " + exec->getModel().getParentInstanceId());
-		DEBUG("[EMGR] Status            : " + SPELLdataHelper::executorStatusToString(st));
+		msg.set( MessageField::FIELD_STAGE_ID, exec->getModel().getStageId() );
+		msg.set( MessageField::FIELD_STAGE_TL, exec->getModel().getStageTitle() );
+		msg.set( MessageField::FIELD_CSP, exec->getModel().getStack() );
+		msg.set( MessageField::FIELD_CODE_NAME, exec->getModel().getCode() );
+
+		if (exec->getModel().getUserAction().isSet())
+		{
+			std::string action = exec->getModel().getUserAction().getLabel();
+			LOG_INFO("User action: " + action);
+			msg.set( MessageField::FIELD_ACTION_LABEL, action );
+			LOG_INFO("User action enabled: " + BSTR(exec->getModel().getUserAction().isEnabled()));
+			msg.set( MessageField::FIELD_ACTION_ENABLED, exec->getModel().getUserAction().isEnabled() ? "true" : "false" );
+		    switch(exec->getModel().getUserAction().getSeverity())
+		    {
+		    case LanguageConstants::INFORMATION:
+				msg.set( MessageField::FIELD_ACTION_SEVERITY, MessageValue::DATA_SEVERITY_INFO );
+				break;
+		    case LanguageConstants::WARNING:
+				msg.set( MessageField::FIELD_ACTION_SEVERITY, MessageValue::DATA_SEVERITY_WARN );
+				break;
+		    case LanguageConstants::ERROR:
+				msg.set( MessageField::FIELD_ACTION_SEVERITY, MessageValue::DATA_SEVERITY_ERROR );
+				break;
+		    default:
+				msg.set( MessageField::FIELD_ACTION_SEVERITY, MessageValue::DATA_SEVERITY_INFO );
+				break;
+		    }
+		}
+
+		LOG_INFO("[EMGR] Parent procedure  : " + exec->getModel().getParentInstanceId());
+		LOG_INFO("[EMGR] Status            : " + SPELLdataHelper::executorStatusToString(st));
+		LOG_INFO("[EMGR] ASRUN file        : " + exec->getModel().getAsRunFilename());
 		if (client)
 		{
 			int controlKey = client->getClientKey();
@@ -628,22 +643,34 @@ void SPELLexecutorManager::buildExecutorInfo( const std::string& procId, SPELLip
 			if (controlKey >= 0) controlStr = ISTR(controlKey);
 			msg.set( MessageField::FIELD_GUI_CONTROL, controlStr );
 			msg.set( MessageField::FIELD_GUI_CONTROL_HOST, client->getClientHost() );
-			DEBUG("[EMGR] Controlling client: " + controlStr + ":" + client->getClientHost());
+			LOG_INFO("[EMGR] Controlling client: " + controlStr + ":" + client->getClientHost());
 		}
 		else
 		{
-			DEBUG("[EMGR] NO controlling client");
-			msg.set( MessageField::FIELD_GUI_CONTROL, "" );
-			msg.set( MessageField::FIELD_GUI_CONTROL_HOST, "" );
+			if (exec->isBackground())
+			{
+				LOG_INFO("[EMGR] Procedure in background");
+				msg.set( MessageField::FIELD_GUI_CONTROL, "<BACKGROUND>" );
+				msg.set( MessageField::FIELD_GUI_CONTROL_HOST, "" );
+			}
+			else
+			{
+				LOG_INFO("[EMGR] NO controlling client");
+				msg.set( MessageField::FIELD_GUI_CONTROL, "" );
+				msg.set( MessageField::FIELD_GUI_CONTROL_HOST, "" );
+			}
 		}
 		msg.set( MessageField::FIELD_OPEN_MODE, SPELLdataHelper::openModeToString(exec->getModel().getOpenMode()) );
-		DEBUG("[EMGR] Open mode       : " + SPELLdataHelper::openModeToString(exec->getModel().getOpenMode()));
+		LOG_INFO("[EMGR] Open mode       : " + SPELLdataHelper::openModeToString(exec->getModel().getOpenMode()));
 	}
 	else
 	{
 		LOG_ERROR("No executor found to complete information");
 		msg.set( MessageField::FIELD_PROC_ID, procId );
+		msg.set( MessageField::FIELD_GROUP_ID, procId );
+		msg.set( MessageField::FIELD_ORIGIN_ID, "SPELL" );
 		msg.set( MessageField::FIELD_PARENT_PROC, " " );
+		msg.set( MessageField::FIELD_PARENT_PROC_LINE, " " );
 		msg.set( MessageField::FIELD_PROC_NAME, procName );
 		msg.set( MessageField::FIELD_ASRUN_NAME, " " );
 		msg.set( MessageField::FIELD_EXEC_STATUS, SPELLdataHelper::executorStatusToString(STATUS_UNINIT) );
@@ -652,5 +679,9 @@ void SPELLexecutorManager::buildExecutorInfo( const std::string& procId, SPELLip
 		msg.set( MessageField::FIELD_GUI_CONTROL, " " );
 		msg.set( MessageField::FIELD_GUI_CONTROL_HOST, " " );
 		msg.set( MessageField::FIELD_OPEN_MODE, " " );
+		msg.set( MessageField::FIELD_STAGE_ID, " " );
+		msg.set( MessageField::FIELD_STAGE_TL, " " );
+		msg.set( MessageField::FIELD_CSP, " " );
+		msg.set( MessageField::FIELD_CODE_NAME, " " );
 	}
 }

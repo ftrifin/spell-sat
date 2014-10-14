@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Python error bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -495,20 +495,30 @@ SPELLcoreException* SPELLerror::errorToException( PyObject* err, PyObject* ptype
     std::string proc = "???";
     int line = -1;
 
-    std::string message = "";
+    std::string message = "Error back trace:\n";
     std::string reason = PYSSTR(pvalue);
 
-    // Parse and show the traceback if any available
+    // Parse and show the backtrace if any available
     LOG_ERROR("**************************************");
     LOG_ERROR(" PYTHON ERROR: " + PYREPR(ptype));
     PyTracebackObject* tb = (PyTracebackObject*) ptraceback;
-    while(tb != NULL)
+
+    if (tb != NULL)
     {
-        proc = PYSTR(tb->tb_frame->f_code->co_filename);
-        line = tb->tb_lineno;
-        std::string at = proc + ":" + ISTR(line);
-        LOG_ERROR( "  - At: " + at)
-        tb = tb->tb_next;
+		while(tb != NULL)
+		{
+			proc = PYSTR(tb->tb_frame->f_code->co_filename);
+			line = tb->tb_lineno;
+			std::string at = proc + ":" + ISTR(line);
+			LOG_ERROR( "  - At: " + at)
+			tb = tb->tb_next;
+			message += " - file '" + proc + "', line " + ISTR(line) + ";\n";
+		}
+		message += "Reason: ";
+    }
+    else
+    {
+    	message = " (no back trace information)\n";
     }
     LOG_ERROR("**************************************");
 
@@ -538,33 +548,33 @@ SPELLcoreException* SPELLerror::errorToException( PyObject* err, PyObject* ptype
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_ImportError))
     {
-        message = "Import error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Import error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_IMPORT, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_IndexError))
     {
-        message = "Index error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Index error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_INDEX, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_KeyError))
     {
-        message = "Key error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Key error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_KEY, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_MemoryError))
     {
-        message = "Memory error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Memory error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_MEMORY, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_NameError))
     {
-        message = "Name error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Name error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_NAME, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_SyntaxError))
     {
         // It is a tuple like ('invalid syntax', ('file.py', lineno, offset, 'text'))
-		message = "(unknown syntax error, could not gather information)";
+		message = "Unknown syntax error (could not gather information)\n" + message;
     	if (PyTuple_Size(pvalue)==2)
     	{
     		PyObject* data = PyTuple_GetItem(pvalue, 1);
@@ -573,24 +583,24 @@ SPELLcoreException* SPELLerror::errorToException( PyObject* err, PyObject* ptype
     			PyObject* filename = PyTuple_GetItem( data, 0);
     			PyObject* lineno   = PyTuple_GetItem( data, 1);
     			PyObject* text     = PyTuple_GetItem( data, 3);
-    			message = "At " + PYREPR(filename) + ", line " + PYSSTR(lineno) + ": \n" + PYREPR(text);
+    			message = message + "At " + PYREPR(filename) + ", line " + PYSSTR(lineno) + ": \n" + PYREPR(text);
     		}
     	}
         exception = new SPELLcoreException( message, "Invalid syntax", SPELL_PYERROR_SYNTAX, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_TypeError))
     {
-        message = "Type error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Type error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_TYPE, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_ValueError))
     {
-        message = "Value error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Value error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_VALUE, false );
     }
     else if (PyErr_GivenExceptionMatches(err, PyExc_BaseException))
     {
-        message = "Python error at " + proc + ":" + ISTR(line) + "\n";
+        message = "Python error\n" + message;
         exception = new SPELLcoreException( message, reason, SPELL_PYERROR_OTHER, false );
     }
     else
@@ -703,7 +713,7 @@ void SPELLerror::throwRuntimeException( const std::string& message, const std::s
 
     if (m_currentError != NULL)
     {
-    	LOG_WARN("Overriding current exception: " + m_currentError->what() );
+    	LOG_WARN("(Throwing runtime exception) Overriding current exception: " + m_currentError->what() );
     	clearErrors();
     }
     m_currentError = new SPELLcoreException(message, reason, SPELL_ERROR_EXECUTION, true);

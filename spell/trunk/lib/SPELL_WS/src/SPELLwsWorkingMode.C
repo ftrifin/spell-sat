@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the warmstart working mode
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -35,7 +35,7 @@ std::string s_WORKING_MODE_STR[] =
 	"ON_LINE",
 	"ON_STEP",
 	"ON_DEMAND",
-	"ON_HOLD",
+	"DISABLED",
 	"UNINIT"
 };
 unsigned int s_NUM_MODES = sizeof(s_WORKING_MODE_STR) / sizeof(std::string);

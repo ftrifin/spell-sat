@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -55,9 +55,14 @@ package com.astra.ses.spell.gui.preferences.keys;
  **************************************************************************/
 public enum FontKey
 {
-	MASTERC("MASTERC", "Master view log"), CODE("CODE", "Code view"), TEXT(
-	        "TEXT", "Text view"), HEADER("HEADER", "Header"), BANNER("BANNER",
-	        "Banner"), GUI_BOLD("GUI_BOLD", "Bold"), GUI_NOM("GUI_NOM", "Main");
+	MASTERC("MASTERC", "Master view log"), 
+	CODE("CODE", "Code view"), 
+	TEXT("TEXT", "Text view"), 
+	HEADER("HEADER", "Header"), 
+	BANNER("BANNER","Banner"), 
+	GUI_BOLD("GUI_BOLD", "Bold"),
+	GUI_BIG("GUI_BIG", "Big font"),
+	GUI_NOM("GUI_NOM", "Main");
 
 	public String	tag;
 	public String	description;

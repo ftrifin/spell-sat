@@ -5,7 +5,7 @@
 // DESCRIPTION: 
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -51,6 +51,20 @@ void SPELLlistener::start( const std::string& configFile )
 	LOG_INFO("Listener start");
 
     SPELLconfiguration::instance().loadConfig(configFile);
+
+    // Configure the time format if defined in configuration
+    std::string format = SPELLconfiguration::instance().getCommonParameter("TdsTimeFormat");
+    if (format.length()!=0)
+    {
+    	if (format.compare ("1") == 0)
+    	{
+    		SPELLutils::setTimeFormat(TIME_FORMAT_SLASH);
+    	}
+    	else if (format.compare("0")==0)
+    	{
+    		SPELLutils::setTimeFormat(TIME_FORMAT_DOT);
+    	}
+    }
 
 	m_guiListener = new SPELLlistenerGui( configFile );
 	m_contextListener = new SPELLlistenerContext( configFile );

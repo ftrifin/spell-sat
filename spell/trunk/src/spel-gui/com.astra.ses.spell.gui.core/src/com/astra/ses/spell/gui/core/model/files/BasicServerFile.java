@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,6 +49,7 @@
 package com.astra.ses.spell.gui.core.model.files;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /******************************************************************************
  * Abstract class providing common operations and data for all server files.
@@ -56,7 +57,7 @@ import java.util.ArrayList;
 public class BasicServerFile implements IServerFile
 {
 	/** Holds the list of file lines */
-	private ArrayList<IServerFileLine>	m_lines;
+	private List<IServerFileLine>	m_lines;
 	private String m_path;
 
 	/**************************************************************************
@@ -65,7 +66,7 @@ public class BasicServerFile implements IServerFile
 	 * @param procId
 	 * @param lines
 	 *************************************************************************/
-	public BasicServerFile( String path, ArrayList<String> lines)
+	public BasicServerFile( String path, List<String> lines)
 	{
 		m_path = path;
 		m_lines = new ArrayList<IServerFileLine>();
@@ -88,13 +89,13 @@ public class BasicServerFile implements IServerFile
 	 * @return the list of file lines
 	 *************************************************************************/
 	@Override
-	public ArrayList<IServerFileLine> getLines()
+	public List<IServerFileLine> getLines()
 	{
 		return m_lines;
 	}
 
 	@Override
-    public void parse(ArrayList<String> lines)
+    public void parse(List<String> lines)
     {
 	    for(String line : lines)
 	    {
@@ -106,5 +107,17 @@ public class BasicServerFile implements IServerFile
     public String getPath()
     {
 		return m_path;
+    }
+
+	@Override
+    public String getFilename()
+    {
+		String filename = m_path;
+		int idx = m_path.lastIndexOf("/");
+		if (idx != -1)
+		{
+			filename = m_path.substring(idx+1);
+		}
+		return filename;
     }
 }

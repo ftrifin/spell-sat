@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -85,7 +85,7 @@ public class ReleaseAllJob implements IRunnableWithProgress
 			int count = 0;
 			for (String procId : openProcs)
 			{
-				mgr.releaseProcedure(procId, monitor);
+				mgr.releaseProcedure(procId, false, monitor);
 				count++;
 				monitor.worked(count);
 			}

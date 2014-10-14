@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 6, 2012
 //
-// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,18 +49,22 @@ package com.astra.ses.spell.gui.procs.model;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ItemStatus;
+import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
+import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
 import com.astra.ses.spell.gui.procs.interfaces.model.SummaryMode;
 
 public class CodeLine implements ICodeLine
 {
 	private String m_source;
+	private String m_partentCodeId;
 	private int m_lineNo;
 	private int m_numExecuted;
 	private BreakpointType m_breakpoint;
@@ -69,6 +73,9 @@ public class CodeLine implements ICodeLine
 	private String m_summaryStatus;
 	private ItemStatus m_status;
 	private int m_biggestNotificationExecution;
+	private boolean m_extendedTimeLine;
+	private int m_maxNotifications;
+	
 
 	class NotificationsPerLine
 	{
@@ -76,10 +83,11 @@ public class CodeLine implements ICodeLine
 		List<ItemNotification> all = new LinkedList<ItemNotification>();
 	}
 	
-	private Map<Integer,NotificationsPerLine> m_notifications;
+	private SortedMap<Integer,NotificationsPerLine> m_notifications;
 	
-	public CodeLine( int index, String source )
+	public CodeLine( String parentCodeId, int index, String source )
 	{
+		m_partentCodeId = parentCodeId;
 		m_source = source;
 		m_lineNo = index;
 		m_notifications = new TreeMap<Integer,NotificationsPerLine>();
@@ -90,6 +98,12 @@ public class CodeLine implements ICodeLine
     public int getLineNo()
     {
 	    return m_lineNo;
+    }
+
+	@Override
+    public String getParentCodeId()
+    {
+	    return m_partentCodeId;
     }
 
 	@Override
@@ -237,6 +251,16 @@ public class CodeLine implements ICodeLine
 			npl.all.add(data);
 			m_notifications.put(executionNumber,npl);
 		}
+
+		// Avoid the map growing without bounds
+		if (m_maxNotifications >= 0)
+		{
+			while (m_notifications.firstKey() < m_biggestNotificationExecution - m_maxNotifications)
+			{
+				m_notifications.remove(m_notifications.firstKey());
+			}
+		}
+				
 	    // Build the summary element for this notification
     	calculateSummary();
     }
@@ -271,6 +295,10 @@ public class CodeLine implements ICodeLine
 	    m_breakpoint = null;
 	    m_numExecuted = 0;
 	    clearNotifications();
+	    // Check line configuration
+	    IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
+	    m_extendedTimeLine = cfg.getBooleanProperty(PropertyKey.SHOW_DATE_LINE); 
+	    m_maxNotifications = Integer.parseInt(cfg.getProperty(PropertyKey.LINE_HISTORY_ITEMS));
     }
 	
 	@Override
@@ -301,19 +329,18 @@ public class CodeLine implements ICodeLine
 	@Override
     public void calculateSummary()
     {
+	    m_summaryName = "";
+	    m_summaryValue = "";
+	    m_summaryStatus = "";
+	    m_status = ItemStatus.UNKNOWN;
+
 		NotificationsPerLine npl = m_notifications.get(m_biggestNotificationExecution);
-		if (npl == null || npl.notifications.isEmpty()) 
-		{
-		    m_summaryName = "";
-		    m_summaryValue = "";
-		    m_summaryStatus = "";
-		    m_status = ItemStatus.UNKNOWN;
-		}
-		else
+		if (npl != null && !npl.notifications.isEmpty()) 
 		{
 			int totalCount = 0;
 		    int successCount = 0;
-		    ItemStatus status = ItemStatus.UNKNOWN;
+		    String notificationTime = "";
+		    
 		    // Calculate the success count and the overall status
 			for(ItemNotification data : npl.notifications)
 			{
@@ -327,31 +354,55 @@ public class CodeLine implements ICodeLine
 		    		}
 		    		catch(Exception ex)
 		    		{
-		    			status = ItemStatus.UNKNOWN;
+		    			// Reset to unknown when we don't understand the message
+		    			m_status = ItemStatus.UNKNOWN;
+		    			m_summaryName = "";
+		    			m_summaryValue = "";
+		    			notificationTime = data.getTime();
 		    		}
 			    	if (itemStatus.equals(ItemStatus.SUCCESS))
 			    	{
 			    		successCount++;
 			    	}
-	    			if (itemStatus.ordinal()>status.ordinal())
+	    			if (itemStatus.ordinal() > m_status.ordinal() || 
+	    					(itemStatus.ordinal() == m_status.ordinal()	&&
+	    					 data.getTime().compareTo(notificationTime) >= 0))
 	    			{
-	    				status = itemStatus;
+	    				// Get all the data from the highest priority record
+	    				m_status = itemStatus;
+	    				m_summaryName = data.getItemName().get(index);
+	    				if (m_summaryName.indexOf("@") != -1)
+	    				{
+	    					m_summaryName = m_summaryName.split("@")[1];
+	    				}
+	    				m_summaryValue = data.getItemValue().get(index);
+	    				notificationTime = data.getTime();
 	    			}
 			    }
 			}
-			if (totalCount == 1)
+
+			if (m_extendedTimeLine)
 			{
-				m_summaryName = npl.notifications.get(0).getItemName().get(0);
-				m_summaryValue = npl.notifications.get(0).getItemValue().get(0);
-				m_summaryStatus = status.getName();
+				if (m_status.getName().isEmpty())
+				{
+					m_summaryStatus = notificationTime;
+				}
+				else
+				{
+					m_summaryStatus = notificationTime + " " + m_status.getName().charAt(0);  
+				}
 			}
-			else
+			else 
 			{
-				m_summaryName = "";
-				m_summaryValue = "";
-				m_summaryStatus = status.getName() + " (" + successCount + "/" + totalCount + ")";
+				if (totalCount > 1)
+				{
+					m_summaryStatus = m_status.getName() + " (" + successCount + "/" + totalCount + ")";
+				}
+				else
+				{
+					m_summaryStatus = m_status.getName();
+				}
 			}
-		    m_status = status;
 		}
     }
 }

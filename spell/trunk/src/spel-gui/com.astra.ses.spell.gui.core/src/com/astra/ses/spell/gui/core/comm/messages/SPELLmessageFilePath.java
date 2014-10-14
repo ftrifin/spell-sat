@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -63,7 +63,15 @@ public class SPELLmessageFilePath extends SPELLmessageRequest
 		setSender(IMessageValue.CLIENT_SENDER);
 		setReceiver(IMessageValue.CONTEXT_RECEIVER);
 	}
-	
+
+	public SPELLmessageFilePath( ServerFileType fileType )
+	{
+		super(IMessageId.REQ_SERVER_FILE_PATH);
+		set(IMessageField.FIELD_SERVER_FILE_ID, fileType.name());
+		setSender(IMessageValue.CLIENT_SENDER);
+		setReceiver(IMessageValue.CONTEXT_RECEIVER);
+	}
+
 	public static String getPath( SPELLmessage response )
 	{
 		String path = null;

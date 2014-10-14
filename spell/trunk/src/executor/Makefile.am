@@ -5,7 +5,7 @@
 ## DESCRIPTION: Automake rules
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -30,7 +30,7 @@ bin_PROGRAMS = SPELL-Executor
 
 SPELL_Executor_SOURCES = src/SPELLexecutorMain.C
 
-SPELL_Executor_LDFLAGS = -lxerces-c -lpthread -lrt -lutil -ldl -lz $(AM_LDFLAGS)
+SPELL_Executor_LDFLAGS = -lxerces-c -lpthread -lrt -lutil -ldl -lz -lcrypto $(AM_LDFLAGS)
 
 SPELL_Executor_LDADD = ${top_builddir}/lib/SPELL_UTIL/libSPELL_UTIL.la \
                        ${top_builddir}/lib/SPELL_IPC/libSPELL_IPC.la   \

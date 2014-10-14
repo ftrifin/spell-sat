@@ -5,7 +5,7 @@
 // DESCRIPTION: Data handling utilities
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -113,19 +113,17 @@ SPELLexecutorStatus SPELLdataHelper::stringToExecutorStatus( std::string st )
 //============================================================================
 // FUNCTION        :
 //============================================================================
-std::string SPELLdataHelper::executorOperationToString( const SPELLexecutorOperation& operation )
+std::string SPELLdataHelper::sharedDataOperationToString( const SPELLsharedDataOperation& operation )
 {
 	switch(operation)
 	{
-	case EXEC_OP_OPEN:   return MessageValue::DATA_EXOP_OPEN;
-	case EXEC_OP_CLOSE:  return MessageValue::DATA_EXOP_CLOSE;
-	case EXEC_OP_KILL:   return MessageValue::DATA_EXOP_KILL;
-	case EXEC_OP_ATTACH: return MessageValue::DATA_EXOP_ATTACH;
-	case EXEC_OP_DETACH: return MessageValue::DATA_EXOP_DETACH;
-	case EXEC_OP_STATUS: return MessageValue::DATA_TYPE_STATUS;
-	case EXEC_OP_CRASH:  return MessageValue::DATA_EXOP_CRASH;
+	case SET_SHARED_DATA: return MessageValue::DATA_SET_SHARED_DATA;
+	case DEL_SHARED_DATA: return MessageValue::DATA_DEL_SHARED_DATA;
+	case CLEAR_SHARED_SCOPE: return MessageValue::DATA_CLEAR_SHARED_SCOPE;
+	case ADD_SHARED_SCOPE: return MessageValue::DATA_ADD_SHARED_SCOPE;
+	case DEL_SHARED_SCOPE: return MessageValue::DATA_DEL_SHARED_SCOPE;
 	default:
-		LOG_ERROR("Unknown executor operation");
+		LOG_ERROR("Unknown context operation");
 		return "";
 	}
 }
@@ -155,6 +153,7 @@ std::string SPELLdataHelper::clientModeToString( const SPELLclientMode& mode )
 	{
 	case CLIENT_MODE_CONTROL: return MessageValue::DATA_GUI_MODE_C;
 	case CLIENT_MODE_MONITOR: return MessageValue::DATA_GUI_MODE_M;
+	case CLIENT_MODE_BACKGROUND: return MessageValue::DATA_GUI_MODE_B;
 	case CLIENT_MODE_UNKNOWN: return "UNKNOWN";
 	default:
 		LOG_ERROR("Unknown client mode");
@@ -169,6 +168,7 @@ SPELLclientMode SPELLdataHelper::clientModeFromString( const std::string& mode  
 {
 	if (mode == MessageValue::DATA_GUI_MODE_C) return CLIENT_MODE_CONTROL;
 	if (mode == MessageValue::DATA_GUI_MODE_M) return CLIENT_MODE_MONITOR;
+	if (mode == MessageValue::DATA_GUI_MODE_B) return CLIENT_MODE_BACKGROUND;
 	return CLIENT_MODE_UNKNOWN;
 }
 

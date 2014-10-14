@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,68 +48,101 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.interfaces;
 
+import com.astra.ses.spell.gui.core.extensionpoints.ICoreProcedureRuntimeListener;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreProcedureInputListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureItemsListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureMessageListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedurePromptListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureRuntimeListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureStackListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureStatusListener;
+
 /*******************************************************************************
  * @brief
  ******************************************************************************/
-public interface IPresentationNotifier
+public interface IPresentationNotifier extends ICoreProcedureRuntimeListener, ICoreProcedureInputListener
 {
 	/***************************************************************************
 	 * Add listener for procedure display messages
 	 **************************************************************************/
-	public void addMessageListener(IProcedureMessageListener listener);
+	public void addMessageListener(IGuiProcedureMessageListener listener);
 
 	/***************************************************************************
 	 * Remove listener for procedure display messages
 	 **************************************************************************/
-	public void removeMessageListener(IProcedureMessageListener listener);
+	public void removeMessageListener(IGuiProcedureMessageListener listener);
 
 	/***************************************************************************
 	 * Add listener for procedure status changes
 	 **************************************************************************/
-	public void addStatusListener(IProcedureStatusListener listener);
+	public void addStatusListener(IGuiProcedureStatusListener listener);
 
 	/***************************************************************************
 	 * Remove listener for procedure status changes
 	 **************************************************************************/
-	public void removeStatusListener(IProcedureStatusListener listener);
+	public void removeStatusListener(IGuiProcedureStatusListener listener);
 
 	/***************************************************************************
 	 * Add listener for procedure item notifications
 	 **************************************************************************/
-	public void addItemListener(IProcedureItemsListener listener);
+	public void addItemListener(IGuiProcedureItemsListener listener);
 
 	/***************************************************************************
 	 * Remove listener for procedure item notifications
 	 **************************************************************************/
-	public void removeItemListener(IProcedureItemsListener listener);
+	public void removeItemListener(IGuiProcedureItemsListener listener);
 
 	/***************************************************************************
 	 * Add listener for procedure runtime changes
 	 **************************************************************************/
-	public void addRuntimeListener(IProcedureRuntimeListener listener);
+	public void addRuntimeListener(IGuiProcedureRuntimeListener listener);
 
 	/***************************************************************************
 	 * Remove listener for procedure runtime changes
 	 **************************************************************************/
-	public void removeRuntimeListener(IProcedureRuntimeListener listener);
+	public void removeRuntimeListener(IGuiProcedureRuntimeListener listener);
 
 	/***************************************************************************
 	 * Add listener for procedure stack changes
 	 **************************************************************************/
-	public void addStackListener(IProcedureStackListener listener);
+	public void addStackListener(IGuiProcedureStackListener listener);
 
 	/***************************************************************************
 	 * Remove listener for procedure stack
 	 **************************************************************************/
-	public void removeStackListener(IProcedureStackListener listener);
+	public void removeStackListener(IGuiProcedureStackListener listener);
 
 	/***************************************************************************
 	 * Add listener for procedure prompts
 	 **************************************************************************/
-	public void addPromptListener(IProcedurePromptListener listener);
+	public void addPromptListener(IGuiProcedurePromptListener listener);
 
 	/***************************************************************************
 	 * Remove listener for procedure prompts
 	 **************************************************************************/
-	public void removePromptListener(IProcedurePromptListener listener);
+	public void removePromptListener(IGuiProcedurePromptListener listener);
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void notifyModelEnabled();
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void notifyModelDisabled();
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void notifyModelLoaded();
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void notifyModelReset();
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void notifyModelUnloaded();
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void notifyModelConfigured();
 }

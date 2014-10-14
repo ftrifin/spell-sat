@@ -5,7 +5,7 @@
 ## DESCRIPTION: Telemetry verifier thread
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -35,6 +35,7 @@ from spell.lib.exception import *
 from spell.lang.constants import *
 from spell.lang.modifiers import *
 from spell.lib.adapter.constants.core import COMP_SYMBOLS
+from spell.lib.registry import REGISTRY
 
 #*******************************************************************************
 # System imports
@@ -53,10 +54,12 @@ class TmVerifierClass(threading.Thread):
     value = None
     status = None
     failed = False
+    stopped = False
     reason = " "
     updtime = " "
     error = None
     
+    __inExpression = False
     __paramName  = None
     __comparison = None
     __fromValue  = None
@@ -64,15 +67,18 @@ class TmVerifierClass(threading.Thread):
     __stepConfig = {}
     
     #===========================================================================
-    def __init__(self, tmClass, stepNum, parameters, globalConfig = {}):
+    def __init__(self, stepNum, parameters, globalConfig = {}, inExpression = False ):
         
         threading.Thread.__init__(self)
+        
+        self.__tmClass = REGISTRY['TM']
         
         # Initialize handles
         self.setName("VRF STEP " + str(stepNum))
         self.step = stepNum
-        self.__tmClass = tmClass
         self.__definition = [ stepNum, parameters, globalConfig ]
+        self.__inExpression = inExpression
+        self.stopped = False
         
         # Status information accessed from tm interface
         self.name = None
@@ -174,6 +180,7 @@ class TmVerifierClass(threading.Thread):
 
         # Update verification status info 
         self.__updateInfo("IN PROGRESS", False)
+        self.__shouldStop = False
         
         result = False
         reason = " "
@@ -203,9 +210,15 @@ class TmVerifierClass(threading.Thread):
                 
             LOG("[V] Comparison result: " + repr(result))
             if not result:
-                reason = "Actual value: " + str(actualValue)
+                if self.__inExpression:
+                    reason = "[EXPRESSION] Actual value: " + str(actualValue)
+                else:
+                    reason = "Actual value: " + str(actualValue)
             else:
-                reason = "Value is " + str(actualValue)
+                if self.__inExpression:
+                    reason = "[EXPRESSION] Value is " + str(actualValue)
+                else:
+                    reason = "Value is " + str(actualValue)
             
         except DriverException,ex:
             LOG("[V] Verification process failed: " + str(ex), LOG_ERROR)
@@ -216,20 +229,25 @@ class TmVerifierClass(threading.Thread):
             result = False
             
         finally:
-            LOG("[V] Declaring verification process success: " + repr(result))
-            if result:
-                self.__updateInfo("SUCCESS", False, reason)
-            else:
-                # If PromptUser is false, do not mark it as failed
-                if self.__stepConfig[PromptUser] == True:
-                    self.__updateInfo("FAILED", True, reason)
-                # If PromptUser is false but the failed check is caused by system failure, report it
-                # unless PromptFailure is False
+            if not self.stopped:
+                LOG("[V] Declaring verification process success: " + repr(result))
+                if result:
+                    self.__updateInfo("SUCCESS", False, reason)
                 else:
-                    if (self.error is None) or (self.__stepConfig[PromptFailure] == False):
-                        self.__updateInfo("SUPERSEDED", True, reason)
-                    else:
+                    # If PromptUser is false, do not mark it as failed
+                    if self.__stepConfig[PromptUser] == True:
                         self.__updateInfo("FAILED", True, reason)
+                    # If PromptUser is false but the failed check is caused by system failure, report it
+                    # unless PromptFailure is False
+                    else:
+                        if (self.error is None) or (self.__stepConfig[PromptFailure] == False):
+                            self.__updateInfo("SUPERSEDED", True, reason)
+                        else:
+                            self.__updateInfo("FAILED", True, reason)
+
+    #===========================================================================
+    def stopVerification(self):
+        self.stopped = True
 
     #===========================================================================
     def getDefinition(self):

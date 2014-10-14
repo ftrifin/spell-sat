@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-13
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,14 +48,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.interfaces.model;
 
-import com.astra.ses.spell.gui.core.comm.commands.ExecutorCommand;
 import com.astra.ses.spell.gui.core.exceptions.CommandFailed;
-import com.astra.ses.spell.gui.core.interfaces.IProcedureInput;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreProcedureInputListener;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.notification.InputData;
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureException;
+import com.astra.ses.spell.gui.types.ExecutorCommand;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * 
@@ -63,7 +63,7 @@ import com.astra.ses.spell.gui.procs.interfaces.exceptions.UninitProcedureExcept
  * {@link IProcedure} object
  * 
  ******************************************************************************/
-public interface IProcedureController extends IProcedureInput
+public interface IProcedureController extends ICoreProcedureInputListener
 {
 	/***************************************************************************
 	 * Set error information
@@ -102,6 +102,11 @@ public interface IProcedureController extends IProcedureInput
 	public void pause();
 
 	/***************************************************************************
+	 * Interrupt the ongoing driver operation
+	 **************************************************************************/
+	public void interrupt();
+
+	/***************************************************************************
 	 * Send a command
 	 * 
 	 * @param cmd
@@ -116,11 +121,6 @@ public interface IProcedureController extends IProcedureInput
 	 * Recover procedure execution from a crash
 	 **************************************************************************/
 	public void recover();
-
-	/***************************************************************************
-	 * Save interpreter information
-	 **************************************************************************/
-	public void save();
 
 	/***************************************************************************
 	 * Reload the procedure
@@ -194,6 +194,14 @@ public interface IProcedureController extends IProcedureInput
 	 *            the msecs
 	 **************************************************************************/
 	public void setExecutionDelay(int msec);
+	
+	/***************************************************************************
+	 * Set the prompt warning delay
+	 * 
+	 * @param msec
+	 *            the msecs
+	 **************************************************************************/	
+	public void setPromptWarningDelay(int msec);
 
 	/***************************************************************************
 	 * Update the executor status
@@ -228,9 +236,9 @@ public interface IProcedureController extends IProcedureInput
 	public void stepOver();
 
 	/***************************************************************************
-	 * Get the step over control
+	 * Move the stack level
 	 **************************************************************************/
-	public IStepOverControl getStepOverControl();
+	public void moveStack( int depth );
 
 	/***************************************************************************
 	 * Perform a step over during procedure execution

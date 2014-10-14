@@ -11,25 +11,5 @@
             name="Shell">
       </listener>
    </extension>
-   <extension
-         point="org.eclipse.ui.menus">
-      <menuContribution
-            locationURI="menu:com.astra.ses.spell.gui.menu.printProcedure?after=additions">
-         <command
-               commandId="com.astra.ses.spell.gui.commands.print"
-               id="Print Code View"
-               label="Print Code View"
-               style="push">
-            <parameter
-                  name="com.astra.ses.spell.gui.print.printableProvider"
-                  value="com.astra.ses.spell.gui.commands.GetActiveProcPrintable">
-            </parameter>
-            <parameter
-                  name="com.astra.ses.spell.gui.commands.procPrintable.mode"
-                  value="com.astra.ses.spell.gui.presentation.CodeView">
-            </parameter>
-         </command>
-      </menuContribution>
-   </extension>
 
 </plugin>

@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 22, 2010 11:44:03 AM
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,6 +48,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.watchvariables.model;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
@@ -65,14 +69,22 @@ public class WatchVariablesContentProvider implements IStructuredContentProvider
 
 	/** Procedure data provider reference */
 	private IVariableManager	m_input;
+	/** Show mode */
+	private boolean m_showGlobals;
+	private boolean m_showLocals;
 
 	/**************************************************************************
 	 * Constructor.
 	 *************************************************************************/
 	public WatchVariablesContentProvider()
 	{
+		m_showGlobals = true;
+		m_showLocals = true;
 	}
 	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public void inputChanged(Viewer v, Object oldInput, Object newInput)
 	{
@@ -81,16 +93,45 @@ public class WatchVariablesContentProvider implements IStructuredContentProvider
 			m_input = (IVariableManager) newInput;
 		}
 	}
+	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void showGlobals( boolean show )
+	{
+		m_showGlobals = show;
+	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void showLocals( boolean show )
+	{
+		m_showLocals = show;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public Object[] getElements(Object parent)
 	{
 		if (m_input == null) return new VariableData[0];
-		VariableData[] elements = m_input.getVariables();
+		Map<String,VariableData> elements = m_input.getVariables();
 		if (elements == null) return new VariableData[0];
-		return elements;
+		List<VariableData> toProvide = new LinkedList<VariableData>();
+
+		for(VariableData var : elements.values())
+		{
+			if (var.isGlobal() && m_showGlobals) toProvide.add(var);
+			if (!var.isGlobal() && m_showLocals) toProvide.add(var);
+		}
+		return toProvide.toArray();
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void dispose()
     {

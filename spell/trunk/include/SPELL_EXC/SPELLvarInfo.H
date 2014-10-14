@@ -5,7 +5,7 @@
 // DESCRIPTION: Procedure variable information
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -47,18 +47,53 @@
 **////////////////////////////////////////////////////////////////////////////
 typedef struct SPELLvarInfo_
 {
+	SPELLvarInfo_()
+	{
+		varName = "";
+		varType = "";
+		varValue = "";
+		isGlobal = false;
+		isDeleted = false;
+		isAdded = false;
+	}
+
 	SPELLvarInfo_( const std::string& name,
 				   const std::string& type,
 				   const std::string& value,
-				   bool global,
-				   bool registered )
+				   bool global )
 	{
 		varName = name;
 		varType = type;
 		varValue = value;
 		isGlobal = global;
-		isRegistered = registered;
+		isDeleted = false;
+		isAdded = false;
 	}
+
+	SPELLvarInfo_& operator=( const SPELLvarInfo_& other )
+	{
+		if (this != &other)
+		{
+			varName = other.varName;
+			varType = other.varType;
+			varValue = other.varValue;
+			isGlobal = other.isGlobal;
+			isDeleted = other.isDeleted;
+			isAdded = other.isAdded;
+		}
+		return *this;
+	}
+
+	SPELLvarInfo_( const SPELLvarInfo_& other )
+	{
+		varName = other.varName;
+		varType = other.varType;
+		varValue = other.varValue;
+		isGlobal = other.isGlobal;
+		isDeleted = other.isDeleted;
+		isAdded = other.isAdded;
+	}
+
 	/** Holds the variable name */
 	std::string varName;
 	/** Holds the variable type string */
@@ -67,8 +102,9 @@ typedef struct SPELLvarInfo_
 	std::string varValue;
 	/** True if the variable is global */
 	bool isGlobal;
-	/** True if the variable is registered */
-	bool isRegistered;
+	/** Operation flags */
+	bool isAdded;
+	bool isDeleted;
 }
 SPELLvarInfo;
 

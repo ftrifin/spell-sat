@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -64,26 +64,28 @@ import java.util.Arrays;
 public class TextBuffer
 {
 	/** The default amount of lines that the buffer will use to grow */
-	public static final int	              DEFAULT_SCALATION_RATIO	= 50;
+	public static final int DEFAULT_SCALATION_RATIO = 50;
+	/** The maximum amount of lines allowed for the buffer */
+	private int m_capacity;
 	/** Holds the list of registered listeners */
-	private ArrayList<TextBufferListener>	m_listeners;
+	private ArrayList<TextBufferListener> m_listeners;
 	/** Holds the buffer data */
-	private TextViewLine[]	              m_buffer;
+	private TextViewLine[] m_buffer;
 	/** Holds the amount of lines stored */
-	private int	                          m_lineCount;
+	private int m_lineCount;
 	/** Holds the currently programmed scalation ratio */
-	private int	                          m_scalationRatio;
+	private int m_scalationRatio;
 	/** Start position of the view window */
-	private int	                          m_windowStart;
+	private int m_windowStart;
 	/** Length of the view window */
-	private int	                          m_windowLength;
+	private int m_windowLength;
 	/** True if the data window must scroll following the new data */
-	private boolean	                      m_scrollWindow;
+	private boolean m_scrollWindow;
 
 	/**************************************************************************
 	 * Constructor.
 	 *************************************************************************/
-	public TextBuffer()
+	public TextBuffer( int capacity )
 	{
 		m_listeners = new ArrayList<TextBufferListener>();
 		m_scalationRatio = DEFAULT_SCALATION_RATIO;
@@ -92,6 +94,7 @@ public class TextBuffer
 		m_windowStart = 0;
 		m_windowLength = DEFAULT_SCALATION_RATIO;
 		m_scrollWindow = false;
+		m_capacity = capacity;
 	}
 
 	/**************************************************************************
@@ -113,29 +116,75 @@ public class TextBuffer
 	/**************************************************************************
 	 * Toggle timestamp
 	 *************************************************************************/
-	public void setShowTimestamp( boolean show )
+	public void setShowTimestamp(boolean show)
 	{
 		if (m_buffer != null)
-		for (TextViewLine line : m_buffer)
+			for (TextViewLine line : m_buffer)
+			{
+				if (line != null)
+					line.setShowTimestamp(show);
+			}
+	}
+
+	/**************************************************************************
+	 * Se buffer capacity
+	 *************************************************************************/
+	public void setCapacity( int lines )
+	{
+		m_capacity = lines;
+		if (m_capacity==-1) return;
+		if (m_capacity <= m_lineCount)
 		{
-			if (line != null)
-			line.setShowTimestamp(show);
+			regenerate();
 		}
 	}
 
 	/**************************************************************************
-	 * Append a line to the buffer
+	 * Regenerate buffer when growing beyond capacity
 	 *************************************************************************/
-	public synchronized void append(TextViewLine line)
+	private void regenerate()
 	{
-		// If the buffer is full, enlarge it
-		if (m_lineCount == m_buffer.length) // The buffer is full
+		if (m_capacity < m_scalationRatio)
 		{
-			TextViewLine[] newData = new TextViewLine[m_buffer.length
-			        + m_scalationRatio];
+			m_buffer = new TextViewLine[ m_scalationRatio ];
+			m_lineCount = 0;
+			System.gc();
+		}
+		else if (m_lineCount > m_scalationRatio)
+		{
+			// These are the lines we are going to keep: last scalation ratio + extra lines
+			int numBlocks = (m_lineCount / m_scalationRatio);
+			int toRemove = m_scalationRatio * numBlocks;
+			int newLineCount = m_lineCount - toRemove;
+			
+			TextViewLine[] newData = new TextViewLine[ m_scalationRatio ];
+			System.arraycopy(m_buffer, toRemove, newData, 0, newLineCount);
+			m_buffer = newData;
+			newData = null;
+			m_lineCount = newLineCount;
+			System.gc();
+			m_windowStart = 0;
+			m_windowLength = DEFAULT_SCALATION_RATIO;
+		}
+	}
+
+	/**************************************************************************
+	 * Append a line to the buffer (synchornized)
+	 *************************************************************************/
+	private synchronized void processNewLine( TextViewLine line )
+	{
+		// If the buffer is full, enlarge it or dump initial lines if too big
+		if (m_capacity != -1 && m_lineCount == m_capacity)
+		{
+			regenerate();
+		}
+		else if (m_lineCount == m_buffer.length) // The buffer is full
+		{
+			TextViewLine[] newData = new TextViewLine[m_buffer.length + m_scalationRatio];
 			System.arraycopy(m_buffer, 0, newData, 0, m_buffer.length);
 			m_buffer = newData;
 			newData = null;
+			System.gc();
 		}
 
 		// If there are no lines, just add it
@@ -150,8 +199,7 @@ public class TextBuffer
 			// If requires ordering
 			if (line.compareTo(previousLine) < 0)
 			{
-				int index = Arrays.binarySearch(m_buffer, 0, m_lineCount - 1,
-				        line);
+				int index = Arrays.binarySearch(m_buffer, 0, m_lineCount - 1, line);
 				if (index < 0) // We need to insert
 				{
 					// (-insertion_point -1)
@@ -168,10 +216,10 @@ public class TextBuffer
 					TextViewLine[] newData = new TextViewLine[m_buffer.length + 1];
 					System.arraycopy(m_buffer, 0, newData, 0, index);
 					newData[index] = line;
-					System.arraycopy(m_buffer, index, newData, index + 1,
-					        m_lineCount - index + 1);
+					System.arraycopy(m_buffer, index, newData, index + 1, m_lineCount - index + 1);
 					m_buffer = newData;
 					newData = null;
+					System.gc();
 				}
 			}
 			else
@@ -182,6 +230,14 @@ public class TextBuffer
 		}
 
 		m_lineCount++;
+	}
+	
+	/**************************************************************************
+	 * Append a line to the buffer
+	 *************************************************************************/
+	public void append(TextViewLine line)
+	{
+		processNewLine(line);
 
 		if ((m_lineCount > (m_windowStart + m_windowLength)) && m_scrollWindow)
 		{
@@ -239,7 +295,7 @@ public class TextBuffer
 	/**************************************************************************
 	 * Get the amount of data stored in the buffer
 	 *************************************************************************/
-	public int getDataSize()
+	public synchronized int getDataSize()
 	{
 		return m_lineCount;
 	}
@@ -247,7 +303,7 @@ public class TextBuffer
 	/**************************************************************************
 	 * Get the all data stored
 	 *************************************************************************/
-	public TextViewLine[] getData()
+	public synchronized TextViewLine[] getData()
 	{
 		TextViewLine[] data = new TextViewLine[m_lineCount];
 		System.arraycopy(m_buffer, 0, data, 0, m_lineCount);
@@ -257,7 +313,7 @@ public class TextBuffer
 	/**************************************************************************
 	 * Get the data window position
 	 *************************************************************************/
-	public int getDataWindowStart()
+	public synchronized int getDataWindowStart()
 	{
 		return m_windowStart;
 	}
@@ -265,7 +321,7 @@ public class TextBuffer
 	/**************************************************************************
 	 * Get the data window size
 	 *************************************************************************/
-	public int getDataWindowLength()
+	public synchronized int getDataWindowLength()
 	{
 		return m_windowLength;
 	}
@@ -273,7 +329,7 @@ public class TextBuffer
 	/**************************************************************************
 	 * Get the data covered by the view window
 	 *************************************************************************/
-	public TextViewLine[] getWindowData()
+	public synchronized TextViewLine[] getWindowData()
 	{
 		// Try to get a full data window
 		int lengthToCopy = m_windowLength;

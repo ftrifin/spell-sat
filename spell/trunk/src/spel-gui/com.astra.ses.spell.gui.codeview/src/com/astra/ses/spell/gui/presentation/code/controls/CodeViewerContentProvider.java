@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 21, 2012
 //
-// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,11 +49,11 @@ package com.astra.ses.spell.gui.presentation.code.controls;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
-import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.presentation.code.CodeModelProxy;
 
 public class CodeViewerContentProvider implements IStructuredContentProvider
 {
-	private IProcedure model;
+	private CodeModelProxy m_model;
 
 	@Override
     public void dispose()
@@ -63,13 +63,13 @@ public class CodeViewerContentProvider implements IStructuredContentProvider
 	@Override
     public void inputChanged(Viewer viewer, Object oldInput, Object newInput)
     {
-	    model = (IProcedure) newInput;
+	    m_model = (CodeModelProxy) newInput;
     }
 
 	@Override
     public Object[] getElements(Object inputElement)
     {
-	    return model.getExecutionManager().getLines().toArray();
+	    return m_model.getCurrentCode().getLines().toArray();
     }
 	
 }

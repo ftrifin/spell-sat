@@ -6,7 +6,7 @@
 //
 // DATE      : Jan 12, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -78,6 +78,8 @@ public class SPELLmessageExecConfigChanged extends SPELLmessageOneway
 		boolean byStep = false;
 		boolean showLib = false;
 		int delay = 0;
+		int promptWarningDelay = 0;
+		
 		try
 		{
 			value = get(IMessageField.FIELD_RUN_INTO);
@@ -99,6 +101,17 @@ public class SPELLmessageExecConfigChanged extends SPELLmessageOneway
 			ex.printStackTrace();
 		}
 		;
+		try
+		{
+			value = get(IMessageField.FIELD_PROMPT_DELAY);
+			promptWarningDelay = Integer.parseInt(value);
+			config.setPromptWarningDelay(promptWarningDelay);
+		}
+		catch (MessageException ex)
+		{
+			ex.printStackTrace();
+		}
+		;		
 		try
 		{
 			value = get(IMessageField.FIELD_BY_STEP);

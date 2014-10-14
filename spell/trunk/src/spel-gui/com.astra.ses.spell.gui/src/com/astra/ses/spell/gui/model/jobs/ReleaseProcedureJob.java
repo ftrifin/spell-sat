@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -60,21 +60,30 @@ import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 
 public class ReleaseProcedureJob extends AbstractProcedureJob
 {
-	public ReleaseProcedureJob(String instanceId)
+	private boolean m_background;
+	
+	public ReleaseProcedureJob(String instanceId, boolean background)
 	{
 		super(instanceId);
+		m_background = background;
 	}
 
 	@Override
 	public void performTask(IProgressMonitor monitor)
 	        throws InvocationTargetException, InterruptedException
 	{
-		IProcedureManager mgr = (IProcedureManager) ServiceManager
-		        .get(IProcedureManager.class);
+		IProcedureManager mgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
 		try
 		{
-			monitor.setTaskName("Releasing procedure " + m_instanceId);
-			mgr.releaseProcedure(m_instanceId, monitor);
+			if (m_background)
+			{
+				monitor.setTaskName("Putting procedure " + m_instanceId + " in background mode");
+			}
+			else
+			{
+				monitor.setTaskName("Releasing procedure " + m_instanceId);
+			}
+			mgr.releaseProcedure(m_instanceId, m_background, monitor);
 			if (monitor.isCanceled())
 			{
 				result = CommandResult.CANCELLED;

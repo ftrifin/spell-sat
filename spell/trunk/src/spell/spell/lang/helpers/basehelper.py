@@ -5,7 +5,7 @@
 ## DESCRIPTION: Base class for language helpers
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -71,6 +71,7 @@ class WrapperHelper(Configurable):
                   ACTION_RECHECK    :'Recheck telemetry',
                   ACTION_SKIP       :'Skip operation and return success (True)'   ,
                   ACTION_NOACTION   :'No action' ,
+                  ACTION_HANDLE     :'Let the procedure handle this error' ,
                   ACTION_CANCEL     :'Cancel operation and return failure (False)' }
 
     _CT_ACTIONS = {  ABORT    :ACTION_ABORT   ,
@@ -79,6 +80,7 @@ class WrapperHelper(Configurable):
                      RECHECK  :ACTION_RECHECK ,
                      SKIP     :ACTION_SKIP    ,
                      NOACTION :ACTION_NOACTION,
+                     HANDLE   :ACTION_HANDLE,
                      CANCEL   :ACTION_CANCEL    }
 
     # Action selected by user in case of failure
@@ -105,6 +107,11 @@ class WrapperHelper(Configurable):
     _interruptible = False
     # Executor handle
     _exec = None
+    # Custom exceptions
+    _failureCode = 0
+    _failureType = None
+    _failureItem = None
+    _customException = False
     
     #===========================================================================
     def __init__(self, interface = None ):
@@ -123,13 +130,30 @@ class WrapperHelper(Configurable):
         self._interruptible = False
         self._exec = REGISTRY['EXEC']
         self._initializeActionStrings()
+        self._customException = False
+        self._failureCode = 0
+        self._failureType = None
+        self._failureItem = None
     
     #===========================================================================
     def configure(self, *args, **kargs ):
         self.setConfig(self.buildConfig(args, kargs, self._getDefaults(), 
           {HandleError:True,GiveChoice:False,Notify:True,PromptUser:True,AllowInterrupt:False}))
         
+        # Standard exception handling
         self._handleError = self.getConfig(HandleError)
+
+        # Custom exception handling
+        self._customException = False
+        self._failureCode = 0
+        if self.hasConfig(OnFailure):
+            onFailure = self.getConfig(OnFailure)
+            if (onFailure & HANDLE)>0:
+                self._customException = True
+                if self.hasConfig(FailureCode):
+                    self._failureCode = self.getConfig(FailureCode)
+                    
+        self._customException = self.getConfig(HandleError)
         self._promptUser = self.getConfig(PromptUser)
         self._doNotify = self.getConfig(Notify)
         self._giveChoice = self.getConfig(GiveChoice)
@@ -166,16 +190,19 @@ class WrapperHelper(Configurable):
         pass
 
     #===========================================================================
+    def setFailureInfo(self,ftype, fitem = None):
+        self._failureType = ftype
+        self._failureItem = fitem
+
+    #===========================================================================
     def __lock(self):
-        if not self._interruptible:
-            # Raise the execution block flag on executor
-            self._exec.processLock()
+        # Raise the execution block flag on executor
+        self._exec.processLock()
         
     #===========================================================================
     def __unlock(self):
-        if not self._interruptible:
-            # Raise the execution block flag on executor
-            self._exec.processUnlock()
+        # Raise the execution block flag on executor
+        self._exec.processUnlock()
 
     #===========================================================================
     def execute(self, *args, **kargs ):
@@ -442,6 +469,9 @@ class WrapperHelper(Configurable):
         if (actionCodes & CANCEL):
             LOG("ACTION CANCEL")
             theOptions.append( ACTION_CANCEL + KEY_SEPARATOR + self._getActionStrings().get(ACTION_CANCEL))
+        if (actionCodes & HANDLE):
+            LOG("ACTION HANDLE")
+            theOptions.append( ACTION_HANDLE + KEY_SEPARATOR + self._getActionStrings().get(ACTION_HANDLE))
         return theOptions
             
     #===========================================================================
@@ -489,6 +519,10 @@ class WrapperHelper(Configurable):
         elif action == ACTION_CANCEL:
             self._notifyOpStatus( NOTIF_STATUS_CL, OPERATION_CANCELLED )
             return self._doCancel()       
+        elif action == ACTION_HANDLE:
+            self._notifyOpStatus( NOTIF_STATUS_SP, OPERATION_HANDLED )
+            handle = Handle( code = self._failureCode, type = self._failureType, item = self._failureItem)
+            raise handle       
         else:
             self._write("Unknown action: " + repr(action), {Severity:ERROR})
             if REGISTRY.exists('EXEC'):

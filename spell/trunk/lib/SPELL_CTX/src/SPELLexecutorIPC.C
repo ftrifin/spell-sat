@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor IPC interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -36,6 +36,7 @@
 #include "SPELL_UTIL/SPELLtime.H"
 #include "SPELL_IPC/SPELLipcHelper.H"
 #include "SPELL_IPC/SPELLipc_Executor.H"
+#include "SPELL_IPC/SPELLipc_Context.H"
 // System includes ---------------------------------------------------------
 
 
@@ -45,7 +46,7 @@
 //=============================================================================
 // CONSTRUCTOR: SPELLexecutorIPC::SPELLexecutorIPC()
 //=============================================================================
-SPELLexecutorIPC::SPELLexecutorIPC( SPELLexecutor& controller, const SPELLexecutorConfiguration& config )
+SPELLexecutorIPC::SPELLexecutorIPC( SPELLexecutor& controller, const SPELLexecutorStartupParams& config )
 : SPELLipcInterfaceListener(),
   m_ipc("CTX-TO-EXECUTOR",999,config.getIpcPort()), // If port is zero, let the interface get a free port
   m_controller(controller)
@@ -80,7 +81,7 @@ void SPELLexecutorIPC::setup()
 //=============================================================================
 void SPELLexecutorIPC::cleanup()
 {
-	SPELLtryMonitor m(m_notifyLock);
+	SPELLmonitor m(m_notifyLock);
 	DEBUG("[EXCIPC] Cleanup");
 	m_connected = false;
 	DEBUG("[EXCIPC] Close executor connection");
@@ -168,7 +169,7 @@ SPELLipcMessage SPELLexecutorIPC::processRequest( const SPELLipcMessage& msg )
 	resp = m_controller.processRequestFromExecutor(msg);
 
 	// Certain requests are to be sent to controlling clients only
-	if (msg.getType() != MSG_TYPE_PROMPT)
+	if ( shouldForwardToMonitoring(msg) )
 	{
 		DEBUG("[EXCIPC] Forward to monitoring clients");
 		// Notify request
@@ -178,6 +179,48 @@ SPELLipcMessage SPELLexecutorIPC::processRequest( const SPELLipcMessage& msg )
 	DEBUG("[EXCIPC] Request processed");
 	TICK_OUT;
 	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLexecutorIPC::processConnectionError
+//=============================================================================
+bool SPELLexecutorIPC::shouldForwardToMonitoring( const SPELLipcMessage& msg )
+{
+	std::string requestId = msg.getId();
+
+	if (msg.getType() == MSG_TYPE_PROMPT)
+	{
+		return false;
+	}
+	if ( requestId == ContextMessages::REQ_OPEN_EXEC )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_INSTANCE_ID )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_EXEC_INFO )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_DEL_SHARED_DATA )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_SET_SHARED_DATA )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_GET_SHARED_DATA_KEYS )
+    {
+        return false;
+    }
+	return true;
 }
 
 //=============================================================================
@@ -211,20 +254,14 @@ void SPELLexecutorIPC::processConnectionClosed( int peerKey )
 //=============================================================================
 void SPELLexecutorIPC::notifyMessage( const SPELLipcMessage& msg )
 {
-	TICK_IN;
-	SPELLtryMonitor m(m_notifyLock);
 	if (m_connected)
 	{
-		if (m_notifiers.size()>0)
+		for( NotifierMap::iterator it = m_notifiers.begin(); it != m_notifiers.end(); it++)
 		{
-			NotifierList::iterator it;
-			for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)
-			{
-				(*it)->processMessageFromExecutor(msg);
-			}
+			SPELLmonitor m(m_notifyLock);
+			if (it->second!=NULL) it->second->processMessageFromExecutor(msg);
 		}
 	}
-	TICK_OUT;
 }
 
 //=============================================================================
@@ -232,53 +269,40 @@ void SPELLexecutorIPC::notifyMessage( const SPELLipcMessage& msg )
 //=============================================================================
 void SPELLexecutorIPC::notifyRequest( const SPELLipcMessage& msg )
 {
-	TICK_IN;
-	SPELLtryMonitor m(m_notifyLock);
 	if (m_connected)
 	{
-		if (m_notifiers.size()>0)
+		for( NotifierMap::iterator it = m_notifiers.begin(); it != m_notifiers.end(); it++)
 		{
-			NotifierList::iterator it;
-			for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)
-			{
-				(*it)->processRequestFromExecutor(msg);
-			}
+			SPELLmonitor m(m_notifyLock);
+			if (it->second!=NULL) it->second->processRequestFromExecutor(msg);
 		}
 	}
-	TICK_OUT;
 }
 
 //=============================================================================
 // METHOD: SPELLexecutorIPC::
 //=============================================================================
-void SPELLexecutorIPC::registerExecutorNotifier( SPELLexecutorListener* notifier )
+void SPELLexecutorIPC::registerExecutorNotifier( std::string id, SPELLexecutorListener* notifier )
 {
-	DEBUG("[EXCIPC] TRY-IN Register notifier listener: " + PSTR(notifier));
-	SPELLtryMonitor m(m_notifyLock);
-	DEBUG("[EXCIPC] Register notifier listener: " + PSTR(notifier));
-	NotifierList::iterator it;
-	for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)
+	SPELLmonitor m(m_notifyLock);
+	LOG_INFO("[EXCIPC] #### Register notifier listener: " + id);
+	NotifierMap::iterator it = m_notifiers.find(id);
+	if (it == m_notifiers.end())
 	{
-		if ((*it) == notifier) return;
+		m_notifiers[id] = notifier;
 	}
-	m_notifiers.push_back(notifier);
 }
 
 //=============================================================================
 // METHOD: SPELLexecutorIPC::
 //=============================================================================
-void SPELLexecutorIPC::deregisterExecutorNotifier( SPELLexecutorListener* notifier )
+void SPELLexecutorIPC::deregisterExecutorNotifier( std::string id )
 {
-	DEBUG("[EXCIPC] TRY-IN De-register notifier listener: " + PSTR(notifier));
-	SPELLtryMonitor m(m_notifyLock);
-	DEBUG("[EXCIPC] De-register notifier listener: " + PSTR(notifier));
-	NotifierList::iterator it;
-	for( it = m_notifiers.begin(); it != m_notifiers.end(); it++)
+	SPELLmonitor m(m_notifyLock);
+	LOG_INFO("[EXCIPC] #### Remove notifier listener: " + id);
+	NotifierMap::iterator it = m_notifiers.find(id);
+	if (it != m_notifiers.end())
 	{
-		if ((*it) == notifier)
-		{
-			m_notifiers.erase(it);
-			return;
-		}
+		m_notifiers.erase(it);
 	}
 }

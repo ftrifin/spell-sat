@@ -82,7 +82,7 @@ Authoring
 
 @organization: SES ENGINEERING
 
-@copyright: Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+@copyright: Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
             
 @license:  This file is part of SPELL.
 
@@ -196,6 +196,7 @@ TryAll = "TryAll"
 #: Notice that not all behavior constants are accepted by all SPELL functions. 
 #: The SPELL function documentation indicate which constants are applicable in each case.
 OnFailure = 'OnFailure'
+FailureCode = 'FailureCode'
 #: Command block flag.
 #:
 #: Accepts True/False.
@@ -204,7 +205,7 @@ OnFailure = 'OnFailure'
 #: single frame. If this flag is True, the commands will be blocked. Otherwise
 #: (default) they will be sent and verified independently.
 Block = 'Block'
-#: Sequence flag.
+#: c flag.
 #:
 #: Accepts True/False.
 #: 
@@ -286,13 +287,17 @@ Mode = 'Mode'
 #: or not. For example, when used with Send() functions, it will prompt the
 #: user for confirmation before sending the command/sequence.
 Confirm ='Confirm'
-#: Confirm flag.
+#: Confirm only critical flag.
 #:
 #: Accepts True/False.
 #: 
 #: Indicates if Send() functions must prompt the user for confirmation before
 #: sending a command/sequence/group with critical commands.
 ConfirmCritical ='ConfirmCritical'
+#: Critical flag
+#:
+#: Accepts True/False.
+Critical = 'Critical'
 #: Type indicator.
 #:
 #: The semantics and accepted values depend on the SPELL function being used. 
@@ -498,3 +503,44 @@ Select = 'Select'
 #:
 #: Accepts True/False
 Overwrite = 'Overwrite'
+#: Name of variables
+#:
+#: Accepts string
+Name = 'Name'
+#: Value of variables
+#:
+#: Accepts any
+Value = 'Value'
+#: Data source
+#:
+#: Accepts string
+Source = 'Source'
+#: Memory image
+#:
+#: Accepts string
+Image = 'Image'
+#: Address
+Address = 'Address'
+#: Accepts string
+Begin = 'Begin'
+#: Address end
+#:
+#: Accepts string
+End = 'End'
+#: Destination
+#:
+#: Accepts string
+Destination = 'Destination'
+#: Ranging sequences
+#:
+#: Accepts string
+Sequences = 'Sequences'
+#: Ranging path
+#:
+#: Accepts string
+Path = 'Path'
+#: Ranging measurements
+#:
+#: Accepts integer
+Measurements = 'Measurements'
+

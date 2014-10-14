@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 13:54
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,8 +48,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.presentation.text.controls;
 
-import org.eclipse.jface.util.IPropertyChangeListener;
-import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.Bullet;
 import org.eclipse.swt.custom.LineBackgroundEvent;
@@ -63,40 +61,38 @@ import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
-import org.eclipse.swt.events.DisposeEvent;
-import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.TextStyle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ScrollBar;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.model.types.Level;
+import com.astra.ses.spell.gui.core.utils.Logger;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
+import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 import com.astra.ses.spell.gui.presentation.text.model.TextParagraph;
 import com.astra.ses.spell.gui.presentation.text.model.TextViewContent;
 import com.astra.ses.spell.gui.presentation.text.model.TextViewLine;
 
 public class CustomStyledText extends Composite implements ControlListener, SelectionListener, LineStyleListener,
-        LineBackgroundListener, PaintObjectListener, IPropertyChangeListener
+        LineBackgroundListener, PaintObjectListener, KeyListener
 {
 
 	private static IConfigurationManager s_cfg = null;
 	private static GlyphMetrics	  s_metrics	 = new GlyphMetrics(0, 0, 16);
-
-	/** Font range */
-	private static final int	  FONT_RANGE	= 4;
 
 	/** Holds the styled text contents model */
 	private TextViewContent	      m_model;
@@ -107,7 +103,9 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	/** True if the widget shall follow the latest data */
 	private boolean	              m_autoScroll;
 	/** Maximum and minimum font sizes */
-	private int	                  m_maxfontSize;
+	private Font                  m_font;
+	private int                   m_fontSize;
+	private int	                  m_maxFontSize;
 	private int	                  m_minFontSize;
 	/** Label Provider */
 	private TextLineLabelProvider m_labelProvider;
@@ -117,7 +115,7 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	/**************************************************************************
 	 * Constructor
 	 *************************************************************************/
-	public CustomStyledText(Composite parent)
+	public CustomStyledText(Composite parent, int capacity )
 	{
 		super(parent, SWT.BORDER | SWT.V_SCROLL);
 		GridLayout layout = new GridLayout();
@@ -132,11 +130,19 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 		layout.numColumns = 1;
 		setLayout(layout);
 
-		m_showTimestamp = false;
+		if (s_cfg == null)
+		{
+			s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
+		}
+
+		m_showTimestamp = s_cfg.getProperty(PropertyKey.TEXT_TIMESTAMP).equals("YES");
+		
+		Logger.debug("Initial show timestamp: " + m_showTimestamp, Level.GUI, this);
+		Logger.debug("Initial capacity: " + capacity, Level.GUI, this);
 		
 		// Construct the model and the view
-		m_model = new TextViewContent();
-		m_view = new StyledText(this, SWT.NONE | SWT.FULL_SELECTION);
+		m_model = new TextViewContent(capacity);
+		m_view = new StyledText(this, SWT.NONE | SWT.FULL_SELECTION | SWT.H_SCROLL );
 		m_view.setContent(m_model);
 		m_view.setEditable(false);
 		m_view.setLineSpacing(0);
@@ -160,6 +166,8 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 		m_view.addLineBackgroundListener(this);
 		// Image drawing
 		m_view.addPaintObjectListener(this);
+		// Manual scrolling
+		m_view.addKeyListener(this);
 		// For the scroll drag and click events
 		m_scrollBar.addSelectionListener(this);
 		// Scrollbar initialization
@@ -170,27 +178,12 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 		// Initial position of the data view
 		m_model.setViewWindow(0, 50, m_autoScroll);
 
-		if (s_cfg == null)
-		{
-			s_cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-		}
-
 		// Setup initial font
-		Font font = s_cfg.getFont(FontKey.CODE);
-		int fontSize = font.getFontData()[0].getHeight();
-		m_minFontSize = Math.max(1, fontSize - FONT_RANGE);
-		m_maxfontSize = fontSize + FONT_RANGE;
-		setFont(font);
-
-		s_cfg.addPropertyChangeListener(this);
-		parent.addDisposeListener(new DisposeListener()
-		{
-			@Override
-			public void widgetDisposed(DisposeEvent e)
-			{
-				unsubuscribeFromPreferences();
-			}
-		});
+		m_font = s_cfg.getFont(FontKey.TEXT);
+		m_fontSize = m_font.getFontData()[0].getHeight();
+		m_minFontSize = 5;
+		m_maxFontSize = 18;
+		updateFont();
 
 		layout();
 	}
@@ -200,8 +193,19 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	 *************************************************************************/
 	public void setShowTimestamp( boolean show )
 	{
+		Logger.debug("Show timestamp: " + show, Level.GUI, this);
 		m_showTimestamp = show;
 		m_model.setShowTimestamp(show);
+		m_view.redraw();
+	}
+
+	/**************************************************************************
+	 * Change buffer capacity
+	 *************************************************************************/
+	public void setCapacity( int lines )
+	{
+		Logger.debug("Set capacity: " + lines, Level.GUI, this);
+		m_model.setCapacity(lines);
 		m_view.redraw();
 	}
 
@@ -217,11 +221,11 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 			if (firstLine)
 			{
 				firstLine = false;
-				m_model.append(new TextViewLine(new String(line), p.getScope(), p.getType(), p.getSequence(), m_showTimestamp));
+				m_model.append(new TextViewLine(new String(line), p.getTimestamp(), p.getScope(), p.getType(), p.getSequence(), m_showTimestamp));
 			}
 			else
 			{
-				m_model.append(new TextViewLine(new String(line), p.getScope(), p.getType(), p.getSequence(), m_showTimestamp));
+				m_model.append(new TextViewLine(new String(line), p.getTimestamp(), p.getScope(), p.getType(), p.getSequence(), m_showTimestamp));
 			}
 		}
 		int totalDataLength = m_model.getTotalDataSize();
@@ -232,6 +236,44 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 		{
 			int selection = (totalDataLength - thumb);
 			m_scrollBar.setSelection(selection);
+		}
+	}
+	
+	/**************************************************************************
+	 * Programmatically scroll down
+	 *************************************************************************/
+	private void scrollDown()
+	{
+		int current = m_scrollBar.getSelection();
+		int thumb = m_scrollBar.getThumb();
+		int max = m_scrollBar.getMaximum();
+		if (current == (max-thumb)) return;
+		current++;
+		int coffset = m_view.getCaretOffset();
+		int lineAtOffset = m_model.getLineAtOffset(coffset);
+		if (lineAtOffset == (m_model.getViewWindowLength()-1))
+		{
+			m_scrollBar.setSelection(current);
+			m_model.setViewWindow(current, thumb, false);
+			m_view.setCaretOffset(m_model.getOffsetAtLine(m_model.getViewWindowLength()-1));
+		}
+	}
+
+	/**************************************************************************
+	 * Programmatically scroll up
+	 *************************************************************************/
+	private void scrollUp()
+	{
+		int current = m_scrollBar.getSelection();
+		int thumb = m_scrollBar.getThumb();
+		if (current == 0) return;
+		current--;
+		int coffset = m_view.getCaretOffset();
+		int lineAtOffset = m_model.getLineAtOffset(coffset);
+		if (lineAtOffset == 0)
+		{
+			m_scrollBar.setSelection(current);
+			m_model.setViewWindow(current, thumb, false);
 		}
 	}
 
@@ -278,26 +320,30 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	 *************************************************************************/
 	public void zoom(boolean increase)
 	{
-		// Get the font size
-		int fontSize = m_view.getFont().getFontData()[0].getHeight();
-
-		if (increase && (fontSize == m_maxfontSize)) return;
-		if (!increase && (fontSize == m_minFontSize)) return;
+		boolean changed = true;
 		if (increase)
 		{
-			fontSize = Math.min(fontSize + 1, m_maxfontSize);
+			m_fontSize++;
+			if (m_fontSize > m_maxFontSize)
+			{
+				m_fontSize = m_maxFontSize;
+				changed = false;
+			}
 		}
 		else
 		{
-			fontSize = Math.max(fontSize - 1, m_minFontSize);
+			m_fontSize--;
+			if (m_fontSize < m_minFontSize)
+			{
+				m_fontSize = m_minFontSize;
+				changed = false;
+			}
 		}
-		FontData[] fdata = m_view.getFont().getFontData();
-		for (int index = 0; index < fdata.length; index++)
+		if (changed)
 		{
-			fdata[index].setHeight(fontSize);
+			m_font = s_cfg.getFont(FontKey.TEXT, m_fontSize);
 		}
-		Font newFont = new Font(Display.getCurrent(), fdata);
-		setFont(newFont);
+		updateFont();
 	}
 
 	/**************************************************************************
@@ -327,10 +373,10 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	/**************************************************************************
 	 * Set the font
 	 *************************************************************************/
-	public void setFont(Font font)
+	private void updateFont()
 	{
 		// Assign the font to the view
-		m_view.setFont(font);
+		m_view.setFont(m_font);
 		// Calculate changes
 		recalculateAfterSizeChange();
 	}
@@ -346,7 +392,7 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	/**************************************************************************
 	 * Set the background color
 	 *************************************************************************/
-	public void setBackground(Color c)
+	public synchronized void setBackground(Color c)
 	{
 		m_view.setBackground(c);
 	}
@@ -444,7 +490,7 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 	 * Callback from PaintObjectListener interface for the styled text widget.
 	 * Used to set images.
 	 *************************************************************************/
-	public void paintObject(PaintObjectEvent event)
+	public synchronized void paintObject(PaintObjectEvent event)
 	{
 		if (m_view.isVisible())
 		{
@@ -494,33 +540,28 @@ public class CustomStyledText extends Composite implements ControlListener, Sele
 		m_model.setViewWindow(m_scrollBar.getSelection(), viewWindowLength, m_autoScroll);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-	public void propertyChange(PropertyChangeEvent event)
-	{
-		String property = event.getProperty();
-		if (property.equals(FontKey.CODE.getPreferenceName()))
+    public void keyPressed(KeyEvent ev)
+    {
+	    
+    }
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+    public void keyReleased(KeyEvent ev)
+    {
+		if (ev.keyCode == SWT.ARROW_DOWN)
 		{
-			IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-
-			Font newFont = cfg.getFont(FontKey.CODE);
-
-			Font oldFont = m_view.getFont();
-			int height = oldFont.getFontData()[0].getHeight();
-			String name = newFont.getFontData()[0].getName();
-			int style = newFont.getFontData()[0].getStyle();
-
-			FontData newFontData = new FontData(name, height, style);
-			newFont = new Font(Display.getDefault(), newFontData);
-
-			setFont(newFont);
+			scrollDown();
 		}
-	}
-
-	/***************************************************************************
-	 * Stop listening from preferences changes
-	 **************************************************************************/
-	private void unsubuscribeFromPreferences()
-	{
-		s_cfg.removePropertyChangeListener(this);
-	}
+		else if (ev.keyCode == SWT.ARROW_UP)
+		{
+			scrollUp();
+		}
+    }
 }

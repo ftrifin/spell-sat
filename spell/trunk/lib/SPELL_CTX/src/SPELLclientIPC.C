@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the client IPC interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -169,9 +169,9 @@ SPELLipcMessage SPELLclientIPC::processRequest( const SPELLipcMessage& msg )
 	}
 	else if (list != NULL)
 	{
-		DEBUG("[CLTRCV] Distribute client request: " + msg.getId());
+		//DEBUG("[CLTRCV] Distribute client request: " + msg.getId());
 		resp = list->distributeRequest(msg);
-		DEBUG("[CLTRCV] Got response for client request: " + msg.getId());
+		//DEBUG("[CLTRCV] Got response for client request: " + msg.getId());
 
 		// Executor request additional processing (request attended by executor that need to be processed in context also)
 		// But only if the response is not an error

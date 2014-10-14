@@ -5,7 +5,7 @@
 // DESCRIPTION: Fake executor model for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -126,7 +126,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorConfig& getConfiguration() const { return *m_config; };
+		SPELLexecutorConfig& getConfiguration() const { return m_cif->getExecutorConfig(); };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -215,6 +215,21 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		const std::string getStack() const { return ""; };
 
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void setControllingClient( const std::string& clientId ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		void setControllingHost( const std::string& hostName ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getControllingHost() const { return ""; };
+
     // *******************************************************************
     // EXECUTION CONFIGURATION PARAMETERS
     // *******************************************************************
@@ -249,10 +264,15 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setExecDelay( const int delay ) {;};
 
-                //////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
-                **////////////////////////////////////////////////////////////////////
-                void setForceTcConfirm( const bool force ) {;};
+		**////////////////////////////////////////////////////////////////////
+		void setPromptWarningDelay( const int delay ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+        **////////////////////////////////////////////////////////////////////
+        void setForceTcConfirm( const bool force ) {;};
 
     // *******************************************************************
     // LANGUAGE INTERLOCK
@@ -315,7 +335,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		void setUserAction( const std::string& functionName, const std::string& actionLabel, const unsigned int severity ) {;};
+		void setUserAction(const SPELLuserAction&) {;};
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -330,7 +350,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		const std::string getUserActionLabel() const { return ""; };
+		const SPELLuserAction getUserAction() const { return SPELLuserAction(); };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -367,8 +387,6 @@ private: //-------------------------------------------------------------------
 		SPELLcif*                    m_cif;
 		/** Holds the child procedure manager */
 		SPELLchildManager*           m_childMgr;
-		/** Fake configuration */
-		SPELLexecutorConfig*         m_config;
 		/** Holds the variable manager */
 		SPELLvariableManager*        m_varManager;
 		/** Holds the fake execution frame */

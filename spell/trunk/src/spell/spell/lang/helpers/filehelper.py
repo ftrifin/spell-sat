@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for generic features
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -267,10 +267,20 @@ class OpenFile_Helper(WrapperHelper):
         # Parse arguments
         
         if len(args)==0:
-            raise SyntaxException("No file name given")
+            raise SyntaxException("No path given")
 
         filename = args[0]
-        baseName = os.path.basename(filename)
+        if isinstance(filename,File):
+            baseName = filename.basename()
+            theFile = filename
+        elif type(filename)==str:
+            baseName = os.path.basename(filename)
+            theFile = File(filename)
+        else:
+            raise SyntaxException("Cannot open", "Expected a string or a File object")
+
+        if theFile.isDir():
+            raise DriverException("Cannot open file", "A directory has been provided")
 
         self._setActionString( ACTION_SKIP   ,  "Skip opening the file " + repr(baseName) + " and return None")
         self._setActionString( ACTION_REPEAT ,  "Try to open the file " + repr(baseName) + " again")
@@ -278,13 +288,12 @@ class OpenFile_Helper(WrapperHelper):
         self._notifyValue( "File", repr(baseName), NOTIF_STATUS_PR, "Opening")
         
         try:
-            self._write("Opening file: " + repr(filename), config={Severity:INFORMATION})
-            
             mode = READ
             if self.hasConfig(Mode):
                 mode = self.getConfig(Mode)
+
+            self._write("Opening file " + repr(baseName) + " in mode " + mode, config={Severity:INFORMATION})
             
-            theFile = File(filename)
             theFile.open(mode)
 
             self._write("File open")
@@ -331,6 +340,9 @@ class CloseFile_Helper(WrapperHelper):
         theFile = args[0]
         if not isinstance(theFile, File):
             raise SyntaxException("Expected a file object")
+
+        if theFile.isDir():
+            raise DriverException("Cannot close file", "A directory has been provided")
 
         self._setActionString( ACTION_SKIP   ,  "Skip closing the file " + repr(theFile.basename()) + " and return True")
         self._setActionString( ACTION_CANCEL ,  "Skip closing the file " + repr(theFile.basename()) + " and return False")
@@ -399,6 +411,9 @@ class WriteFile_Helper(WrapperHelper):
         if type(theData) != str and type(theData) != list:
             raise SyntaxException("Expected a string or list of strings as second argument")
 
+        if theFile.isDir():
+            raise DriverException("Cannot write to file", "A directory has been provided")
+
         self._setActionString( ACTION_SKIP   ,  "Skip writing to file " + repr(theFile.basename()) + " and return True")
         self._setActionString( ACTION_CANCEL ,  "Skip writing to file " + repr(theFile.basename()) + " and return False")
         self._setActionString( ACTION_REPEAT ,  "Try to write to file " + repr(theFile.basename()) + " again")
@@ -456,6 +471,9 @@ class ReadFile_Helper(WrapperHelper):
         if not isinstance(theFile, File):
             raise SyntaxException("Expected a file object as argument")
         
+        if theFile.isDir():
+            raise DriverException("Cannot read file", "A directory has been provided")
+        
         self._setActionString( ACTION_SKIP   ,  "Skip reading from file " + repr(theFile.basename()) + " and return None")
         self._setActionString( ACTION_REPEAT ,  "Try to read from file " + repr(theFile.basename()) + " again")
 
@@ -478,4 +496,95 @@ class ReadFile_Helper(WrapperHelper):
         self._write("Retry read from file", {Severity:WARNING} )
         return [True,None]
 
+################################################################################
+class DeleteFile_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+        Helper for the ReadFile wrapper.
+    """    
+    
+    #===========================================================================
+    def __init__(self):
+        super(DeleteFile_Helper, self).__init__()
+        self._opName = ""
+    
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        # Parse arguments
+        
+        if len(args)<1:
+            raise SyntaxException("Incorrect arguments")
+
+        theFile = args[0]
+        
+        if not isinstance(theFile,File) and type(theFile)!= str:
+            raise SyntaxException("Cannot delete", "Expected a file object or string")
+        
+        if type(theFile)==str:
+            theFile = File(theFile)
+        
+        if theFile.isDir():
+            raise DriverException("Cannot delete file", "A directory has been provided")
+        
+        self._setActionString( ACTION_SKIP   ,  "Skip deleting file " + repr(theFile) + " and return None")
+        self._setActionString( ACTION_REPEAT ,  "Try to delete file " + repr(theFile) + " again")
+
+        # Will do the checks and raise the appropriate exceptions
+        theFile.delete()
+
+        return [False,True,NOTIF_STATUS_OK,"File deleted"]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Delete file skipped", {Severity:WARNING} )
+        return [False,None]        
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry deleting file", {Severity:WARNING} )
+        return [True,None]
+
+################################################################################
+class ReadDirectory_Helper(WrapperHelper):
+
+    #===========================================================================
+    def __init__(self):
+        super(ReadDirectory_Helper, self).__init__()
+        self._opName = ""
+    
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        # Parse arguments
+        
+        if len(args)<1:
+            raise SyntaxException("Incorrect arguments")
+
+        theDir = args[0]
+        if not isinstance(theDir,File) and type(theDir)!= str:
+            raise SyntaxException("Cannot read directory", "Expected a file object or string")
+        
+        if type(theDir)==str:
+            theDir = File(theDir)
+        
+        if not theDir.isDir():
+            raise DriverException("Cannot read directory", "A file has been provided")
+        
+        self._setActionString( ACTION_SKIP   ,  "Skip reading directory " + repr(theDir) + " and return None")
+        self._setActionString( ACTION_REPEAT ,  "Try to read the directory " + repr(theDir) + " again")
+
+        # Will do the checks and raise the appropriate exceptions
+        result = theDir.read()
+
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Read directory skipped", {Severity:WARNING} )
+        return [False,None]        
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry read directory", {Severity:WARNING} )
+        return [True,None]
 

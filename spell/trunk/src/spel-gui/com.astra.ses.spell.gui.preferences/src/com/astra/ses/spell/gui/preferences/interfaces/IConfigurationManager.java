@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,6 +48,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.preferences.interfaces;
 
+import java.text.DateFormat;
 import java.util.Vector;
 
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -56,17 +57,20 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
 
 import com.astra.ses.spell.gui.core.interfaces.IService;
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
 import com.astra.ses.spell.gui.core.model.types.Environment;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 import com.astra.ses.spell.gui.core.model.types.Scope;
+import com.astra.ses.spell.gui.preferences.initializer.elements.CommandsInfo;
+import com.astra.ses.spell.gui.preferences.initializer.elements.StatusInfo;
 import com.astra.ses.spell.gui.preferences.initializer.elements.StyleInfo;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 import com.astra.ses.spell.gui.preferences.keys.GuiColorKey;
 import com.astra.ses.spell.gui.preferences.keys.ProcColorKey;
 import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
 import com.astra.ses.spell.gui.preferences.keys.StatusColorKey;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * Configuration manager provides attributes stored in the preferences system
@@ -77,6 +81,11 @@ public interface IConfigurationManager extends IService
 	 * Get the configuration file
 	 **************************************************************************/
 	public String getConfigurationFile();
+
+	/***************************************************************************
+	 * Set the configuration file
+	 **************************************************************************/
+	public void setConfigurationFile( String path );
 
 	/***************************************************************************
 	 * Get the value of a environment variable
@@ -135,6 +144,16 @@ public interface IConfigurationManager extends IService
 	 * Restore presentations to its default value
 	 **************************************************************************/
 	public void restorePresentations();
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public void updateConnectivityDefaults( AuthenticationData auth );
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public AuthenticationData getConnectivityDefaults();
 
 	/***************************************************************************
 	 * Return a preferences values as stored in the eclipse preferences system
@@ -324,6 +343,42 @@ public interface IConfigurationManager extends IService
 	 * @param font
 	 **************************************************************************/
 	public void setFont(FontKey key, Font font);
+	
+	/***************************************************************************
+	 * Get commands info
+	 * 
+	 **************************************************************************/
+	public CommandsInfo getCommands();
+	
+	/***************************************************************************
+	 * Set commands info
+	 * 
+	 **************************************************************************/
+	public void setCommands(CommandsInfo commands);
+	
+	/***************************************************************************
+	 * Restore commands info
+	 * 
+	 **************************************************************************/
+	public void restoreCommands();
+	
+	/***************************************************************************
+	 * Get status location
+	 * 
+	 **************************************************************************/
+	public StatusInfo getStatus();
+	
+	/***************************************************************************
+	 * Set status location
+	 * 
+	 **************************************************************************/
+	public void setStatus(StatusInfo status);
+	
+	/***************************************************************************
+	 * Restore status location
+	 * 
+	 **************************************************************************/
+	public void restoreStatus();
 
 	/***************************************************************************
 	 * Add a preference change listener
@@ -334,4 +389,9 @@ public interface IConfigurationManager extends IService
 	 * Add a preference change listener
 	 **************************************************************************/
 	public void removePropertyChangeListener(IPropertyChangeListener listener);
+	
+	/***************************************************************************
+	 * Add a preference change listener
+	 **************************************************************************/
+	public DateFormat getTimeFormat ();
 }

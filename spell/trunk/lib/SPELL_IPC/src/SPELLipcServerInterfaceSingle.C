@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the interface for single client servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -266,6 +266,7 @@ void SPELLipcServerInterfaceSingle::connectionClosed( int peerKey )
 //=============================================================================
 void SPELLipcServerInterfaceSingle::sendMessage( SPELLipcMessage& msg )
 {
+    SPELLmonitor m(m_clientLock);
     DEBUG(NAME + "Send message to peer");
     try
     {
@@ -286,6 +287,7 @@ void SPELLipcServerInterfaceSingle::sendMessage( SPELLipcMessage& msg )
 //=============================================================================
 SPELLipcMessage SPELLipcServerInterfaceSingle::sendRequest( SPELLipcMessage& msg, unsigned long timeoutMsec )
 {
+    SPELLmonitor m(m_clientLock);
     DEBUG(NAME + "Send request to peer " + msg.dataStr());
     SPELLipcMessage resp = VOID_MESSAGE;
     try

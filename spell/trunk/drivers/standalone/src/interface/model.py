@@ -5,7 +5,7 @@
 ## DESCRIPTION: Simulator data model
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -44,6 +44,7 @@ from tc_sim_item import *
 #*******************************************************************************
 import time
 import threading,thread,sys
+from tm_sim_item import RAISE_EXCEPTION
 
 #*******************************************************************************
 # Import definition
@@ -65,6 +66,8 @@ class SimulatorModel(threading.Thread,Configurable):
     finishEvent = None
     tmItems = {}
     tcItems = {}
+    gpItems = {}
+    cfgItems = {}
 
     #===========================================================================    
     def __init__(self):
@@ -79,6 +82,8 @@ class SimulatorModel(threading.Thread,Configurable):
         self.finishEvent.clear()
         self.tmItems = {}
         self.tcItems = {}
+        self.gpItems = {}
+        self.cfgItems = {}
     
     #===========================================================================    
     def working(self, w = None):
@@ -101,9 +106,7 @@ class SimulatorModel(threading.Thread,Configurable):
     #===========================================================================    
     def load(self, defFile):
         loader = ModelLoader(self)
-        tmItems,tcItems = loader.loadFromFile(defFile)
-        self.tmItems = tmItems
-        self.tcItems = tcItems
+        loader.loadFromFile(defFile)
     
     #===========================================================================    
     def cleanup(self):
@@ -129,29 +132,67 @@ class SimulatorModel(threading.Thread,Configurable):
         
         tcItem = self.getTCitem(tcItemName)
         
-        tmItemName = tcItem.getTmItemName()
-        
-        tmItem = self.getTMitem(tmItemName)
-        
         changeDef = tcItem.getTmChange()
-        self.lock.acquire()
-        tmItem.change( changeDef )
-        self.lock.release()
+        
+        if changeDef == RAISE_EXCEPTION:
+            raise DriverException("Preconfigured command failure")
+        
+        tmItemNames = tcItem.getTmItemNames()
+
+        time.sleep(tcItem.getExecTime())
+        for tmItemName in tmItemNames:
+            tmItem = self.getTMitem(tmItemName)
+            self.lock.acquire()
+            tmItem.change( changeDef )
+            self.lock.release()
 
     #===========================================================================    
-    def changeItem(self, tmItemName, value):
+    def changeTMitem(self, tmItemName, value):
         tmItem = self.getTMitem(tmItemName)
         tmItem.change(value)
 
     #===========================================================================    
-    def getTMitem(self, name, description = ""):
+    def changeGPitem(self, gpItemName, value):
+        gpItem = self.getGPitem(gpItemName)
+        gpItem.change(value)
+
+    #===========================================================================    
+    def changeCFGitem(self, cfgItemName, value):
+        self.getCFGitem(cfgItemName)
+        self.gpItems[cfgItemName] = value
+
+    #===========================================================================    
+    def getTMitem(self, name):
         if not self.tmItems.has_key(name):
-            tmItem = TmItemSimClass(self,name,description,'0','"SIMVALUE"', 0)
+            raise DriverException("Unknown telemetry parameter: " + repr(name))
         else:
             tmItem = self.tmItems[name]
         return tmItem
 
     #===========================================================================    
+    def isGPitem(self, name):
+        return self.gpItems.has_key(name)
+
+    #===========================================================================    
+    def getGPitem(self, name):
+        if not self.gpItems.has_key(name):
+            raise DriverException("Unknown ground parameter: " + repr(name))
+        else:
+            gpItem = self.gpItems[name]
+        return gpItem
+
+    #===========================================================================    
     def getTCitem(self, name):
-        tcItem = TcItemSimClass(self,name,'PARAM','0')
+        if not self.tcItems.has_key(name):
+            raise DriverException("Unknown telecommand: " + repr(name))
+        else:
+            tcItem = self.tcItems[name]
         return tcItem
+
+    #===========================================================================    
+    def getCFGitem(self, name):
+        if not self.cfgItems.has_key(name):
+            raise DriverException("Unknown GCS configuration parameter: " + repr(name))
+        else:
+            cfgItemValue = self.cfgItems[name]
+        return cfgItemValue

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -69,11 +69,9 @@ public class BuildProcListJob implements IRunnableWithProgress
 	{
 		try
 		{
-			IProcedureManager pmgr = (IProcedureManager) ServiceManager
-			        .get(IProcedureManager.class);
+			IProcedureManager pmgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
 			if (pmgr.canOperate())
 			{
-				pmgr.refreshAvailableProcedures();
 				m_procs = pmgr.getAvailableProcedures(true);
 			}
 			monitor.done();

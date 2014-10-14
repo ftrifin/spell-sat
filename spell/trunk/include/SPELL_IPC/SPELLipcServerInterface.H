@@ -5,7 +5,7 @@
 // DESCRIPTION: Interface for servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -232,6 +232,11 @@ private: //-------------------------------------------------------------------
     // METHODS ///////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////
+		/** Get the next client key available
+		**////////////////////////////////////////////////////////////////////
+		int getFreeClientKey();
+
+		//////////////////////////////////////////////////////////////////////
 		/** Add a client to the list of connected clients.
 		 *
 		 * \param key IN: key associated with the client
@@ -318,8 +323,8 @@ private: //-------------------------------------------------------------------
 
 		/** Holds the interface name */
 		std::string 					m_ifcName;
-		/** Holds the last client key used */
-		int 							m_lastClientKey;
+		/** Holds the client keys used */
+		std::vector<int>  				m_usedClientKeys;
 		/** Holds the server key */
 		int 							m_serverKey;
 		/** Holds the server port */

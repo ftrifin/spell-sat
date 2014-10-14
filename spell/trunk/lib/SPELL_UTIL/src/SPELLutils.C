@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the utilities
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -31,8 +31,11 @@
 #include "SPELL_UTIL/SPELLpythonMonitors.H"
 // Project includes --------------------------------------------------------
 // System includes ---------------------------------------------------------
-#include <ios>
-#include <iomanip>
+#include <time.h>
+
+static int s_timeFormat = TIME_FORMAT_DEFAULT;
+
+
 
 //============================================================================
 // FUNCTION : PYSIZE
@@ -102,7 +105,8 @@ std::string SPELLutils::binstr( unsigned long i )
 //============================================================================
 std::string SPELLutils::itostr( long i )
 {
-    char buffer[500];
+    char buffer[50];
+    bzero(buffer,50);
     sprintf( buffer, "%ld", i );
     return buffer;
 };
@@ -502,31 +506,71 @@ std::list<std::string> SPELLutils::getSubdirs( const std::string& path )
 }
 
 //============================================================================
+// FUNCTION:    SPELLutils::setTimeFormat()
+//============================================================================
+void SPELLutils::setTimeFormat( int format )
+{
+	s_timeFormat = format;
+}
+
+//============================================================================
 // FUNCTION:    SPELLutils::timestamp
 //============================================================================
 std::string SPELLutils::timestamp()
 {
-    time_t t;
-    ::time(&t);
-    struct tm* theTime;
+	SPELLdateDesc date = getSystemDate();
 
-    theTime = ::gmtime( &t );
-
-    std::string year  = ISTR( 1900 + theTime->tm_year);
-    std::string month = ISTR(theTime->tm_mon+1);
+    std::string year  = ISTR(date.year);
+    std::string month = ISTR(date.month);
     if (month.size()==1) month = "0" + month;
-    std::string day   = ISTR(theTime->tm_mday);
+    std::string day   = ISTR(date.day);
     if (day.size()==1) day = "0" + day;
-    std::string hours = ISTR(theTime->tm_hour);
+    std::string hours = ISTR(date.hours);
     if (hours.size()==1) hours = "0" + hours;
-    std::string mins = ISTR(theTime->tm_min);
+    std::string mins = ISTR(date.minutes);
     if (mins.size()==1) mins = "0" + mins;
-    std::string secs = ISTR(theTime->tm_sec);
+    std::string secs = ISTR(date.seconds);
     if (secs.size()==1) secs = "0" + secs;
+    std::string ddd  = ISTR(date.yday);
+    if (ddd.size()==1) ddd = "00" + ddd;
+    else if (ddd.size()==2) ddd = "0" + ddd;
 
-    // 2009-09-01 12:49:54
-    return year + "-" + month + "-" + day + " " + hours + ":" +
-           mins + ":" + secs;
+    std::string output = "";
+
+    switch(s_timeFormat)
+    {
+    case TIME_FORMAT_SLASH:
+    	// Example: 2009/09/01 12:49:54
+    	output = year + "/" + month + "/" + day + " " + hours + ":" + mins + ":" + secs;
+    	break;
+    case TIME_FORMAT_DOT:
+    	// Example: 2009.130.12.49.54
+    	output = year + "." + ddd + "." + hours + "." + mins + "." + secs;
+    	break;
+    case TIME_FORMAT_DEFAULT:
+    default:
+    	// Example: 2009-09-01 12:49:54
+    	output = year + "-" + month + "-" + day + " " + hours + ":" + mins + ":" + secs;
+    	break;
+    }
+
+    return output;
+}
+
+//=============================================================================
+// METHOD: SPELLutils::timestampUsec
+//=============================================================================
+std::string SPELLutils::timestampUsec()
+{
+	const std::string complete("000000");
+	SPELLtimeDesc time = getSystemTime();
+    std::string sec  = ISTR(time.seconds);
+    std::string usec = ISTR(time.useconds);
+    if (usec.length()<6)
+    {
+    	usec += complete.substr(0,6-usec.length());
+    }
+    return (sec + usec);
 }
 
 //============================================================================
@@ -545,22 +589,18 @@ void SPELLutils::deleteFile( const std::string& file )
 //============================================================================
 std::string SPELLutils::fileTimestamp()
 {
-    time_t t;
-    time(&t);
-    struct tm* theTime;
+	SPELLdateDesc date = getSystemDate();
 
-    theTime = gmtime( &t );
-
-    std::string year  = ISTR( 1900 + theTime->tm_year);
-    std::string month = ISTR(theTime->tm_mon+1);
+    std::string year  = ISTR(date.year);
+    std::string month = ISTR(date.month);
     if (month.size()==1) month = "0" + month;
-    std::string day   = ISTR(theTime->tm_mday);
+    std::string day   = ISTR(date.day);
     if (day.size()==1) day = "0" + day;
-    std::string hours = ISTR(theTime->tm_hour);
+    std::string hours = ISTR(date.hours);
     if (hours.size()==1) hours = "0" + hours;
-    std::string mins = ISTR(theTime->tm_min);
+    std::string mins = ISTR(date.minutes);
     if (mins.size()==1) mins = "0" + mins;
-    std::string secs = ISTR(theTime->tm_sec);
+    std::string secs = ISTR(date.seconds);
     if (secs.size()==1) secs = "0" + secs;
 
     // 2009-09-01_124954
@@ -623,6 +663,19 @@ std::string SPELLutils::getSPELL_DATA()
 	if (value == NULL)
 	{
 	    return getSPELL_HOME() + PATH_SEPARATOR + "data";
+	}
+	return value;
+}
+
+//============================================================================
+// FUNCTION:    SPELLutils::getSPELL_LOG()
+//============================================================================
+std::string SPELLutils::getSPELL_LOG()
+{
+	char* value = getenv("SPELL_LOG");
+	if (value == NULL)
+	{
+	    return getSPELL_HOME() + PATH_SEPARATOR + "log";
 	}
 	return value;
 }
@@ -869,5 +922,42 @@ std::string SPELLutils::resolve( const std::string& hostname )
     if(entry == NULL)
         return "";
 
-    return inet_ntoa(*((struct in_addr*) entry->h_addr_list[0]));
+    std::string result = inet_ntoa(*((struct in_addr*) entry->h_addr_list[0]));
+    return result;
+}
+
+//============================================================================
+// FUNCTION:    SPELLutils::getSystemTime()
+//============================================================================
+SPELLutils::SPELLtimeDesc SPELLutils::getSystemTime()
+{
+	SPELLtimeDesc timed;
+	struct timespec abstime;
+	clock_gettime(0, &abstime);
+    timed.seconds = abstime.tv_sec;
+    timed.useconds = abstime.tv_nsec/1000;
+    return timed;
+}
+
+//============================================================================
+// FUNCTION:    SPELLutils::getSystemDate()
+//============================================================================
+SPELLutils::SPELLdateDesc SPELLutils::getSystemDate()
+{
+	SPELLdateDesc date;
+    time_t t;
+    ::time(&t);
+    struct tm* theTime;
+
+    theTime = ::gmtime( &t );
+
+    date.year = 1900 + theTime->tm_year;
+    date.month = theTime->tm_mon+1;
+    date.day = theTime->tm_mday;
+    date.hours = theTime->tm_hour;
+    date.minutes = theTime->tm_min;
+    date.seconds = theTime->tm_sec;
+    date.yday = theTime->tm_yday + 1;
+
+    return date;
 }

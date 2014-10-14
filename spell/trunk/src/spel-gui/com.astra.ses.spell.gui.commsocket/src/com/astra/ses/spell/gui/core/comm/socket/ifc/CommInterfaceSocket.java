@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -56,6 +56,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessage;
@@ -71,14 +72,11 @@ import com.astra.ses.spell.gui.core.comm.socket.utils.Tunneler;
 import com.astra.ses.spell.gui.core.exceptions.CommException;
 import com.astra.ses.spell.gui.core.interfaces.ICommInterface;
 import com.astra.ses.spell.gui.core.interfaces.ICommListener;
-import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.core.model.server.ServerInfo;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
-import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
-import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
-import com.trilead.ssh2.Connection;
 
 /*******************************************************************************
  * @brief Communication interface socket-based implementation.
@@ -86,19 +84,6 @@ import com.trilead.ssh2.Connection;
  ******************************************************************************/
 public class CommInterfaceSocket implements ICommInterface
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the server details */
 	private ServerInfo m_serverInfo;
 	/** Registration key */
@@ -121,13 +106,11 @@ public class CommInterfaceSocket implements ICommInterface
 	private Mailbox m_responseMailbox;
 	/** Sequence counter */
 	private AtomicLong m_seqCount;
+	/** Holds the local host name */
+	private String m_localHostname;
+	private String m_localFullyQualifiedName;
+	private String m_localIpAddress;
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -144,6 +127,30 @@ public class CommInterfaceSocket implements ICommInterface
 		m_tunneler = null;
 		m_scp = null;
 		m_responseMailbox = new Mailbox();
+		try
+		{
+	        m_localHostname = java.net.InetAddress.getLocalHost().getHostName();
+        }
+        catch (UnknownHostException e)
+        {
+	        m_localHostname = null;
+        }
+		try
+        {
+	        m_localIpAddress = java.net.InetAddress.getLocalHost().getHostAddress();
+        }
+        catch (UnknownHostException e)
+        {
+	        m_localIpAddress = null;
+        }
+		try
+        {
+	        m_localFullyQualifiedName = java.net.InetAddress.getLocalHost().getCanonicalHostName();
+        }
+        catch (UnknownHostException e)
+        {
+	        m_localFullyQualifiedName = null;
+        }
 	}
 
 	/***************************************************************************
@@ -160,6 +167,53 @@ public class CommInterfaceSocket implements ICommInterface
 	}
 
 	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	private boolean isLocalServer()
+	{ 
+		if (m_localHostname != null)
+		{
+			if (m_serverInfo.getHost().equals(m_localHostname)) return true;
+		}
+		if (m_localFullyQualifiedName != null)
+		{
+			if (m_serverInfo.getHost().equals(m_localFullyQualifiedName)) return true;
+		}
+		if (m_localIpAddress != null)
+		{
+			if (m_serverInfo.getHost().equals(m_localIpAddress)) return true;
+		}
+		if (m_serverInfo.getHost().equals("localhost")) return true;
+		if (m_serverInfo.getHost().equals("127.0.0.1")) return true;
+
+		try
+		{
+			String serverFullyQualifiedName =
+				InetAddress.getByName(m_serverInfo.getHost()).getCanonicalHostName();
+			
+			if (serverFullyQualifiedName.equals(m_localFullyQualifiedName))
+			{
+				return true;
+			}
+		}
+		catch (UnknownHostException e)
+		{
+			// do nothing
+		}
+		return false; 
+	}
+
+	/***************************************************************************
+	 * Returns whether the local filesystem is forced to be used as file
+	 * transfer mechanism.
+	 **************************************************************************/
+	private boolean hasLocalAccess()
+	{ 
+		AuthenticationData authentication = m_serverInfo.getAuthentication(); 
+		return authentication != null && authentication.isLocalAccess(); 
+	}
+
+	/***************************************************************************
 	 * Connect to the SPELL server
 	 **************************************************************************/
 	public synchronized void connect() throws CommException
@@ -170,9 +224,10 @@ public class CommInterfaceSocket implements ICommInterface
 		}
 		try
 		{
+			Logger.info("Connecting IPC interface to " + m_serverInfo.getName(), Level.PROC, this);
 			// Enable tunneling if needed
 			boolean tunneling = false;
-			if (m_serverInfo.getTunnelUser() != null)
+			if (m_serverInfo.getAuthentication() != null && !hasLocalAccess())
 			{
 				Logger.info("Enabling SSH tunneling to " + m_serverInfo.getName(), Level.PROC, this);
 				setTunneling(m_serverInfo);
@@ -206,31 +261,23 @@ public class CommInterfaceSocket implements ICommInterface
 			}
 			Logger.debug("Connected", Level.COMM, this);
 			
-			// Prepare SCP client
-			if (tunneling)
+			if (isLocalServer() || hasLocalAccess())
 			{
-				m_scp = new FileTransfer( m_tunneler.getConnection() );
+				Logger.info("Using local file transfers", Level.COMM, this);
+				m_scp = new FileTransfer();
 			}
 			else
 			{
-				Logger.debug("Creating SCP connection", Level.COMM, this);
-				Connection conn = new Connection(m_serverInfo.getHost());
-				conn.connect();
-				Logger.debug("Authenticating SCP", Level.COMM, this);
-				
-				IConfigurationManager cfg = (IConfigurationManager) ServiceManager.get(IConfigurationManager.class);
-
-				String user = cfg.getProperty(PropertyKey.SCP_CONNECTION_USER);
-				String pwd = cfg.getProperty(PropertyKey.SCP_CONNECTION_PWD);
-				
-				if (user == null || user.trim().isEmpty() ) user = "spell";
-				if (pwd  == null || pwd.trim().isEmpty() ) pwd = "spell";
-				
-				boolean isAuthenticated = conn.authenticateWithPassword( user, pwd );
-				if (isAuthenticated == false) throw new IOException("SCP authentication failed.");
-				m_scp = new FileTransfer( conn );
+				if (m_serverInfo.getAuthentication()==null)
+				{
+					Logger.warning("Warning: no authentication methods available to perform file transfers!", Level.COMM, this);
+					m_scp = null;
+				}
+				else
+				{
+					m_scp = new FileTransfer( m_tunneler.getConnection(), m_serverInfo );
+				}
 			}
-			
 			DataInputStream in = new DataInputStream(m_socket.getInputStream());
 			DataOutputStream out = new DataOutputStream(m_socket.getOutputStream());
 
@@ -246,7 +293,6 @@ public class CommInterfaceSocket implements ICommInterface
 		}
 		catch (Exception ex)
 		{
-			ex.printStackTrace();
 			m_socket = null;
 			throw new CommException(ex.getLocalizedMessage());
 		}
@@ -277,7 +323,7 @@ public class CommInterfaceSocket implements ICommInterface
 	 * 
 	 * @return True if it is connected
 	 **************************************************************************/
-	public synchronized boolean isConnected()
+	public boolean isConnected()
 	{
 		if (m_socket == null)
 			return false;
@@ -341,11 +387,15 @@ public class CommInterfaceSocket implements ICommInterface
 	{
 		try
 		{
+			if (m_scp == null)
+			{
+				throw new CommException("Unable download file '" + remoteFile + "':\n\nNo authentication parameters in configuration");
+			}
 			m_scp.getFile(remoteFile, targetDir);
 		}
 		catch(IOException ex)
 		{
-			throw new CommException("Failed to download file '" + remoteFile + "': " + ex.getLocalizedMessage());
+			throw new CommException("Failed to download file '" + remoteFile + "':\n\n " + ex.getLocalizedMessage());
 		}
 	}
 
@@ -473,7 +523,6 @@ public class CommInterfaceSocket implements ICommInterface
 		}
 		catch (Exception ex)
 		{
-			ex.printStackTrace();
 			throw new CommException(ex.getLocalizedMessage());
 		}
 	}
@@ -490,7 +539,6 @@ public class CommInterfaceSocket implements ICommInterface
 		}
 		catch (Exception ex)
 		{
-			ex.printStackTrace();
 			throw new CommException(ex.getLocalizedMessage());
 		}
 	}
@@ -535,7 +583,6 @@ public class CommInterfaceSocket implements ICommInterface
 		}
 		catch (Exception ex)
 		{
-			ex.printStackTrace();
 			throw new CommException("Error in disconnection (force=" + force + "): " + ex.getLocalizedMessage());
 		}
 	}

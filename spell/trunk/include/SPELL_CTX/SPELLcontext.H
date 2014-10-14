@@ -5,7 +5,7 @@
 // DESCRIPTION: Main class of the context process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -35,12 +35,16 @@
 #include "SPELL_CTX/SPELLclient.H"
 #include "SPELL_CTX/SPELLclientMode.H"
 #include "SPELL_CTX/SPELLexecutorOperation.H"
+#include "SPELL_CTX/SPELLsharedDataOperation.H"
 #include "SPELL_CTX/SPELLlistenerIPC.H"
+#include "SPELL_CTX/SPELLsharedData.H"
 // Project includes ----------------------------------------------------------
 #include "SPELL_SDB/SPELLdatabase.H"
 #include "SPELL_EXC/SPELLexecutorStatus.H"
 #include "SPELL_SYN/SPELLevent.H"
 #include "SPELL_IPC/SPELLipcDataChunk.H"
+
+#include "SPELL_CFG/SPELLexecutorDefaults.H"
 
 /** \addtogroup SPELL_CTX */
 /*@{*/
@@ -109,15 +113,14 @@ public: //--------------------------------------------------------------------
 
 		int getClientPort() { return m_clientIPC.getPort(); };
 
-		void notifyExecutorOperation( const std::string& procId,
-				                      const std::string& parentProcId,
-									  int clientKey,
-				                      const SPELLclientMode& clientMode,
-				                      const SPELLexecutorStatus& status,
-				                      const SPELLexecutorOperation& operation,
-				                      const std::string& condition,
-				                      const std::string& errorMessage = "",
-				                      const std::string& errorReason = "" );
+		void notifyExecutorOperation( const SPELLexecutorOperation& op );
+
+		void notifySharedDataOperation( const std::string& procId, const SPELLsharedDataOperation& operation, const std::string& variables, const std::string& values, const std::string& scope );
+		void notifySharedDataOperation( int clientKey, const SPELLsharedDataOperation& operation, const std::string& variables, const std::string& values, const std::string& scope );
+		void notifySharedDataOperation( const SPELLipcMessage& msg, const SPELLsharedDataOperation& operation, const std::string& variables, const std::string& values, const std::string& scope );
+
+		void fillExecutorDefaults( SPELLipcMessage& msg );
+
 
 		//====================================================================
 		// REQUEST PROCESSING
@@ -125,10 +128,12 @@ public: //--------------------------------------------------------------------
 
 		SPELLipcMessage openExecutor( const SPELLipcMessage& msg, SPELLclient* controllingClient );
 		SPELLipcMessage getInstanceId(const SPELLipcMessage& msg);
+		SPELLipcMessage getCurrentTime(const SPELLipcMessage& msg);
 		SPELLipcMessage closeExecutor(const SPELLipcMessage& msg);
 		SPELLipcMessage killExecutor(const SPELLipcMessage& msg);
 		SPELLipcMessage recoverExecutor( const SPELLipcMessage& msg, SPELLclient* controllingClient );
 		SPELLipcMessage removeControl( const SPELLipcMessage& msg );
+		SPELLipcMessage setExecutorInBackground( const SPELLipcMessage& msg );
 		SPELLipcMessage getProcedureList( const SPELLipcMessage& msg );
 		SPELLipcMessage getExecutorList( const SPELLipcMessage& msg );
 		SPELLipcMessage getProcedureProperties( const SPELLipcMessage& msg );
@@ -139,11 +144,25 @@ public: //--------------------------------------------------------------------
 		SPELLipcMessage getClientInfo(const SPELLipcMessage& msg);
 		SPELLipcMessage getServerFilePath(const SPELLipcMessage& msg);
 		SPELLipcMessage getProcedureRecoveryList( const SPELLipcMessage& msg );
+		SPELLipcMessage getProcedureAsRunList( const SPELLipcMessage& msg );
 		SPELLipcMessage deleteRecoveryFiles( const SPELLipcMessage& msg );
-		SPELLipcMessage dumpInterpreterInfo( const SPELLipcMessage& msg );
 		SPELLipcMessage listFiles( const SPELLipcMessage& msg );
 		SPELLipcMessage listDataDirectories( const SPELLipcMessage& msg );
 		SPELLipcMessage getInputFile( const SPELLipcMessage& msg );
+
+		SPELLipcMessage getExecutorDefaults( const SPELLipcMessage& msg );
+		SPELLipcMessage setExecutorDefaults( const SPELLipcMessage& msg );
+
+		//====================================================================
+		// REQUESTS FOR SHARED DATA
+		//====================================================================
+		SPELLipcMessage setSharedData( const SPELLipcMessage& msg );
+		SPELLipcMessage getSharedData( const SPELLipcMessage& msg );
+		SPELLipcMessage clearSharedData( const SPELLipcMessage& msg );
+		SPELLipcMessage getSharedDataKeys( const SPELLipcMessage& msg );
+		SPELLipcMessage getSharedDataScopes( const SPELLipcMessage& msg );
+		SPELLipcMessage addSharedDataScope( const SPELLipcMessage& msg );
+		SPELLipcMessage removeSharedDataScope( const SPELLipcMessage& msg );
 
 		//====================================================================
 		// IPC FAILURE
@@ -193,6 +212,8 @@ private: //-------------------------------------------------------------------
 		SPELLclientIPC			m_clientIPC;
 		/** Holds the IPC system for listener */
 		SPELLlistenerIPC		m_listenerIPC;
+		/** Holds the context execution default parameters */
+		SPELLexecutorDefaults m_executorDefaults;
 		/** Finish event */
 		SPELLevent              m_eventFinish;
 		/** Singleton instance */
@@ -201,6 +222,8 @@ private: //-------------------------------------------------------------------
 		ChunkerMap m_dataChunkers;
 		/** Data chunking synchronization */
 		SPELLmutex m_chunkLock;
+		/** Shared data blackboard */
+		SPELLsharedData m_sharedData;
 };
 
 /*@}*/

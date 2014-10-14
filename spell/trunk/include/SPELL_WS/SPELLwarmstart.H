@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL warmstart interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -99,7 +99,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \param newFrame IN: the new frame.
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyCall( PyFrameObject* newFrame ) = 0;
+		virtual void notifyCall( const std::string& id, PyFrameObject* newFrame ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify that the interpreter has come back from a function. The frame

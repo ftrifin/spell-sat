@@ -5,7 +5,7 @@
 // DESCRIPTION: Python bindings for CIF
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -290,27 +290,27 @@ static PyObject* ClientIF_Notify( PyObject* self, PyObject* args, PyObject* kwds
 
     PyObject* o_type = PyTuple_GetItem( args, 0 );
     assert( o_type != NULL );
-    if (PYSTR(o_type) == MessageValue::DATA_NOTIF_TYPE_VAL)
+    if (PYSTR(o_type) == NotificationValue::DATA_NOTIF_TYPE_VAL)
     {
         notification.type = NOTIFY_VALUE;
     }
-    else if (PYSTR(o_type) == MessageValue::DATA_NOTIF_TYPE_ITEM)
+    else if (PYSTR(o_type) == NotificationValue::DATA_NOTIF_TYPE_ITEM)
     {
         notification.type = NOTIFY_ITEM;
     }
-    else if (PYSTR(o_type) == MessageValue::DATA_NOTIF_TYPE_EXEC)
+    else if (PYSTR(o_type) == NotificationValue::DATA_NOTIF_TYPE_EXEC)
     {
         notification.type = NOTIFY_EXECUTION;
     }
-    else if (PYSTR(o_type) == MessageValue::DATA_NOTIF_TYPE_VERIF)
+    else if (PYSTR(o_type) == NotificationValue::DATA_NOTIF_TYPE_VERIF)
     {
         notification.type = NOTIFY_VERIFICATION;
     }
-    else if (PYSTR(o_type) == MessageValue::DATA_NOTIF_TYPE_TIME)
+    else if (PYSTR(o_type) == NotificationValue::DATA_NOTIF_TYPE_TIME)
     {
         notification.type = NOTIFY_TIME;
     }
-    else if (PYSTR(o_type) == MessageValue::DATA_NOTIF_TYPE_SYS)
+    else if (PYSTR(o_type) == NotificationValue::DATA_NOTIF_TYPE_SYS)
     {
         notification.type = NOTIFY_SYSTEM;
     }

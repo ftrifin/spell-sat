@@ -6,7 +6,7 @@
 //
 // DATE      : Feb 9, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -100,7 +100,7 @@ public class InputFileViewerDialog extends TitleAreaDialog
 	private Image m_image;
 	/** Holds the bold font */
 	private Font m_font;
-	/** Holds the container model */
+	/** Holds the dictionary model */
 	private DataContainer m_container;
 	/** Holds the file viewer */
 	private DictVariablesTable m_fileTable;

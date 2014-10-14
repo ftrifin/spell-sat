@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,33 +53,104 @@ import java.util.Map;
 import com.astra.ses.spell.gui.core.interfaces.IMessageField;
 import com.astra.ses.spell.gui.core.interfaces.IMessageId;
 import com.astra.ses.spell.gui.core.interfaces.IMessageValue;
+import com.astra.ses.spell.gui.core.model.types.ClientMode;
 
 public class SPELLmessageOpenExec extends SPELLmessageRequest
 {
-	public SPELLmessageOpenExec(String procId)
+	public SPELLmessageOpenExec(String procId, boolean background)
 	{
 		super(IMessageId.REQ_OPEN_EXEC);
 		set(IMessageField.FIELD_PROC_ID, procId);
-		set(IMessageField.FIELD_GUI_MODE, IMessageValue.CLIENT_MODE_CONTROL);
+		if (background)
+		{
+			set(IMessageField.FIELD_GUI_MODE, ClientMode.BACKGROUND.name());
+		}
+		else
+		{
+			set(IMessageField.FIELD_GUI_MODE, ClientMode.CONTROL.name());
+		}
 		setSender(IMessageValue.CLIENT_SENDER);
 		setReceiver(IMessageValue.CONTEXT_RECEIVER);
 	}
 
 	public void setArguments(Map<String, String> arguments)
 	{
-		String argStr = "";
+		String argStr = "{";
 		for (String key : arguments.keySet())
 		{
-			if (argStr.length() > 0) argStr += ",,";
-			String arg = key + "=" + arguments.get(key);
+			if (argStr.length() > 1) argStr += ",";
+			String value = arguments.get(key);
+			if (!isStringLiteral(value) && !isInteger(value) && !isDouble(value))
+			{
+				value = "'" + value + "'";
+			}
+			String arg = "'" + key + "':" + value;
 			argStr += arg;
 		}
+		argStr += "}";
 		set(IMessageField.FIELD_ARGS, argStr);
 	}
 
 	public void setCondition(String condition)
 	{
 		set(IMessageField.FIELD_CONDITION, condition);
-		set(IMessageField.FIELD_GUI_MODE, IMessageValue.CLIENT_MODE_SCHEDULE);
+		set(IMessageField.FIELD_GUI_MODE, ClientMode.SCHEDULE.name());//TODO remove SCHEDULE
+	}
+	
+	private boolean isStringLiteral( String value )
+	{
+		if (value.startsWith("\"") && value.endsWith("\"")) return true;
+		if (value.startsWith("'") && value.endsWith("'")) return true;
+		return false;
+	}
+	
+	private boolean isInteger( String value )
+	{
+		try
+		{
+			Integer.parseInt(value);
+			return true;
+		}
+		catch(NumberFormatException ex1)
+		{
+			try
+			{
+				Integer.parseInt(value,16);
+				return true;
+			}
+			catch(NumberFormatException ex2)
+			{
+				try
+				{
+					Integer.parseInt(value,2);
+					return true;
+				}
+				catch(NumberFormatException ex3)
+				{
+					try
+					{
+						Integer.parseInt(value,8);
+						return true;
+					}
+					catch(NumberFormatException ex4)
+					{
+					}
+				}
+			}
+			return false;
+		}
+	}
+
+	private boolean isDouble( String value )
+	{
+		try
+		{
+			Integer.parseInt(value);
+			return true;
+		}
+		catch(NumberFormatException ex)
+		{
+			return false;
+		}
 	}
 }

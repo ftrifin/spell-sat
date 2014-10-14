@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,24 +61,23 @@ import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.server.TransferData;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
-import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableWatcher;
+import com.astra.ses.spell.gui.watchvariables.interfaces.IVariableListener;
 import com.astra.ses.spell.gui.watchvariables.interfaces.IWatchVariablesProxy;
+import com.astra.ses.spell.gui.watchvariables.messages.IWVMessageId;
 import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageChangeVariable;
+import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageCheckVariablesEnabled;
 import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageGetVariables;
-import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageNoWatchVariable;
+import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageScopeChange;
+import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageSetVariablesDisabled;
+import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageSetVariablesEnabled;
 import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageVariableChange;
-import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageVariableScopeChange;
-import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageWatchNothing;
-import com.astra.ses.spell.gui.watchvariables.messages.SPELLmessageWatchVariable;
-import com.astra.ses.spell.gui.watchvariables.notification.ScopeNotification;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
 import com.astra.ses.spell.gui.watchvariables.notification.VariableNotification;
-import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 
 public class WatchVariablesProxy implements IWatchVariablesProxy, ICommListener
 {
 	private IContextProxy m_ctxProxy = null;
-	private Map<String,IVariableWatcher> m_watchers;
+	private Map<String,IVariableListener> m_listeners;
 	
 	/***************************************************************************
 	 * Constructor
@@ -86,25 +85,90 @@ public class WatchVariablesProxy implements IWatchVariablesProxy, ICommListener
 	public WatchVariablesProxy()
 	{
 		Logger.debug("Created", Level.INIT, this);
-		m_watchers = new TreeMap<String,IVariableWatcher>();
+		m_listeners = new TreeMap<String,IVariableListener>();
 	}
 
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
 	public void setup()
 	{
 		m_ctxProxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
 		m_ctxProxy.addCommListener(this);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
 	public void cleanup()
 	{
 		m_ctxProxy.removeCommListener(this);
 	}
 
-	public VariableData[] retrieveVariables( String procId, WhichVariables type, IProgressMonitor monitor ) throws Exception
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public boolean isEnabled( String procId )
+	{
+		SPELLmessage msg = new SPELLmessageCheckVariablesEnabled(procId);
+		
+		try
+		{
+			// Perform the request. May throw an exception.
+			SPELLmessage response = m_ctxProxy.sendRequest(msg);
+			if (response != null)
+			{
+				return SPELLmessageCheckVariablesEnabled.isEnabled(response);
+			}
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+		}
+		return false;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public void setEnabled( String procId, boolean enable )
+	{
+		SPELLmessage msg = null;
+		
+		if (enable)
+		{
+			msg = new SPELLmessageSetVariablesEnabled(procId);
+		}
+		else
+		{
+			msg = new SPELLmessageSetVariablesDisabled(procId);
+		}
+		
+		try
+		{
+			m_ctxProxy.sendMessage(msg);
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+		}
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	@Override
+	public Map<String,VariableData> retrieveVariables( String procId, IProgressMonitor monitor ) throws Exception
 	{
 		VariableData[] variables = null;
-		Logger.debug("Requesting " + type + " variables in " + procId, Level.PROC, this);
+		Map<String,VariableData> result = null;
+		
+		Logger.debug("Requesting variables in " + procId, Level.PROC, this);
 		SPELLmessage msg = null;
 		SPELLmessage response = null;
 
@@ -117,25 +181,25 @@ public class WatchVariablesProxy implements IWatchVariablesProxy, ICommListener
 		{
 			if (monitor.isCanceled())
 			{
-				return variables;
+				return result;
 			}
 			
 			// If chunkNo == 0, it is the initial request
 			if (chunkNo == 0)
 			{
-				msg = new SPELLmessageGetVariables(procId, type);
+				msg = new SPELLmessageGetVariables(procId);
 			}
 			// Subsequent requests
 			else
 			{
-				msg = new SPELLmessageGetVariables(procId, type, chunkNo);
+				msg = new SPELLmessageGetVariables(procId, chunkNo);
 			}
 			// Perform the request. May throw an exception.
 			response = m_ctxProxy.sendRequest(msg);
 
 			if (monitor.isCanceled())
 			{
-				return variables;
+				return result;
 			}
 
 			// Process the response and obtain the transfer data
@@ -143,7 +207,7 @@ public class WatchVariablesProxy implements IWatchVariablesProxy, ICommListener
 			{
 				if (chunkNo == 0)
 				{
-					variables = SPELLmessageGetVariables.getVariables(type, response);
+					variables = SPELLmessageGetVariables.getVariables(response);
 				}
 				chunk = SPELLmessageGetVariables.getValueChunk(response);
 			}
@@ -189,94 +253,47 @@ public class WatchVariablesProxy implements IWatchVariablesProxy, ICommListener
 
 			if (monitor.isCanceled())
 			{
-				return variables;
+				return result;
 			}
 		}
+		
 		if (variables == null)
 		{
 			monitor.setTaskName("No variables obtained");
 			return null;
 		}
+		
 		monitor.beginTask("Updating variable values", variables.length);
 		String[] values = SPELLmessageGetVariables.getValues(valueList);
 		for( int index=0; index< variables.length; index++)
 		{
 			if (monitor.isCanceled())
 			{
-				return variables;
+				return result;
 			}
-			monitor.subTask("Variable: " + variables[index].name);
+			monitor.subTask("Variable: " + variables[index].getName());
 			monitor.worked(1);
-			variables[index].value = values[index];
+			variables[index].setValue(values[index]);
 		}
 		if (values.length==variables.length+1)
 		{
 			if (monitor.isCanceled())
 			{
-				return variables;
+				return result;
 			}
-			variables[ variables.length-1 ].value = values[values.length-1];
+			variables[ variables.length-1 ].setValue(values[values.length-1]);
 		}
-		return variables;
-	}
-	
-	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#registerVariableWatch
-	 * ()
-	 */
-	@Override
-	public VariableData registerVariableWatch(String procId, String varName, boolean global) throws Exception
-	{
-		Logger.debug("Requesting variable watch in " + procId, Level.COMM, this);
-		SPELLmessage msg = new SPELLmessageWatchVariable(procId, varName, global);
-		SPELLmessage response = m_ctxProxy.sendRequest(msg);
-		VariableData data = null;
-		if (response != null)
+		result = new TreeMap<String,VariableData>();
+		for(VariableData data : variables)
 		{
-			data = new VariableData(varName, SPELLmessageWatchVariable.getType(response),
-			        SPELLmessageWatchVariable.getValue(response), global, true);
+			result.put(data.getName(),data);
 		}
-		return data;
+		return result;
 	}
-
-	/*
-	 * (non-Javadoc)
+	
+	/**************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#unregisterVariableWatch
-	 * ()
-	 */
-	@Override
-	public void unregisterVariableWatch(String procId, String varName, boolean global) throws Exception
-	{
-		Logger.debug("Requesting variable no-watch in " + procId, Level.COMM, this);
-		SPELLmessage msg = new SPELLmessageNoWatchVariable(procId, varName, global);
-		m_ctxProxy.sendRequest(msg);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.astra.ses.spell.gui.core.interfaces.IContextProxy#watchNothing()
-	 */
-	@Override
-	public void watchNothing(String procId) throws Exception
-	{
-		Logger.debug("Requesting variable no-watch in " + procId, Level.COMM, this);
-		SPELLmessage msg = new SPELLmessageWatchNothing(procId);
-		m_ctxProxy.sendRequest(msg);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.interfaces.IContextProxy#changeVariable()
-	 */
+	 *************************************************************************/
 	@Override
 	public void changeVariable(String procId, String varName, String valueExpression, boolean isGlobal) throws Exception
 	{
@@ -285,73 +302,92 @@ public class WatchVariablesProxy implements IWatchVariablesProxy, ICommListener
 		m_ctxProxy.sendRequest(msg);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public SPELLmessageResponse receiveRequest(SPELLmessageRequest msg)
     {
-	    // TODO Auto-generated method stub
 	    return null;
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void receiveMessage(SPELLmessage msg)
     {
-		if (msg instanceof SPELLmessageVariableScopeChange)
+		if (msg.getId().equals(IWVMessageId.MSG_VARIABLE_CHANGE))
 		{
-			ScopeNotification data = ((SPELLmessageVariableScopeChange) msg).getData();
-			if (m_watchers.containsKey(data.getProcId()))
+			SPELLmessageVariableChange chg = new SPELLmessageVariableChange(msg);
+			VariableNotification data = chg.getData();
+			if (m_listeners.containsKey(data.getProcId()))
 			{
-				m_watchers.get(data.getProcId()).callbackVariableScopeChange(data);
+				m_listeners.get(data.getProcId()).variableChanged(data);
 			}
 		}
-		else if (msg instanceof SPELLmessageVariableChange)
+		else if (msg.getId().equals(IWVMessageId.MSG_SCOPE_CHANGE))
 		{
-			VariableNotification data = ((SPELLmessageVariableChange) msg).getData();
-			if (m_watchers.containsKey(data.getProcId()))
+			SPELLmessageScopeChange chg = new SPELLmessageScopeChange(msg);
+			if (m_listeners.containsKey(chg.getProcId()))
 			{
-				m_watchers.get(data.getProcId()).callbackVariableChange(data);
+				m_listeners.get(chg.getProcId()).scopeChanged(chg.getData());
 			}
 		}
     }
 	
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void connectionLost(ErrorData data)
     {
-		for(IVariableWatcher watcher : m_watchers.values())
+		for(IVariableListener listener : m_listeners.values())
 		{
-			watcher.callbackConnectionLost();
+			listener.connectionLost();
 		}
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void connectionFailed(ErrorData data)
     {
-		for(IVariableWatcher watcher : m_watchers.values())
+		for(IVariableListener listener : m_listeners.values())
 		{
-			watcher.callbackConnectionLost();
+			listener.connectionLost();
 		}
     }
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
     public void connectionClosed()
     {
-		for(IVariableWatcher watcher : m_watchers.values())
+		for(IVariableListener listener : m_listeners.values())
 		{
-			watcher.callbackConnectionLost();
+			listener.connectionLost();
 		}
     }
 
-
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void addVariableWatcher(String procId, IVariableWatcher watcher)
+    public void addListener(String procId, IVariableListener listener)
     {
-		m_watchers.put(procId,watcher); 
+		m_listeners.put(procId,listener); 
     }
 
-
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
-    public void removeVariableWatcher(String procId, IVariableWatcher watcher)
+    public void removeListener(String procId, IVariableListener listener)
     {
-		m_watchers.remove(procId); 
+		m_listeners.remove(procId); 
     }
 
 }

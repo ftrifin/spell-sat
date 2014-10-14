@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the goto mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -66,7 +66,7 @@ SPELLgoto::SPELLgoto( PyCodeObject* code )
 //=============================================================================
 SPELLgoto::~SPELLgoto()
 {
-    DEBUG("[GOTO] Destroyed for code " + PYREPR( (PyObject*) m_code))
+    DEBUG("[GOTO] Destroyed for code " + PYREPR( (PyObject*) m_code));
     m_labels.clear();
     m_titles.clear();
     m_gotos.clear();
@@ -79,12 +79,14 @@ void SPELLgoto::analyze()
 {
     assert( m_code != NULL );
 
-    DEBUG("[GOTO] Analyzing code " + PYREPR( (PyObject*) m_code))
+    DEBUG("[GOTO] Analyzing code " + PYREPR( (PyObject*) m_code));
 
     // Assume there is no INIT step
     m_initLine = -1;
     // Pointer to initial instruction (used by macros)
     unsigned char* first_instr = (unsigned char*) PyString_AS_STRING(m_code->co_code);
+    // Size of the code to analyze
+    const unsigned int code_size = PyString_Size(m_code->co_code);
     // Pointer to current instruction (used by macros)
     register unsigned char* next_instr = first_instr;
     // Holds the current line
@@ -96,9 +98,6 @@ void SPELLgoto::analyze()
     // Opcode argument
     register unsigned int oparg;
 
-    // Will be true when there is no more SPELLgoto to process
-    bool finished = false;
-
     // Holds the last loaded name
     std::string loaded_name,loaded_const = "";
     // Helps to parse the step statements
@@ -107,10 +106,9 @@ void SPELLgoto::analyze()
 	std::string step_id,step_title,goto_id = "";
     register unsigned short const1 = 1;
 
-    while(not finished)
+    offset = INSTR_OFFSET();
+    while (offset < code_size)
     {
-        // Get the instruction offset
-        offset = INSTR_OFFSET();
         // Obtain the opcode
         opcode = NEXTOP();
 
@@ -120,12 +118,8 @@ void SPELLgoto::analyze()
 
         switch(opcode)
         {
-        case RETURN_VALUE:
-        {
-            finished = true;
-            break;
-        }
         case LOAD_NAME:
+        case LOAD_GLOBAL:
         {
             loaded_name = PYSTR(PyTuple_GetItem(m_code->co_names,oparg));
             if (loaded_name == STEP_CALL)
@@ -175,11 +169,11 @@ void SPELLgoto::analyze()
                 // If it is an INIT step, mark it
                 if (step_id == "INIT")
                 {
-                    LOG_INFO("Found INIT step at " + ISTR(lineno))
+                    LOG_INFO("Found INIT step at " + ISTR(lineno));
                     m_initLine = lineno;
                 }
                 // Store the info
-                DEBUG("[GOTO] Label " + step_id + ":" + step_title + " at " + ISTR(lineno))
+                DEBUG("[GOTO] Label " + step_id + ":" + step_title + " at " + ISTR(lineno));
               	m_labels.insert( std::make_pair( step_id, lineno ));
                 m_labelLines.insert(lineno);
                 m_titles.insert( std::make_pair( step_title, step_id ));
@@ -194,19 +188,24 @@ void SPELLgoto::analyze()
         }
         }// End switch
 
-    	// Inform about errors, but ignore them at this analysis
-        PyObject* obj = PyErr_Occurred();
-   	    if (obj!= NULL)
-    	{
-   	        PyObject* ptype;
-   	        PyObject* pvalue;
-   	        PyObject* ptraceback;
-   	        PyErr_Fetch( &ptype, &pvalue, &ptraceback );
-   	        //LOG_ERROR("ERROR ON GOTO ANALYSIS: " + PYREPR(pvalue));
-    	}
+//    	// Inform about errors, but ignore them at this analysis
+//        PyObject* obj = PyErr_Occurred();
+//   	    if (obj!= NULL)
+//    	{
+//   	        PyObject* ptype;
+//   	        PyObject* pvalue;
+//   	        PyObject* ptraceback;
+//   	        PyErr_Fetch( &ptype, &pvalue, &ptraceback );
+//   	        //LOG_ERROR("ERROR ON GOTO ANALYSIS: " + PYREPR(pvalue));
+//    	}
+
+        PyErr_Clear();
+
+        // Get the instruction offset
+        offset = INSTR_OFFSET();
 
     }
-    DEBUG("[GOTO] Code analyzed, labels (" + ISTR(m_labels.size()) + "), gotos(" + ISTR(m_gotos.size()) + ") for code " + PYREPR( (PyObject*) m_code))
+    DEBUG("[GOTO] Code analyzed, labels (" + ISTR(m_labels.size()) + "), gotos(" + ISTR(m_gotos.size()) + ") for code " + PYREPR( (PyObject*) m_code));
 }
 
 //=============================================================================
@@ -240,7 +239,7 @@ const int SPELLgoto::getTargetLine( const unsigned int frameLine )
     it = m_gotos.find( (unsigned int) frameLine );
     if (it != m_gotos.end() )
     {
-        DEBUG("[GOTO] Found target line: " + ISTR(frameLine))
+        DEBUG("[GOTO] Found target line: " + ISTR(frameLine));
         lit = m_labels.find( (*it).second );
         return (*lit).second;
     }

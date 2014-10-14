@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-24 08:34
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,18 +48,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.services;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.Vector;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -69,31 +63,20 @@ import com.astra.ses.spell.gui.core.interfaces.IContextProxy;
 import com.astra.ses.spell.gui.core.interfaces.IExecutorInfo;
 import com.astra.ses.spell.gui.core.interfaces.IFileManager;
 import com.astra.ses.spell.gui.core.model.files.AsRunFile;
-import com.astra.ses.spell.gui.core.model.files.AsRunFileLine;
-import com.astra.ses.spell.gui.core.model.files.IServerFileLine;
-import com.astra.ses.spell.gui.core.model.notification.DisplayData;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
-import com.astra.ses.spell.gui.core.model.notification.InputData;
-import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
-import com.astra.ses.spell.gui.core.model.notification.StackNotification;
-import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
-import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.ProcProperties;
-import com.astra.ses.spell.gui.core.model.types.PromptDisplayType;
-import com.astra.ses.spell.gui.core.model.types.Scope;
 import com.astra.ses.spell.gui.core.model.types.ServerFileType;
 import com.astra.ses.spell.gui.core.utils.Logger;
-import com.astra.ses.spell.gui.procs.ProcExtensions;
+import com.astra.ses.spell.gui.procs.ProcedureNotifications;
 import com.astra.ses.spell.gui.procs.exceptions.LoadFailed;
 import com.astra.ses.spell.gui.procs.exceptions.NoSuchProcedure;
 import com.astra.ses.spell.gui.procs.exceptions.NotConnected;
 import com.astra.ses.spell.gui.procs.interfaces.model.AsRunProcessing;
 import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
+import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
-import com.astra.ses.spell.gui.procs.interfaces.model.priv.IExecutionInformationHandler;
 import com.astra.ses.spell.gui.procs.model.Procedure;
 import com.astra.ses.spell.gui.procs.model.RemoteProcedure;
 
@@ -103,7 +86,6 @@ import com.astra.ses.spell.gui.procs.model.RemoteProcedure;
  */
 class ProcedureModelManager
 {
-	private static final DateFormat s_df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 	/** Holds the reference to the context proxy */
 	private IContextProxy m_proxy;
 	/** Holds the reference to the context proxy */
@@ -131,14 +113,14 @@ class ProcedureModelManager
 	 * Request the list of available procedures to the context. Called as soon
 	 * as the context proxy Connected Event is received.
 	 **************************************************************************/
-	Map<String, String> obtainAvailableProcedures()
+	Map<String, String> obtainAvailableProcedures( boolean refresh )
 	{
 		try
 		{
 			// Ensure we are connected
 			checkConnectivity();
 			Logger.debug("Loading available procedures", Level.PROC, this);
-			m_availableProcedures = m_proxy.getAvailableProcedures();
+			m_availableProcedures = m_proxy.getAvailableProcedures(refresh);
 		}
 		catch (Exception ex)
 		{
@@ -205,8 +187,8 @@ class ProcedureModelManager
 		TreeMap<ProcProperties, String> props = m_proxy.getProcedureProperties(procedureId);
 
 		Logger.debug("Instantiate model " + instanceId, Level.PROC, this);
-		IProcedure proc = new Procedure(instanceId, props, ClientMode.CONTROLLING);
-
+		IProcedure proc = new Procedure(instanceId, props, ClientMode.CONTROL);
+		
 		// Provoke the first source code acquisition
 		Logger.debug("Acquire source code for the first time", Level.PROC, this);
 		proc.getExecutionManager().initialize(monitor);
@@ -217,6 +199,49 @@ class ProcedureModelManager
 		return proc;
 	}
 
+	/***************************************************************************
+	 * Add a new procedure model created by an external party.
+	 * 
+	 **************************************************************************/
+	void addLocalProcedureModel(String instanceId, IProcedure model)
+	{
+		Logger.debug("Store local model " + instanceId, Level.PROC, this);
+		m_localModels.put(instanceId, model);
+	}
+
+	/***************************************************************************
+	 * Remove a procedure model created by an external party.
+	 * 
+	 **************************************************************************/
+	void removeLocalProcedureModel(String instanceId)
+	{
+		Logger.debug("Remove local model manually " + instanceId, Level.PROC, this);
+		m_localModels.remove(instanceId);
+	}
+
+	/***************************************************************************
+	 * Add a background procedure model.
+	 **************************************************************************/
+	String addBackgroundProcedureModel( String procId )
+	{
+		try
+		{
+			String instanceId = getAvailableId(procId);
+			Logger.debug("Registered remote background model: " + instanceId, Level.PROC, this);
+			RemoteProcedure proc = new RemoteProcedure(instanceId);
+			IExecutionInformationHandler runtime = (IExecutionInformationHandler) proc.getRuntimeInformation();
+			runtime.setBackground(true);
+			Logger.debug("Store remote model " + instanceId, Level.PROC, this);
+			m_remoteModels.put(instanceId, proc);
+			return instanceId;
+		}
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+		}
+		return null;
+	}
+	
 	/***************************************************************************
 	 * Create a remote procedure model and add it to the list
 	 * 
@@ -341,8 +366,7 @@ class ProcedureModelManager
 		{
 			Logger.debug("Updating remote procedure model: " + instanceId, Level.PROC, this);
 			IProcedure proc = m_remoteModels.get(instanceId);
-			IExecutorInfo info = new ExecutorInfo(instanceId);
-			m_proxy.updateExecutorInfo(instanceId, info);
+			IExecutorInfo info = m_proxy.getExecutorInfo(instanceId);
 			((IExecutionInformationHandler) proc.getRuntimeInformation()).copyFrom(info);
 		}
 	}
@@ -393,13 +417,43 @@ class ProcedureModelManager
 	 *************************************************************************/
 	String getProcedureName(String procId)
 	{
-		if (!m_availableProcedures.containsKey(procId))
+		if (!isProcedureIdAvailable(procId))
 		{
 			return null;
 		}
 		return m_availableProcedures.get(procId);
 	}
 
+	/**************************************************************************
+	 * Complete a procedure identifier with leading folders if any. The
+	 * StartProc function in procedures can be used without the leading
+	 * folders, and GUI mechanisms like the dependencies manager need to
+	 * translate those dependencies to the complete ones.
+	 *************************************************************************/
+	String getCompleteProcedureId( String procId )
+	{
+		// Try to find the id without the leading folders (SPELL StartProc allows to
+		// start procedures without these folders, thus the GUI shall be compliant)
+		for(String id : m_availableProcedures.keySet())
+		{
+			int idx = id.lastIndexOf("/");
+			if (idx != -1)
+			{
+				String pid = id.substring(idx+1);
+				if (pid.equals(procId)) return id;
+			}
+		}
+		return null;
+	}
+	
+	/***************************************************************************
+	 * Check if the given procedure identifier is available
+	 **************************************************************************/
+	boolean isProcedureIdAvailable( String procId )
+	{
+		return m_availableProcedures.containsKey(procId);
+	}
+	
 	/***************************************************************************
 	 * Request the procedure properties
 	 **************************************************************************/
@@ -456,6 +510,12 @@ class ProcedureModelManager
 		{
 			Logger.debug("Updating local procedure model: " + instanceId, Level.PROC, this);
 			IProcedure proc = m_localModels.get(instanceId);
+			
+			// Limits for file retrieval and processing
+			IFileManager.ProcessingLimits limits = new IFileManager.ProcessingLimits();
+			limits.fileLineCount    = 100000;
+			limits.processLineCount = 10000;
+			
 			// Reset the executor info for replaying execution
 			AsRunFile asRun = null;
 			boolean replaySuccess = true;
@@ -466,13 +526,13 @@ class ProcedureModelManager
 				if (asRunFilePath != null)
 				{
 					Logger.debug("Retrieving As-Run file: " + asRunFilePath, Level.PROC, this);
-					asRun = (AsRunFile) m_fileMgr.getServerFile(asRunFilePath, ServerFileType.ASRUN, monitor);
+					asRun = (AsRunFile) m_fileMgr.getServerFile(asRunFilePath, ServerFileType.ASRUN, limits, monitor);
 				}
 				else
 				{
 					Logger.debug("Retrieving As-Run file for " + instanceId, Level.PROC, this);
 					String path = m_fileMgr.getServerFilePath(instanceId, ServerFileType.ASRUN, monitor);
-					asRun = (AsRunFile) m_fileMgr.getServerFile(path, ServerFileType.ASRUN, monitor);
+					asRun = (AsRunFile) m_fileMgr.getServerFile(path, ServerFileType.ASRUN, limits, monitor);
 				}
 				monitor.worked(1);
 
@@ -505,6 +565,9 @@ class ProcedureModelManager
 			// Refresh the proc status
 			Logger.debug("Refresh controller status (update local model)", Level.PROC, this);
 			proc.getController().refresh();
+			
+			Logger.debug("Set client mode " + mode, Level.PROC, this);
+			((IExecutionInformationHandler) proc.getRuntimeInformation()).setClientMode(mode);
 
 			monitor.worked(1);
 		}
@@ -519,7 +582,7 @@ class ProcedureModelManager
 	{
 		if (refresh)
 		{
-			m_availableProcedures = m_proxy.getAvailableProcedures();
+			m_availableProcedures = m_proxy.getAvailableProcedures(refresh);
 		}
 		return m_availableProcedures;
 	}
@@ -529,7 +592,17 @@ class ProcedureModelManager
 	 **************************************************************************/
 	Set<String> getOpenLocalProcedures()
 	{
-		return m_localModels.keySet();
+		Set<String> list = new HashSet<String>();
+		for(String instanceId : m_localModels.keySet())
+		{
+			IProcedure model = m_localModels.get(instanceId);
+			if (model.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL) ||
+				model.getRuntimeInformation().getClientMode().equals(ClientMode.MONITOR) )
+			{
+				list.add(instanceId);
+			}
+		}
+		return list;
 	}
 
 	/***************************************************************************
@@ -581,12 +654,14 @@ class ProcedureModelManager
 	void disableProcedure(String reason, IProcedure procedure)
 	{
 		String procId = procedure.getProcId();
+		Logger.warning("Disable procedure: " + procId + " (" + reason + ")", Level.PROC, this);
+		
 		ErrorData data = new ErrorData(procId, reason, "", true);
 		IExecutionInformationHandler handler = (IExecutionInformationHandler) procedure.getRuntimeInformation();
 		handler.setExecutorLost();
 		procedure.getRuntimeProcessor().notifyProcedureError(data);
-		ProcExtensions.get().fireProcedureError(procedure, data);
-		ProcExtensions.get().fireModelDisabled(procedure);
+		ProcedureNotifications.get().fireProcedureError(procedure, data);
+		ProcedureNotifications.get().fireModelDisabled(procedure);
 	}
 
 	/***************************************************************************
@@ -603,9 +678,10 @@ class ProcedureModelManager
 			// We shall refresh the model first
 			try
 			{
+				Logger.warning("Enable procedure: " + proc.getProcId(), Level.PROC, this);
 				proc.getController().refresh();
 				// Then notify consumers
-				ProcExtensions.get().fireModelEnabled(proc);
+				ProcedureNotifications.get().fireModelEnabled(proc);
 			}
 			catch (Exception ex)
 			{
@@ -622,216 +698,20 @@ class ProcedureModelManager
 	 **************************************************************************/
 	private void replayExecution(IProcedure model, AsRunFile data, AsRunReplayResult result, IProgressMonitor monitor)
 	{
-		monitor.beginTask("Restoring AsRun information", data.getLines().size());
-
-		result.totalLines = data.getLines().size();
-		result.processedLines = 0;
-
-		Logger.info("Start execution replay on " + model.getProcId(), Level.PROC, this);
-
 		if (!model.isInReplayMode())
 		{
 			Logger.error("Cannot replay, model is not in the correct mode", Level.PROC, this);
 			result.message = "procedure model is not in the correct mode";
 			result.status = AsRunProcessing.FAILED;
 		}
-
-		ErrorData retrievedError = null;
-		StatusNotification retrievedStatus = null;
-
-		// Data to build a prompt
-		String promptMessage = null;
-		Vector<String> promptOptions = null;
-		Vector<String> promptExpected = null;
-		boolean numericPrompt = false;
-		Scope promptScope = Scope.OTHER;
-
-		boolean retrievedLine = false;
-		result.status = AsRunProcessing.COMPLETE;
-		result.message = "";
-
-		ArrayList<IServerFileLine> lines = data.getLines();
-		Logger.debug("AsRun lines: " + lines.size(), Level.PROC, this);
-
-		long seq = 0;
-
-		double totalMemory = Runtime.getRuntime().totalMemory()*1.0;
-		
-		for (IServerFileLine tabbedLine : lines)
+		else
 		{
-			if (monitor.isCanceled()) break;
-			
-			// Display progress
-			result.processedLines++;
-			monitor.worked(1);
-			
-			Double percent = (result.processedLines*1.0) / (result.totalLines*1.0) * 100;
-			String pc = percent.toString();
-			int idx = pc.indexOf(".");
-			int tl = idx + 3;
-			if (tl<pc.length())
-			{
-				pc = pc.substring(0, tl );
-			}
-			
-			Double pcm = (Runtime.getRuntime().freeMemory() / totalMemory) * 100.0;
-			String mem = pcm.toString();
-			idx = mem.indexOf(".");
-			int tlm = idx + 3;
-			if (tlm<mem.length())
-			{
-				mem = mem.substring(0, tlm );
-			}
-			
-			if (pcm<10.0)
-			{
-				result.status = AsRunProcessing.PARTIAL;
-				result.message = "oldest ASRUN data discarded due to memory usage";
-				model.getRuntimeProcessor().clearNotifications();
-				Logger.warning("NOTIFICATIONS DISCARDED!! (" + result.processedLines + ")", Level.PROC, this);
-				System.err.println("NOTIFICATIONS DISCARDED!! (" + result.processedLines + ")");
-			}
-			
-			monitor.subTask( "" + result.processedLines + " lines processed of a total of " + result.totalLines + " (" + pc + " %), available memory " + mem + "%");
-			
-			Date currentTime = Calendar.getInstance().getTime();
-			String currentTimeStr = s_df.format(currentTime);
-			seq++;
-			AsRunFileLine arLine = (AsRunFileLine) tabbedLine;
-			try
-			{
-				switch (arLine.getAsRunType())
-				{
-				case LINE: // Fall through
-				case STAGE:
-					retrievedLine = true;
-				case CALL: // Fall through
-				case RETURN:
-					StackNotification ndata = (StackNotification) arLine.getNotificationData();
-					ndata.setTime(currentTimeStr);
-					ndata.setSequence(seq);
-					try
-					{
-						model.getRuntimeProcessor().notifyProcedureStack(ndata);
-					}
-					catch (Exception ex)
-					{
-						ex.printStackTrace();
-					}
-					;
-					break;
-				case ITEM:
-					ItemNotification idata = (ItemNotification) arLine.getNotificationData();
-					idata.setTime(currentTimeStr);
-					idata.setSequence(seq);
-					try
-					{
-						model.getRuntimeProcessor().notifyProcedureItem(idata);
-					}
-					catch (Exception ex)
-					{
-						ex.printStackTrace();
-					}
-					;
-					break;
-				case DISPLAY: // Fall through
-				case ANSWER:
-					DisplayData ddata = (DisplayData) arLine.getNotificationData();
-					ddata.setTime(currentTimeStr);
-					ddata.setSequence(seq);
-					try
-					{
-						model.getRuntimeProcessor().notifyProcedureDisplay(ddata);
-					}
-					catch (Exception ex)
-					{
-						ex.printStackTrace();
-					}
-					;
-					break;
-				case STATUS:
-					// Update only if the procedure is not in error
-					retrievedStatus = (StatusNotification) arLine.getNotificationData();
-					break;
-				case ERROR:
-					retrievedError = (ErrorData) arLine.getNotificationData();
-					break;
-				case INIT:
-					break;
-				case PROMPT:
-					promptMessage = arLine.getDataA();
-					// Clear other prompt data, this may be not the first prompt
-					// in the asrun
-					numericPrompt = false;
-					promptOptions = null;
-					promptExpected = null;
-					break;
-				case PROMPT_TYPE:
-					if (arLine.getSubType().equals("16"))
-					{
-						numericPrompt = true;
-					}
-					break;
-				case PROMPT_OPTIONS:
-					String opts = arLine.getSubType();
-					String[] options = opts.split(",,");
-					promptOptions = new Vector<String>();
-					promptOptions.addAll(Arrays.asList(options));
-					break;
-				case PROMPT_EXPECTED:
-					String expt = arLine.getSubType();
-					String[] expected = expt.split(",,");
-					promptExpected = new Vector<String>();
-					promptExpected.addAll(Arrays.asList(expected));
-					break;
-				default:
-					Logger.error("Unknown AsRun data in line " + result.processedLines, Level.PROC, this);
-				}
-			}
-			catch (Exception ex)
-			{
-				ex.printStackTrace();
-				Logger.error("Failed to process ASRUN line " + result.processedLines + ":" + tabbedLine.toString().replace("\t", "<T>"), Level.PROC, this);
-				Logger.error("   " + ex.getLocalizedMessage(), Level.PROC, this);
-				result.message = "failed to process some lines";
-				result.status = AsRunProcessing.PARTIAL;
-			}
+			monitor.beginTask("Restoring AsRun information", data.getLines().size());
+			Logger.info("Start execution replay on " + model.getProcId(), Level.PROC, this);
+			ExecutionPlayer player = new ExecutionPlayer(model,data,m_proxy);
+			player.replay(monitor,0,result);
+			Logger.info("Finished execution replay on " + model.getProcId() + ", processed " + result.processedLines + " lines, result " + result.status, Level.PROC, this);
 		}
-
-		Logger.debug("Finished replay with status " + retrievedStatus.getStatus(), Level.PROC, this);
-
-		if (retrievedStatus.getStatus().equals(ExecutorStatus.PROMPT))
-		{
-			Logger.debug("Recreating prompt", Level.PROC, this);
-			InputData inputData = null;
-			if (promptOptions != null)
-			{
-				inputData = new InputData(null, model.getProcId(), promptMessage, promptScope, promptOptions, promptExpected, false,
-				        PromptDisplayType.RADIO);
-			}
-			else
-			{
-				inputData = new InputData(null, model.getProcId(), promptMessage, promptScope, numericPrompt, false);
-			}
-			model.getController().notifyProcedurePrompt(inputData);
-		}
-		
-		// Send the status notification to the model
-		model.getRuntimeProcessor().notifyProcedureStatus(retrievedStatus);
-		
-		if (retrievedError != null)
-		{
-			model.getController().setError(retrievedError);
-		}
-
-		if (retrievedLine == false)
-		{
-			Logger.error("Unable to retrieve current line information", Level.PROC, this);
-			result.message = "could not gather line information from ASRUN";
-			result.status = AsRunProcessing.FAILED;
-		}
-		
-		Logger.info("Finished execution replay on " + model.getProcId() + ", processed " + result.processedLines + " lines, result " + result.status, Level.PROC, this);
 	}
 
 	/***************************************************************************

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -54,7 +54,7 @@ package com.astra.ses.spell.gui.core.model.files;
  ******************************************************************************/
 public enum AsRunColumns
 {
-	TIMESTAMP("Timestamp", 15), TYPE("Type", 7), SUBTYPE("Subtype", 8), STACK_POSITION(
+	TIMESTAMP("Timestamp", 15), SEQUENCE("Seq", 5), TYPE("Type", 7), SUBTYPE("Subtype", 8), STACK_POSITION(
 	        "Stack position", 20), DATA_A("Data A", 20), DATA_B("Data B", 6), DATA_C(
 	        "Data C", 6), DATA_D("Data D", 6), COMMENTS("Comments", 12);
 
@@ -89,6 +89,9 @@ public enum AsRunColumns
 		{
 			switch (this)
 			{
+			case SEQUENCE:
+				result = Long.toString(line.getSequence());
+				break;
 			case TIMESTAMP:
 				result = line.getTimestamp();
 				break;

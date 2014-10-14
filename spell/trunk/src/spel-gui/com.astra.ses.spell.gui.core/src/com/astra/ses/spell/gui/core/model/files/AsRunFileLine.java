@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,13 +53,15 @@ import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.notification.NotificationData;
 import com.astra.ses.spell.gui.core.model.notification.StackNotification;
 import com.astra.ses.spell.gui.core.model.notification.StatusNotification;
+import com.astra.ses.spell.gui.core.model.notification.UserActionNotification;
+import com.astra.ses.spell.gui.core.model.notification.UserActionNotification.UserActionStatus;
 import com.astra.ses.spell.gui.core.model.types.AsRunType;
 import com.astra.ses.spell.gui.core.model.types.DisplayType;
 import com.astra.ses.spell.gui.core.model.types.ExecutionMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.ItemType;
 import com.astra.ses.spell.gui.core.model.types.Scope;
 import com.astra.ses.spell.gui.core.model.types.Severity;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * Representation of an AsRun file line
@@ -90,6 +92,7 @@ public class AsRunFileLine extends BasicServerFileLine
 		{
 			m_type = AsRunType.valueOf(getElement(AsRunColumns.TYPE.ordinal()));
 			m_timestamp = getElement(AsRunColumns.TIMESTAMP.ordinal());
+			m_sequence = Long.parseLong(getElement(AsRunColumns.SEQUENCE.ordinal()));
 			m_stack = getElement(AsRunColumns.STACK_POSITION.ordinal());
 			m_subType = getElement(AsRunColumns.SUBTYPE.ordinal());
 			m_dataA = getElement(AsRunColumns.DATA_A.ordinal());
@@ -97,15 +100,6 @@ public class AsRunFileLine extends BasicServerFileLine
 			m_dataC = getElement(AsRunColumns.DATA_C.ordinal());
 			m_dataD = getElement(AsRunColumns.DATA_D.ordinal());
 			m_comment = getElement(AsRunColumns.COMMENTS.ordinal());
-			if (m_type == AsRunType.CALL || m_type == AsRunType.LINE
-			        || m_type == AsRunType.RETURN)
-			{
-				m_sequence = Long.parseLong(m_dataA);
-			}
-			else
-			{
-				m_sequence = 0;
-			}
 		}
 		catch (Exception ex)
 		{
@@ -113,8 +107,7 @@ public class AsRunFileLine extends BasicServerFileLine
 			System.err.println("[" + src + "]");
 			ex.printStackTrace();
 			m_type = AsRunType.UNKNOWN;
-		}
-		;
+		};
 	}
 
 	/***********************************************************************
@@ -245,15 +238,11 @@ public class AsRunFileLine extends BasicServerFileLine
 			{
 				sev = Severity.valueOf(getSubType());
 			}
-			catch (Exception ex)
-			{
-				;
-			}
-			;
+			catch (Exception ex){;};
 			String msg = getDataA();
 			msg = msg.replace("%C%", "\n");
 			Scope scope = Scope.fromCode(getDataB());
-			data = new DisplayData(m_procId, getDataA(), dtype, sev, scope);
+			data = new DisplayData(m_procId, msg, dtype, sev, scope);
 			break;
 		}
 		case STAGE:
@@ -279,18 +268,49 @@ public class AsRunFileLine extends BasicServerFileLine
 		{
 			String msg = getDataA();
 			msg = msg.replace("%C%", "\n");
-			msg = "REQUIRED USER INPUT\n" + msg;
 			data = new DisplayData(m_procId, msg, DisplayType.DISPLAY,
-			        Severity.PROMPT, Scope.OTHER);
+			        Severity.PROMPT, Scope.PROMPT);
 			break;
 		}
 		case ANSWER:
 		{
 			String msg = getDataA();
 			msg = msg.replace("%C%", "\n");
-			msg = "ANSWER: " + msg;
+			msg = "Answer: '" + msg + "'";
 			data = new DisplayData(m_procId, msg, DisplayType.DISPLAY,
-			        Severity.PROMPT, Scope.OTHER);
+			        Severity.PROMPT, Scope.PROMPT);
+			break;
+		}
+		case UACTION:
+		{
+			UserActionStatus st = UserActionStatus.valueOf(getSubType());
+			switch(st)
+			{
+			case DISABLED:
+			case DISMISSED:
+				data = new UserActionNotification(st, m_procId);
+				break;
+			case ENABLED:
+				String action = null;
+				Severity sev = Severity.INFO;
+				if (getDataA() != null && !getDataA().trim().isEmpty())
+				{
+					action = getDataA();
+				}
+				if (getDataB() != null && !getDataB().trim().isEmpty())
+				{
+					sev = Severity.valueOf(getDataB());
+				}
+				if (action != null)
+				{
+					data = new UserActionNotification(st, m_procId, action, sev);
+				}
+				else
+				{
+					data = new UserActionNotification(st, m_procId);
+				}
+				break;
+			}
 			break;
 		}
 		case COMMAND:

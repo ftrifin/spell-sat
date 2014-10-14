@@ -6,7 +6,7 @@
 //
 // DATE      : Sep 22, 2010
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,6 +58,7 @@ import org.eclipse.swt.widgets.Display;
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineNode;
 import com.astra.ses.spell.gui.procs.interfaces.listeners.IExecutionListener;
 import com.astra.ses.spell.gui.procs.interfaces.model.ICodeLine;
+import com.astra.ses.spell.gui.procs.interfaces.model.ICodeModel;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 /**************************************************************************
@@ -85,7 +86,7 @@ public class OutlineContentProvider implements IStructuredContentProvider, ITree
 			if (oldInput == null)
 			{
 				m_model.getExecutionManager().addListener(this);
-				onCodeChanged();
+				onCodeChanged(null);
 			}
 		}
 	}
@@ -133,7 +134,7 @@ public class OutlineContentProvider implements IStructuredContentProvider, ITree
 	}
 
 	@Override
-	public void onCodeChanged()
+	public void onCodeChanged( ICodeModel model )
 	{
 		// Force the recreation of the tree contents
 		Display.getDefault().syncExec(new Runnable()
@@ -146,17 +147,14 @@ public class OutlineContentProvider implements IStructuredContentProvider, ITree
 	}
 
 	@Override
-	public void onLineChanged( ICodeLine line )
-	{
-	}
+	public void onLineChanged( ICodeLine line ) {}
 
 	@Override
-    public void onItemsChanged( List<ICodeLine> lines )
-    {
-    }
+	public void onLinesChanged( List<ICodeLine> lines ) {}
 
 	@Override
-    public void onProcessingDelayChanged(long delay)
-    {
-    }
+    public void onItemsChanged( List<ICodeLine> lines ) {}
+
+	@Override
+    public void onProcessingDelayChanged(long delay) {}
 }

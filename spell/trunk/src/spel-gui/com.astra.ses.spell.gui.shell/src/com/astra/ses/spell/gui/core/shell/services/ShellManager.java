@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,9 +53,9 @@ import java.util.Vector;
 
 import com.astra.ses.spell.gui.core.comm.commands.Command;
 import com.astra.ses.spell.gui.core.exceptions.CommandFailed;
-import com.astra.ses.spell.gui.core.interfaces.IBaseInterface;
-import com.astra.ses.spell.gui.core.interfaces.IShellListener;
 import com.astra.ses.spell.gui.core.interfaces.IShellManager;
+import com.astra.ses.spell.gui.core.interfaces.listeners.IBaseListener;
+import com.astra.ses.spell.gui.core.interfaces.listeners.IShellListener;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.model.types.Severity;
 import com.astra.ses.spell.gui.core.shell.commands.ShellCommands;
@@ -65,7 +65,7 @@ import com.astra.ses.spell.gui.core.utils.Logger;
  * @brief Manages a SPELL shell
  * @date 23/11/07
  ******************************************************************************/
-public class ShellManager implements IShellManager, IBaseInterface
+public class ShellManager implements IShellManager, IBaseListener
 {
 	// =========================================================================
 	// # STATIC DATA MEMBERS

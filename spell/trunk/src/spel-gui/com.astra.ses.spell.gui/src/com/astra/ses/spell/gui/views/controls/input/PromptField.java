@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -71,7 +71,7 @@ import com.astra.ses.spell.gui.core.model.types.ItemStatus;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.FontKey;
 import com.astra.ses.spell.gui.preferences.keys.GuiColorKey;
-import com.astra.ses.spell.gui.views.controls.actions.GuiExecutorCommand;
+import com.astra.ses.spell.gui.types.GuiExecutorCommand;
 
 /*******************************************************************************
  * Custom implementation of a prompt field. This control parses the input to
@@ -271,6 +271,7 @@ public class PromptField implements KeyListener
 	{
 		m_contents.setBackground(s_cfg.getGuiColor(GuiColorKey.CONSOLE_BG));
 		m_contents.setForeground(s_cfg.getGuiColor(GuiColorKey.CONSOLE_FG));
+		m_contents.update();
 	}
 
 	/***************************************************************************
@@ -281,11 +282,6 @@ public class PromptField implements KeyListener
 	 **************************************************************************/
 	public void setValue(String value)
 	{
-		String suffix = PROMPT_SYMBOL;
-		if (!m_hintStr.equals(""))
-		{
-			suffix = "(" + m_hintStr + ")" + suffix;
-		}
 		m_contents.setText( m_promptRest + value);
 		m_contents.setSelection(m_contents.getText().length());
 	}
@@ -310,7 +306,22 @@ public class PromptField implements KeyListener
 	 **************************************************************************/
 	public void setHint(String hint)
 	{
+		String suffix = PROMPT_SYMBOL;
 		m_hintStr = hint;
+		if (!m_hintStr.isEmpty())
+		{
+			// If the hint is too long, don't use it but put it as tooltip
+			if (m_hintStr.length()>15)
+			{
+				m_contents.setToolTipText("Possible inputs: " + m_hintStr);
+				m_hintStr = "";
+			}
+			else
+			{
+				suffix = " (" + m_hintStr + ")" + suffix;
+			}
+		}
+		m_promptRest = m_promptStr + suffix;
 	}
 
 	/***************************************************************************
@@ -323,19 +334,6 @@ public class PromptField implements KeyListener
 			m_hintStr = "";
 			reset();
 		}
-	}
-
-	/***************************************************************************
-	 * Set the prompt text
-	 * 
-	 * @param prompt
-	 *            The prompt text
-	 **************************************************************************/
-	public void setPrompt(String prompt)
-	{
-		String value = getValue();
-		m_promptStr = prompt;
-		setValue(value);
 	}
 
 	/***************************************************************************

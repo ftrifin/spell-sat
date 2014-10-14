@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,6 +59,7 @@ import org.eclipse.ui.part.PageBookView;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.exceptions.NoSuchViewException;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IViewManager;
 
@@ -69,9 +70,9 @@ import com.astra.ses.spell.gui.services.IViewManager;
 public abstract class ProcedurePageView extends PageBookView
 {
 	/** Holds the default empty string */
-	private String	m_defaultMsg;
+	private String m_defaultMsg;
 	/** Holds the default title */
-	private String	m_defaultTitle;
+	private String m_defaultTitle;
 
 	/***************************************************************************
 	 * Constructor.
@@ -102,7 +103,7 @@ public abstract class ProcedurePageView extends PageBookView
 	protected PageRec doCreatePage(IWorkbenchPart part)
 	{
 		// Get the view
-		ProcedureView view = (ProcedureView) part;
+		IProcedureView view = (IProcedureView) part;
 		// Create the page
 		Page page = createMyPage(view.getProcId(), view.getProcName());
 		initPage(page);
@@ -120,8 +121,7 @@ public abstract class ProcedurePageView extends PageBookView
 	@Override
 	protected IWorkbenchPart getBootstrapPart()
 	{
-		IWorkbenchPage page = PlatformUI.getWorkbench()
-		        .getActiveWorkbenchWindow().getActivePage();
+		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 		IWorkbenchPart result = null;
 		if (page != null)
 		{
@@ -133,14 +133,13 @@ public abstract class ProcedurePageView extends PageBookView
 			else
 			{
 				IRuntimeSettings mgr = (IRuntimeSettings) ServiceManager.get(IRuntimeSettings.class);
-				String procId = (String) mgr
-				        .getRuntimeProperty(IRuntimeSettings.RuntimeProperty.ID_PROCEDURE_SELECTION);
+				String procId = (String) mgr.getRuntimeProperty(IRuntimeSettings.RuntimeProperty.ID_PROCEDURE_SELECTION);
 				if ((procId != null) && (!procId.isEmpty()))
 				{
 					try
 					{
 						IViewManager vmgr = (IViewManager) ServiceManager.get(IViewManager.class);
-						result = vmgr.getProcView(procId);
+						result = (IWorkbenchPart) vmgr.getProcedureView(procId);
 					}
 					catch (NoSuchViewException ex)
 					{
@@ -155,7 +154,8 @@ public abstract class ProcedurePageView extends PageBookView
 	@Override
 	protected boolean isImportant(IWorkbenchPart part)
 	{
-		if (part == null) return false;
+		if (part == null)
+			return false;
 		boolean important = part.getClass().equals(ProcedureView.class);
 		return (important);
 	}
@@ -168,7 +168,7 @@ public abstract class ProcedurePageView extends PageBookView
 		String partName = m_defaultTitle;
 		if (!pageRec.page.equals(getDefaultPage()))
 		{
-			ProcedureView view = (ProcedureView) pageRec.part;
+			IProcedureView view = (IProcedureView) pageRec.part;
 			partName += " - " + view.getProcName();
 		}
 		setPartName(partName);

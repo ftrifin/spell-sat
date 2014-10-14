@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL driver manager wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -85,8 +85,10 @@ public: //--------------------------------------------------------------------
 		/** Setup (load) the SPELL driver.
 		 *
 		 * \param ctxName IN: the name of the current context.
+		 * \param interfaces IN: the name of the interfaces to be activated.
+		 *    If empty, the driver choses the interfaces based on configuration.
 		**////////////////////////////////////////////////////////////////////
-		void setup( std::string ctxName );
+		void setup( const std::string& ctxName, const std::string& interfaces = "" );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Cleanup (unload) the SPELL driver.
@@ -95,6 +97,11 @@ public: //--------------------------------------------------------------------
 		 *  driver cleanups.
 		**////////////////////////////////////////////////////////////////////
 		void cleanup( bool shutdown );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Callback for command processing
+		**////////////////////////////////////////////////////////////////////
+		void onCommand( const std::string& commandI );
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

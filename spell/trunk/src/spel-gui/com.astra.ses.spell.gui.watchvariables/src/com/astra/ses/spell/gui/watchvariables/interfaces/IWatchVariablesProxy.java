@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -46,10 +46,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.watchvariables.interfaces;
 
+import java.util.Map;
+
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.astra.ses.spell.gui.watchvariables.notification.VariableData;
-import com.astra.ses.spell.gui.watchvariables.notification.WhichVariables;
 
 
 /*******************************************************************************
@@ -62,17 +63,15 @@ public interface IWatchVariablesProxy
 	
 	public void cleanup();
 	
-	public VariableData[] retrieveVariables(String procId, WhichVariables whichOnes, IProgressMonitor monitor ) throws Exception;
+	public boolean isEnabled( String procId );
 
-	public VariableData registerVariableWatch(String procId, String varName, boolean global) throws Exception;
+	public void setEnabled( String procId, boolean enable );
 
-	public void unregisterVariableWatch(String procId, String varName, boolean global) throws Exception;
-
-	public void watchNothing(String procId) throws Exception;
+	public Map<String,VariableData> retrieveVariables(String procId, IProgressMonitor monitor ) throws Exception;
 
 	public void changeVariable(String procId, String varName, String valueExpression, boolean isGlobal) throws Exception;
 	
-	public void addVariableWatcher( String procId, IVariableWatcher watcher );
+	public void addListener( String procId, IVariableListener listener );
 	
-	public void removeVariableWatcher( String procId, IVariableWatcher watcher );
+	public void removeListener( String procId, IVariableListener listener );
 }

@@ -5,7 +5,7 @@
 // DESCRIPTION: Processing code for client requests
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -89,15 +89,6 @@ protected: //-----------------------------------------------------------------
     	void processMessageForChild( const SPELLipcMessage& msg );
 
 		//////////////////////////////////////////////////////////////////////
-		/** Process a notification regarding a child procedure.
-		 *
-		 * \param msg IN: IPC message to process.
-		 * \param response INOUT: IPC response to complete.
-		 *
-		**////////////////////////////////////////////////////////////////////
-    	void processNotificationForChild( const SPELLipcMessage& msg, SPELLipcMessage& response );
-
-		//////////////////////////////////////////////////////////////////////
 		/** Process a request to obtain the current configuration.
 		 *
 		 * \param msg IN: IPC request.
@@ -152,33 +143,6 @@ protected: //-----------------------------------------------------------------
     	void processGetVariables( const SPELLipcMessage& msg, SPELLipcMessage& response );
 
 		//////////////////////////////////////////////////////////////////////
-		/** Process a request to watch a variable.
-		 *
-		 * \param msg IN: IPC request.
-		 * \param response INOUT: IPC response to complete.
-		 *
-		**////////////////////////////////////////////////////////////////////
-    	void processVariableWatch( const SPELLipcMessage& msg, SPELLipcMessage& response );
-
-		//////////////////////////////////////////////////////////////////////
-		/** Process a request stop watching a variable.
-		 *
-		 * \param msg IN: IPC request.
-		 * \param response INOUT: IPC response to complete.
-		 *
-		**////////////////////////////////////////////////////////////////////
-    	void processVariableNoWatch( const SPELLipcMessage& msg, SPELLipcMessage& response );
-
-		//////////////////////////////////////////////////////////////////////
-		/** Process a request to stop watching all variables.
-		 *
-		 * \param msg IN: IPC request.
-		 * \param response INOUT: IPC response to complete.
-		 *
-		**////////////////////////////////////////////////////////////////////
-    	void processWatchNothing( const SPELLipcMessage& msg, SPELLipcMessage& response );
-
-		//////////////////////////////////////////////////////////////////////
 		/** Process a request to change a variable value
 		 *
 		 * \param msg IN: IPC request.
@@ -188,13 +152,13 @@ protected: //-----------------------------------------------------------------
     	void processChangeVariable( const SPELLipcMessage& msg, SPELLipcMessage& response );
 
 		//////////////////////////////////////////////////////////////////////
-		/** Process a request to save interpreter state
+		/** Process a request to check if variable analysis is enabled
 		 *
 		 * \param msg IN: IPC request.
 		 * \param response INOUT: IPC response to complete.
 		 *
 		**////////////////////////////////////////////////////////////////////
-    	void processSaveState( const SPELLipcMessage& msg, SPELLipcMessage& response );
+    	void processCheckVariablesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Process a request to get global dictionary contents
@@ -222,6 +186,15 @@ private: //-----------------------------------------------------------------
     // STATIC ////////////////////////////////////////////////////////////////
     // LIFECYCLE /////////////////////////////////////////////////////////////
     // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if an object is a data container
+		 *
+		 * \param dict IN: Python object
+		 *
+		**////////////////////////////////////////////////////////////////////
+		bool isDataContainer(PyObject* dict);
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
     	std::vector<std::string> m_valueChunks;

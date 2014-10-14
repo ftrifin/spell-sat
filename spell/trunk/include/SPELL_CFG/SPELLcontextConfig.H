@@ -5,7 +5,7 @@
 // DESCRIPTION: Wrapper for context configuration
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -75,6 +75,10 @@ public: //--------------------------------------------------------------------
 		~SPELLcontextConfig();
 
     // STATIC ////////////////////////////////////////////////////////////////
+		static const std::string ExecutorProgram;
+		static const std::string ExecutorStartTimeout;
+		static const std::string ExecutorLoginTimeout;
+		static const std::string UseDriverTime;
     // METHODS ///////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////
@@ -173,15 +177,6 @@ public: //--------------------------------------------------------------------
 		std::string getExecutorParameter( const std::string& key ) const;
 
 		//////////////////////////////////////////////////////////////////////
-		/** Obtain an ISA configuration parameter.
-		 *
-		 * \param key IN: the name of the configuration parameter.
-		 *
-		 * \returns The value of the configuration parameter.
-		**////////////////////////////////////////////////////////////////////
-		std::string getISAParameter( const std::string& key ) const;
-
-		//////////////////////////////////////////////////////////////////////
 		/** Obtain the path for a given database location
 		 *
 		 * \param locationName IN: name of the database location
@@ -269,11 +264,6 @@ private: //-------------------------------------------------------------------
 		void loadExecutorParameters();
 
 		//////////////////////////////////////////////////////////////////////
-		/** Load executor parameters
-		**////////////////////////////////////////////////////////////////////
-		void loadISAParameters();
-
-		//////////////////////////////////////////////////////////////////////
 		/** Load driver parameters
 		**////////////////////////////////////////////////////////////////////
 		void loadDriverParameters();
@@ -308,8 +298,6 @@ private: //-------------------------------------------------------------------
 		std::string m_inputDir;
 		/** Holds the executor config  */
 		Properties m_executorConfig;
-		/** Holds the ISA config  */
-		Properties m_isaConfig;
 		/** Holds the driver config  */
 		Properties m_driverConfig;
 		/** Holds the XML reader */

@@ -6,7 +6,7 @@ PACKAGE: spell.lang.helpers.tchelper
 
 PROJECT: SPELL
 
- Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.a.r.l.
+ Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 
  This file is part of SPELL.
 
@@ -270,15 +270,17 @@ class Send_Helper(WrapperHelper):
         # 5. Parse command arguments
         self._parseCommandArguments()
         
-        # Notify send
-        if self._isSequence:
-            self._write("Sending sequence " +  repr(self._cmdName))
-        elif self._isGroup:
-            self._write("Sending group of " + str(len(self._cmdDef)) + " element(s)")
-            for name in self._cmdName:
-                self._write("    - " + repr(name))
-        else:
-            self._write("Sending command " +  repr(self._cmdName))
+        # Some text messages, not needed if Confirm is activated as the confirmation
+        # mechanism already displays the command
+        if (not self.hasConfig(Confirm)) or (self.getConfig(Confirm)!=True):
+            if self._isSequence:
+                self._write("Sending sequence " +  repr(self._cmdName))
+            elif self._isGroup:
+                self._write("Sending group of " + str(len(self._cmdDef)) + " element(s)")
+                for name in self._cmdName:
+                    self._write("    - " + repr(name))
+            else:
+                self._write("Sending command " +  repr(self._cmdName))
 
         #-----------------------------------------------------------------------
         # Parse the telemetry information
@@ -297,23 +299,45 @@ class Send_Helper(WrapperHelper):
         self.__doAdjustLimitsP = self.__doAdjustLimits
         self.__canAdjustLimits = self.__doAdjustLimits
                  
+        # Store information for possible failures
+        self.setFailureInfo("TM", self._cmdDef)
+                 
     #==========================================================================
     def _buildCommandDescription(self):
-        msg = ""     
+        msg = "Please confirm execution of the following "
         if self._isGroup:
-            msg = "Command group:"
+            msg += "command group:"
             for cmd in self._cmdDef:
-                msg += "\n     - " + cmd.name() 
-                if (cmd.desc().strip() != ""):
-                    msg += ": " + cmd.desc()
+                msg += "\n    Command: " + cmd.name() 
+                if (cmd.desc().strip() != ""): msg += " ('" + cmd.desc() + "')"
+                if len(cmd._getParams())>0:
+                    msg += "\n    Arguments:"
+                    for param in cmd._getParams():
+                        msg += "\n         - " + repr(param.name) + " = " + str(param.value.get()) + " " + str(param.value.units())
+                    
         elif self._isSequence:
-            msg = "Sequence " + self._cmdDef.name()
-            if (self._cmdDef.desc().strip() != ""):
-                msg += ": " + self._cmdDef.desc()
+            msg += "sequence: " + self._cmdDef.name()
+            if (self._cmdDef.desc().strip() != ""): msg += " ('" + self._cmdDef.desc() + "')"
+
+            if len(self._cmdDef.getElements())>0:
+                msg += "\n    Elements:"
+                for element in self._cmdDef.getElements():
+                    msg += "\n         - " + repr(element)
+
+            if len(self._cmdDef._getParams())>0:
+                msg += "\n    Arguments:"
+                for param in self._cmdDef._getParams():
+                    msg += "\n         - " + repr(param.name) + " = " + str(param.value.get()) + " " + str(param.value.units())
+                    
         else:
-            msg = "Command " + self._cmdDef.name()
-            if (self._cmdDef.desc().strip() != ""):
-                msg += ": " + self._cmdDef.desc()
+            msg += "command: " + self._cmdDef.name()
+            
+            if (self._cmdDef.desc().strip() != ""): msg += " ('" + self._cmdDef.desc() + "')"
+            
+            if len(self._cmdDef._getParams())>0:
+                msg += "\n    Arguments:"
+                for param in self._cmdDef._getParams():
+                    msg += "\n         - " + repr(param.name) + " = " + str(param.value.get()) + " " + str(param.value.units())
         return msg
                             
     #===========================================================================
@@ -331,8 +355,7 @@ class Send_Helper(WrapperHelper):
         
         if confirm:
             self.__section = 'CONFIRM'
-            msg = "Please confirm execution of command(s):\n  "
-            msg += self._buildCommandDescription()
+            msg = self._buildCommandDescription()
             if not self._prompt(msg, [], {Type:OK_CANCEL}):
                 return [ False, False, NOTIF_STATUS_CL, "Cancelled by user" ]
 
@@ -348,6 +371,9 @@ class Send_Helper(WrapperHelper):
             self._setActionString( ACTION_REPEAT ,  "Retry disabling limits")
             self._setActionString( ACTION_SKIP   ,  "Skip limits adjustment and command injection. Proceed with telemetry verification")
             self._setActionString( ACTION_CANCEL ,  "Skip the whole Send() operation and return failure (False)")
+            
+            # Store information for possible failures
+            self.setFailureInfo("TM", self.__verifyCondition)
             
             # We need to enlarge the limit range to the maximum to
             # avoid alarms (analog parameters) or to allow any
@@ -403,11 +429,21 @@ class Send_Helper(WrapperHelper):
 
         if self.__doSendCommand:
             self.__section = 'TC'
+            # Store information for possible failures
+            self.setFailureInfo("TC", self._cmdDef)
+
             # We do not allow recheck or repeat yet, only resend
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~REPEAT))
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RECHECK))
+            
             # Adapt the action messages
-            self._setActionString( ACTION_RESEND ,  "Send the command(s) again")
+            if self._isGroup:
+                self._setActionString( ACTION_RESEND ,  "Send the whole command group again")
+            elif self._isSequence:
+                self._setActionString( ACTION_RESEND ,  "Send the command sequence again")
+            else:
+                self._setActionString( ACTION_RESEND ,  "Send the command again")
+                
             if self.__verifyCondition:
                 self._setActionString( ACTION_SKIP   ,  "Skip the command injection. Proceed with telemetry verification")
             else:
@@ -419,10 +455,6 @@ class Send_Helper(WrapperHelper):
                 tcIsSuccess = REGISTRY['TC'].send(self._cmdDef, config = self.getConfig() )
                 
             except DriverException,ex:
-                if type(self._cmdDef)==list:
-                    self._notifyValue( "GROUP", "", NOTIF_STATUS_FL, "Failed: " + str(ex))
-                else:
-                    self._notifyValue( self._cmdDef.name() , "", NOTIF_STATUS_FL, "Failed: " + str(ex))
                 raise ex
 
             if tcIsSuccess:
@@ -442,6 +474,9 @@ class Send_Helper(WrapperHelper):
         # If there are verification sets, verify them
         if self.__doCheckTelemetry and self.__verifyCondition and tcIsSuccess:
             self.__section = 'TM'
+            
+            # Store information for possible failures
+            self.setFailureInfo("TM", self.__verifyCondition)
 
             # Adapt the action messages
             self._setActionString( ACTION_RECHECK,  "Repeat the telemetry verification")
@@ -459,7 +494,7 @@ class Send_Helper(WrapperHelper):
             # We dont allow repeat here but allow recheck at least
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~REPEAT))
 
-           # Adapt the action messages
+            # Adapt the action messages
             self._setActionString( ACTION_RECHECK,  "Repeat the telemetry verification")
             self._setActionString( ACTION_SKIP   ,  "Skip the telemetry verification and return success (True)")
             self._setActionString( ACTION_CANCEL ,  "Skip the telemetry verification and return failure (False)")
@@ -480,6 +515,10 @@ class Send_Helper(WrapperHelper):
         #-----------------------------------------------------------------------
         if tmIsSuccess and self.__canAdjustLimits and self.__doAdjustLimits:
             self.__section = "LIM2"
+            
+            # Store information for possible failures
+            self.setFailureInfo("TM", self.__verifyCondition)
+
             # We dont allow recheck/resend for this, only repeat if the user wants
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RESEND))
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RECHECK))
@@ -692,6 +731,8 @@ class BuildTC_Helper(WrapperHelper):
     def _doPreOperation(self, *args, **kargs ):
         self._obtainCommandName(*args,**kargs)
         self._obtainCommandArguments(*args,**kargs)
+        # Store information for possible failures
+        self.setFailureInfo("TC", self._tcName)
 
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
@@ -752,6 +793,6 @@ class BuildMemoryLoad_Helper(BuildTC_Helper):
         self._setActionString( ACTION_REPEAT ,  "Repeat the memory load construction")
 
         repeat, tcItem, status, msg = super(BuildMemoryLoad_Helper, self)._doOperation(args,kargs);
-        tcItem._isMemoryLoad = True
+        tcItem.addConfig('MemoryLoad',True)
 
         return [repeat,tcItem,status,msg]

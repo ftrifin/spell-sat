@@ -6,7 +6,7 @@
 //
 // DATE      : 2009-11-23
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -68,79 +68,65 @@ import org.osgi.framework.Bundle;
  *****************************************************************************/
 public class SpellProgrammingLanguage
 {
-	private static SpellProgrammingLanguage	s_instance;
+	private static SpellProgrammingLanguage s_instance;
 	/** Holds the list of available SPELL constants */
-	private ArrayList<String>	            m_constants;
+	private ArrayList<String> m_constants;
 	/** Holds the list of available SPELL functions */
-	private ArrayList<String>	            m_functions;
+	private ArrayList<String> m_functions;
 	/** Holds the list of SPELL critical functions */
-	private ArrayList<String>	            m_criticalFunctions;
+	private ArrayList<String> m_criticalFunctions;
 	/** Holds the list of available SPELL modifiers */
-	private ArrayList<String>	            m_modifiers;
+	private ArrayList<String> m_modifiers;
 
 	/**
 	 * Holds the default list of SPELL functions, applied when the plugin cannot
 	 * obtain them
 	 */
-	private static String[]	s_defaultFunctions	= { "GetTM",
-	        "Display", "Verify", "SendAndVerify", "SendAndVerifyAdjLim",
-	        "Send", "SetGroundParameter", "Prompt", "Abort", "Event", "Step",
-	        "GetResource", "SetResource", "UserLogin", "UserLogout", "DisplayStep",
-	        "CheckUser", "StartTask", "StopTask", "CheckTask", "SetExecDelay",
-	        "StartProc", "LoadDictionary", "WaitFor", "AdjustLimits",
-	        "EnableAlarms", "DisableAlarms", "SetTMparam", "GetTMparam",
-	        "Script", "OpenDisplay", "CloseDisplay", "PrintDisplay", "Goto", 
-	        "Notification" };
+	private static String[] s_defaultFunctions = { "GetTM", "Display", "Verify", "SendAndVerify", "SendAndVerifyAdjLim", "Send",
+	        "SetGroundParameter", "Prompt", "Abort", "Event", "Step", "GetResource", "SetResource", "UserLogin", "UserLogout",
+	        "DisplayStep", "CheckUser", "StartTask", "StopTask", "CheckTask", "SetExecDelay", "StartProc", "LoadDictionary", "WaitFor",
+	        "AdjustLimits", "EnableAlarms", "DisableAlarms", "SetTMparam", "GetTMparam", "Script", "OpenDisplay", "CloseDisplay",
+	        "PrintDisplay", "Goto", "Notification", "OpenFile", "CloseFile", "DeleteFile", "ReadFile", "WriteFile", "ReadDirectory",
+	        "GetLimits", "SetLimits", "IsAlarmed", "GenerateMemoryReport", "CompareMemoryImages", "TMTCLookup", "MemoryLookup",
+	        "EnableRanging", "DisableRanging", "StartRanging", "StartRangingCalibration", "GetBasebandNames",
+	        "GetBasebandConfig", "SetBasebandConfig", "GetAntennaNames", "AbortRanging",
+	        "EnableLimits", "DisableLimits", "OpenWorkspace", "CloseWorkspace" };
 
 	/**
-	 * Holds the default list of SPELL CRITICAL functions, applied when the plugin cannot
-	 * obtain them
+	 * Holds the default list of SPELL CRITICAL functions, applied when the
+	 * plugin cannot obtain them
 	 */
-	private static String[]	s_criticalFunctions	= { "SendAndVerify", 
-		    "SendAndVerifyAdjLim", "Send", "Abort" };
+	private static String[] s_criticalFunctions = { "SendAndVerify", "SendAndVerifyAdjLim", "Send", "Abort" };
 
 	/**
 	 * Holds the default list of SPELL modifiers, applied when the plugin cannot
 	 * obtain them
 	 */
-	private static String[]	s_defaultModifiers	= {
-	        "ValueFormat", "OnFailure", "Wait", "Timeout", "Delay", "TryAll",
-	        "Time", "Retries", "Host", "Tolerance", "Delay", "Type", "Range",
-	        "Severity", "Scope", "OnTrue", "OnFalse", "PromptUser",
-	        "PromptFailure", "Retry", "GiveChoice", "HandleError", "ValueType",
-	        "Radix", "Units", "Strict", "Interval", "Until", "HiYel", "HiRed",
-	        "LoYel", "LoRed", "HiBoth", "LoBoth", "Midpoint", "Limits",
-	        "IgnoreCase", "Block", "Sequence", "Default", "Mode", "Confirm",
-	        "OnSkip", "SendDelay", "eq", "gt", "lt", "neq", "ge", "le", "btw",
-	        "nbw", "Printer", "Format", "Extended" };
+	private static String[] s_defaultModifiers = { "ValueFormat", "OnFailure", "Wait", "Timeout", "Delay", "TryAll", "Time", "Retries",
+	        "Host", "Tolerance", "Delay", "Type", "Range", "Severity", "Scope", "OnTrue", "OnFalse", "PromptUser", "PromptFailure",
+	        "Retry", "GiveChoice", "HandleError", "ValueType", "Radix", "Units", "Strict", "Interval", "Until", "HiYel", "HiRed", "LoYel",
+	        "LoRed", "HiBoth", "LoBoth", "Midpoint", "Limits", "IgnoreCase", "Block", "Sequence", "Default", "Mode", "Confirm", "OnSkip",
+	        "SendDelay", "eq", "gt", "lt", "neq", "ge", "le", "btw", "nbw", "Printer", "Format", "Extended", "Reuse", "Monitor" };
 	/**
 	 * Holds the default list of SPELL constants, applied when the plugin cannot
 	 * obtain them
 	 */
-	private static String[]	s_defaultConstants	= { "YES_NO", "STEP", "PREV_STEP",
-	        "ALPHA", "NUM", "LIST", "YES", "OK_CANCEL", "OK", "CANCEL", "NO",
-	        "YES_NO", "COMBO", "ENG", "RAW", "DEC", "BIN", "OCT", "HEX",
-	        "INFO", "WARNING", "ERROR", "DISPLAY", "LOGVIEW", "DIALOG", "LONG",
-	        "DATETIME", "RELTIME", "STRING", "FLOAT", "BOOLEAN", "ABORT", "SKIP",
-	        "REPEAT", "RECHECK", "RESEND", "NOACTION", "PROMPT", "NOPROMPT",
-	        "ACTION_ABORT", "ACTION_SKIP", "ACTION_REPEAT", "ACTION_RESEND",
-	        "ACTION_CANCEL", "MINUTE", "HOUR", "TODAY", "YESTERDAY", "DAY",
-	        "SECOND", "ITEM_SUCCESS", "ITEM_FAILED", "ITEM_PROGRESS"  };
+	private static String[] s_defaultConstants = { "YES_NO", "STEP", "PREV_STEP", "ALPHA", "NUM", "LIST", "YES", "OK_CANCEL", "OK",
+	        "CANCEL", "NO", "YES_NO", "COMBO", "ENG", "RAW", "DEC", "BIN", "OCT", "HEX", "INFO", "WARNING", "ERROR", "DISPLAY", "LOGVIEW",
+	        "DIALOG", "LONG", "DATETIME", "RELTIME", "STRING", "FLOAT", "BOOLEAN", "ABORT", "SKIP", "REPEAT", "RECHECK", "RESEND",
+	        "NOACTION", "PROMPT", "NOPROMPT", "ACTION_ABORT", "ACTION_SKIP", "ACTION_REPEAT", "ACTION_RESEND", "ACTION_CANCEL", "MINUTE",
+	        "HOUR", "TODAY", "YESTERDAY", "DAY", "SECOND", "ITEM_SUCCESS", "ITEM_FAILED", "ITEM_PROGRESS" };
 	/**
 	 * Holds the default list of SPELL entities, applied when the plugin cannot
 	 * obtain them
 	 */
-	private static String[]	s_defaultEntities	= { "DAY",
-	        "GDB", "SCDB", "ARGS", "PROC", "IVARS", 
-	        "TIME", "HOUR", "MINUTE", "NOW", "SECOND", "TODAY",
-	        "TOMORROW", "YESTERDAY"	                       };
-	
+	private static String[] s_defaultEntities = { "DAY", "GDB", "SCDB", "ARGS", "PROC", "IVARS", "TIME", "HOUR", "MINUTE", "NOW", "SECOND",
+	        "TODAY", "TOMORROW", "YESTERDAY", "File", "Var", "DataContainer" };
+
 	/** Holds the list of python and other keywords */
-	private static String[]	s_defaultKeywords	= { "for",
-	        "if", "elif", "else", "try", "except", "while", "in", "print",
-	        "del", "def", "command", "sequence", "group", "args", "verify",
-	        "config", "True", "False", "import", "type", "level", "and", "or",
-	        "not", "global", "str", "abs", "float", "int", "pass", "assert" };
+	private static String[] s_defaultKeywords = { "for", "if", "elif", "else", "try", "except", "while", "in", "print", "del", "def",
+	        "command", "sequence", "group", "args", "verify", "config", "True", "False", "import", "type", "level", "and", "or", "not",
+	        "global", "str", "abs", "float", "int", "pass", "assert" };
 
 	/**************************************************************************
 	 * Spell languange singleton get() method
@@ -165,7 +151,7 @@ public class SpellProgrammingLanguage
 		m_functions = new ArrayList<String>();
 		m_modifiers = new ArrayList<String>();
 		m_criticalFunctions = new ArrayList<String>();
-		m_criticalFunctions.addAll( Arrays.asList(s_criticalFunctions) );
+		m_criticalFunctions.addAll(Arrays.asList(s_criticalFunctions));
 	}
 
 	/**************************************************************************
@@ -173,10 +159,14 @@ public class SpellProgrammingLanguage
 	 *************************************************************************/
 	public String[] getSpellConstants()
 	{
-		if (m_constants.size() == 0) parseConstants();
+		if (m_constants.size() == 0)
+			parseConstants();
 		// Provide the hardcoded defaults if it was unable to read the constants
 		// from SPELL library
-		if (m_constants.size() == 0) { return s_defaultConstants; }
+		if (m_constants.size() == 0)
+		{
+			return s_defaultConstants;
+		}
 		return m_constants.toArray(new String[0]);
 	}
 
@@ -190,18 +180,15 @@ public class SpellProgrammingLanguage
 		String path = System.getenv("SPELL_HOME");
 		if (path == null)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to read constants file. No SPELL_HOME defined!!!");
+			System.err.println("[LANGUAGE] Unable to read constants file. No SPELL_HOME defined!!!");
 			return;
 		}
 		String sep = System.getProperty("file.separator");
-		path += sep + "spell" + sep + "spell" + sep + "lang" + sep
-		        + "constants.py";
+		path += sep + "spell" + sep + "spell" + sep + "lang" + sep + "constants.py";
 		File constantsFile = new File(path);
 		if (!constantsFile.exists())
 		{
-			System.err.println("[LANGUAGE] " + constantsFile.getAbsolutePath()
-			        + " does not exist. Using default");
+			System.err.println("[LANGUAGE] " + constantsFile.getAbsolutePath() + " does not exist. Using default");
 			Bundle bundle = Activator.getDefault().getBundle();
 			Path filePath = new Path("default_constants");
 			URL url = FileLocator.find(bundle, filePath, Collections.EMPTY_MAP);
@@ -227,10 +214,14 @@ public class SpellProgrammingLanguage
 				if (line != null)
 				{
 					line = line.trim();
-					if (line.isEmpty()) continue;
-					if (line.startsWith("#")) continue;
-					if (!line.contains("=")) continue;
-					if (line.startsWith("=")) continue;
+					if (line.isEmpty())
+						continue;
+					if (line.startsWith("#"))
+						continue;
+					if (!line.contains("="))
+						continue;
+					if (line.startsWith("="))
+						continue;
 					String[] items = line.split(" ");
 					m_constants.add(items[0]);
 				}
@@ -246,8 +237,7 @@ public class SpellProgrammingLanguage
 		}
 		catch (IOException e)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to read constants file: " + e);
+			System.err.println("[LANGUAGE] Unable to read constants file: " + e);
 		}
 	}
 
@@ -256,9 +246,24 @@ public class SpellProgrammingLanguage
 	 *************************************************************************/
 	public String[] getSpellFunctions()
 	{
-		if (m_functions.size() == 0) parseFunctions();
+		if (m_functions.size() == 0)
+		{
+			String standardLanguageFile = System.getenv("SPELL_HOME");
+			if (standardLanguageFile == null)
+			{
+				System.err.println("[LANGUAGE] Unable to read functions file. No SPELL_HOME defined!!!");
+				return m_functions.toArray(new String[0]);
+			}
+			String sep = System.getProperty("file.separator");
+			standardLanguageFile += sep + "spell" + sep + "spell" + sep + "lang" + sep + "functions.py";
+			parseFunctions( standardLanguageFile );
+		}
+		
 		// Provide the hardcoded defaults if there are no items read
-		if (m_functions.size() == 0) { return s_defaultFunctions; }
+		if (m_functions.size() == 0)
+		{
+			return s_defaultFunctions;
+		}
 		/*
 		 * FIXME some functions don't appear in the functions file to avoid
 		 * conflicts, but anyhow they are functions, so they are added here
@@ -271,7 +276,7 @@ public class SpellProgrammingLanguage
 	/**************************************************************************
 	 * Get spell functions
 	 *************************************************************************/
-	public boolean isCriticalFunction( String functionName )
+	public boolean isCriticalFunction(String functionName)
 	{
 		return m_criticalFunctions.contains(functionName);
 	}
@@ -280,24 +285,13 @@ public class SpellProgrammingLanguage
 	 * Parse the SPELL language functions file to get the actual set of
 	 * available constants
 	 *************************************************************************/
-	private void parseFunctions()
+	private void parseFunctions( String path )
 	{
 		m_functions.clear();
-		String path = System.getenv("SPELL_HOME");
-		if (path == null)
-		{
-			System.err
-			        .println("[LANGUAGE] Unable to read functions file. No SPELL_HOME defined!!!");
-			return;
-		}
-		String sep = System.getProperty("file.separator");
-		path += sep + "spell" + sep + "spell" + sep + "lang" + sep
-		        + "functions.py";
 		File functionsFile = new File(path);
 		if (!functionsFile.exists())
 		{
-			System.err.println("[LANGUAGE] " + functionsFile.getAbsolutePath()
-			        + " does not exist. Using default");
+			System.err.println("[LANGUAGE] " + functionsFile.getAbsolutePath() + " does not exist. Using default");
 			Bundle bundle = Activator.getDefault().getBundle();
 			Path filePath = new Path("default_functions");
 			URL url = FileLocator.find(bundle, filePath, Collections.EMPTY_MAP);
@@ -323,13 +317,14 @@ public class SpellProgrammingLanguage
 				if (line != null)
 				{
 					line = line.trim();
-					if (line.isEmpty()) continue;
+					if (line.isEmpty())
+						continue;
 					if (line.startsWith("def"))
 					{
 						String[] items = line.split(" ");
 						String funcName = items[1];
-						if (funcName.endsWith("(")) funcName = funcName
-						        .substring(0, funcName.length() - 1);
+						if (funcName.endsWith("("))
+							funcName = funcName.substring(0, funcName.length() - 1);
 						m_functions.add(funcName);
 					}
 				}
@@ -340,13 +335,11 @@ public class SpellProgrammingLanguage
 		}
 		catch (FileNotFoundException e)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to find functions file: " + e);
+			System.err.println("[LANGUAGE] Unable to find functions file: " + e);
 		}
 		catch (IOException e)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to read functions file: " + e);
+			System.err.println("[LANGUAGE] Unable to read functions file: " + e);
 		}
 	}
 
@@ -355,9 +348,13 @@ public class SpellProgrammingLanguage
 	 *************************************************************************/
 	public String[] getSpellModifiers()
 	{
-		if (m_modifiers.isEmpty()) parseModifiers();
+		if (m_modifiers.isEmpty())
+			parseModifiers();
 		// Provide the hardcoded defaults if there are no items read
-		if (m_modifiers.size() == 0) { return s_defaultModifiers; }
+		if (m_modifiers.size() == 0)
+		{
+			return s_defaultModifiers;
+		}
 		return m_modifiers.toArray(new String[0]);
 	}
 
@@ -370,18 +367,15 @@ public class SpellProgrammingLanguage
 		String path = System.getenv("SPELL_HOME");
 		if (path == null)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to read modifiers file. No SPELL_HOME defined!!!");
+			System.err.println("[LANGUAGE] Unable to read modifiers file. No SPELL_HOME defined!!!");
 			return;
 		}
 		String sep = System.getProperty("file.separator");
-		path += sep + "spell" + sep + "spell" + sep + "lang" + sep
-		        + "modifiers.py";
+		path += sep + "spell" + sep + "spell" + sep + "lang" + sep + "modifiers.py";
 		File modifiersFile = new File(path);
 		if (!modifiersFile.exists())
 		{
-			System.err.println("[LANGUAGE] " + modifiersFile.getAbsolutePath()
-			        + " does not exist. Using default");
+			System.err.println("[LANGUAGE] " + modifiersFile.getAbsolutePath() + " does not exist. Using default");
 			Bundle bundle = Activator.getDefault().getBundle();
 			Path filePath = new Path("default_modifiers");
 			URL url = FileLocator.find(bundle, filePath, Collections.EMPTY_MAP);
@@ -407,10 +401,14 @@ public class SpellProgrammingLanguage
 				if (line != null)
 				{
 					line = line.trim();
-					if (line.isEmpty()) continue;
-					if (line.startsWith("#")) continue;
-					if (!line.contains("=")) continue;
-					if (line.startsWith("=")) continue;
+					if (line.isEmpty())
+						continue;
+					if (line.startsWith("#"))
+						continue;
+					if (!line.contains("="))
+						continue;
+					if (line.startsWith("="))
+						continue;
 					String[] items = line.split(" ");
 					m_modifiers.add(items[0]);
 				}
@@ -421,13 +419,11 @@ public class SpellProgrammingLanguage
 		}
 		catch (FileNotFoundException e)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to find modifiers file: " + e);
+			System.err.println("[LANGUAGE] Unable to find modifiers file: " + e);
 		}
 		catch (IOException e)
 		{
-			System.err
-			        .println("[LANGUAGE] Unable to read modifiers file: " + e);
+			System.err.println("[LANGUAGE] Unable to read modifiers file: " + e);
 		}
 	}
 

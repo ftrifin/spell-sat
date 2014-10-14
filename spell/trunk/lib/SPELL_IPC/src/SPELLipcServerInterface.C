@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the interface for servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -52,7 +52,6 @@ SPELLipcServerInterface::SPELLipcServerInterface( const std::string& name, int k
       m_mailbox(name)
       //m_msgPool(name + "-POOL", 30, 100)
 {
-    m_lastClientKey = 1; // Must start with 1, the key '0' means no key assigned
     m_serverKey = key;
     m_serverPort = port;
 
@@ -140,13 +139,13 @@ void SPELLipcServerInterface::run()
 
 				if (key == 0)
 				{
-					key = m_lastClientKey;
+					key = getFreeClientKey();
 					LOG_INFO(NAME + "New client, assigned key: " + ISTR(key));
-					m_lastClientKey++;
 				}
 				else
 				{
 					LOG_INFO(NAME + "#### Client reconnected, reusing key: " + ISTR(key));
+					m_usedClientKeys.push_back(key);
 				}
 				// Send back the key to the client
 				writeKey(key,clientSocket);
@@ -167,6 +166,43 @@ void SPELLipcServerInterface::run()
     DEBUG(NAME + "Server interface stop");
 
     DEBUG(NAME + "Interface stopped");
+}
+
+//=============================================================================
+// METHOD: SPELLipcServerInterface:getFreeClientKey()
+//=============================================================================
+int SPELLipcServerInterface::getFreeClientKey()
+{
+	if (m_usedClientKeys.empty())
+	{
+		m_usedClientKeys.push_back(1);
+		return 1;
+	}
+	std::vector<int>::const_iterator it;
+	int biggestKey = -1;
+	for(it = m_usedClientKeys.begin(); it != m_usedClientKeys.end(); it++)
+	{
+		if (biggestKey < (*it)) biggestKey = (*it);
+	}
+	int freeKey = -1;
+	for(int index=1; index<biggestKey; index++)
+	{
+		int freeKey = index+1;
+		// If the key not being used already
+		it = std::find(m_usedClientKeys.begin(), m_usedClientKeys.end(), freeKey);
+		if (it == m_usedClientKeys.end())
+		{
+			m_usedClientKeys.push_back(freeKey);
+			break;
+		}
+	}
+	// If we did not find any free key in between
+	if (freeKey == -1)
+	{
+		m_usedClientKeys.push_back(biggestKey+1);
+		freeKey = biggestKey+1;
+	}
+	return freeKey;
 }
 
 //=============================================================================
@@ -214,6 +250,11 @@ void SPELLipcServerInterface::removeClient( int key )
     cit->second->disconnect();
     delete cit->second;
     m_clients.erase(cit);
+    std::vector<int>::iterator kit = std::find(m_usedClientKeys.begin(), m_usedClientKeys.end(), key);
+    if (kit != m_usedClientKeys.end())
+    {
+    	m_usedClientKeys.erase(kit);
+    }
     LOG_INFO(NAME + "Removed client " + ISTR(key));
     DEBUG( NAME + "Remove client OUT" );
 }
@@ -233,6 +274,7 @@ void SPELLipcServerInterface::removeAllClients()
         delete cit->second;
         DEBUG(NAME + "Removing client " + ISTR(cit->first) + " done" );
     }
+    m_usedClientKeys.clear();
     m_clients.clear();
 	DEBUG( NAME + "Remove all clients OUT");
 }

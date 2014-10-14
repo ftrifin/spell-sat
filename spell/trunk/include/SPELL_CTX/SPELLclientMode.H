@@ -5,7 +5,7 @@
 // DESCRIPTION: Client mode definition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -48,6 +48,7 @@ typedef enum SPELLclientMode_
 {
 	CLIENT_MODE_CONTROL,
 	CLIENT_MODE_MONITOR,
+	CLIENT_MODE_BACKGROUND,
 	CLIENT_MODE_UNKNOWN
 }
 SPELLclientMode;

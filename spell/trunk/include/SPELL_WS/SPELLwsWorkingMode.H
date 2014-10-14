@@ -5,7 +5,7 @@
 // DESCRIPTION: Definition of WS working modes
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -51,7 +51,7 @@ typedef enum SPELLwsWorkingMode_
 	MODE_ON_LINE = 0,
 	MODE_ON_STEP,
 	MODE_ON_DEMAND,
-	MODE_ON_HOLD,
+	MODE_DISABLED,
 	MODE_UNINIT
 }
 SPELLwsWorkingMode;

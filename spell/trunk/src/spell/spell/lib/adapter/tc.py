@@ -5,7 +5,7 @@
 ## DESCRIPTION: Telecommand interface
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -269,16 +269,30 @@ class TcInterface(Configurable,Interface):
         if useConfig.has_key(Block) and useConfig.get(Block):
             if type(tcList)!=list:
                 raise DriverException("Expected a command list")
+            
+            # Use copies to ensure that the driver does not modify the 
+            # original items by mistake
+            listCopy = []
+            for item in tcList:
+                listCopy.append( item._copy() )
+
             LOG("Sending commands as block")
-            self._checkCriticalCommands(tcList, useConfig)
+            self._checkCriticalCommands(listCopy, useConfig)
             # Send commands as a block
-            return self._sendBlock( tcList, useConfig )
+            return self._sendBlock( listCopy, useConfig )
         else:
+            
+            # Use copies to ensure that the driver does not modify the 
+            # original items by mistake
+            listCopy = []
+            for item in tcList:
+                listCopy.append( item._copy() )
+
             # Send single command
-            if len(tcList)==1:
-                tcitem = tcList[0]
+            if len(listCopy)==1:
+                tcitem = listCopy[0]
                 LOG("Sending a single command/sequence")
-                self._checkCriticalCommands(tcList, useConfig)
+                self._checkCriticalCommands(listCopy, useConfig)
                 LOG("Sending " + tcitem.name())
                 LOG("Item configuration:\n\n" + repr(tcitem.getConfig()) + "\n")
                 self.__lastStatus = None
@@ -287,8 +301,8 @@ class TcInterface(Configurable,Interface):
             
             # Send list of commands one by one
             else:
-                self._checkCriticalCommands(tcList, useConfig)
-                return self._sendList(tcList, useConfig)
+                self._checkCriticalCommands(listCopy, useConfig)
+                return self._sendList(listCopy, useConfig)
 
     #==========================================================================
     def __buildTcList(self, args):

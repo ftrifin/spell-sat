@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+#  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 #
 # This file is part of SPELL.
 #
@@ -28,7 +28,7 @@
 #==============================================================================
 
 export PATH=$SPELL_COTS/bin:$PATH
-export LD_LIBRARY_PATH=$SPELL_COTS/lib:$SPELL_HOME/lib:$LD_LIBRARY_PATH:/opt/omni/lib
+export LD_LIBRARY_PATH=$SPELL_COTS/lib:$SPELL_HOME/lib:$LD_LIBRARY_PATH
 
 # SPELL user data
 if [[ -z "$SPELL_DATA" ]]
@@ -83,7 +83,7 @@ PYMAJOR=`echo $PYVERSION | cut -d"." -f 2`
 [[ "$PYMAJOR" < "5" ]] && echo "ERROR: python > 2.5.X required for SPELL" && exit 1
 
 # Update python path
-export PYTHONPATH=${PYTHONPATH}:${SPELL_HOME}/spell:${SPELL_HOME}/server:${SPELL_HOME}
+export PYTHONPATH=${PYTHONPATH}:${SPELL_HOME}/spell:${SPELL_HOME}
 export TK_LIBRARY=""
 export TCL_LIBRARY=""
 export PYTHONCASEOK=""

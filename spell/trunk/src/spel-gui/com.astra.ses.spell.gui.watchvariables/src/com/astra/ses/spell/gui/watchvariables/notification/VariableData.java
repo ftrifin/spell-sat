@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -52,42 +52,141 @@ package com.astra.ses.spell.gui.watchvariables.notification;
  ******************************************************************************/
 public class VariableData implements Comparable<VariableData>
 {
+	private String	m_name;
+	private String	m_type;
+	private String	m_value;
+	private boolean	m_isGlobal;
+	private boolean	m_isChanged;
+	private boolean m_isDeleted;
+	private boolean m_isAdded;
+
 	/**************************************************************************
 	 * Constructor.
 	 * 
-	 * @param name
-	 * @param type
-	 * @param value
+	 * @param m_name
+	 * @param m_type
+	 * @param m_value
 	 * @param global
 	 *************************************************************************/
-	public VariableData(String name, String type, String value, boolean global,
-	        boolean registered)
+	public VariableData(String name, String type, String value, boolean global)
 	{
-		this.name = name;
-		this.type = type;
-		this.value = value;
-		this.isGlobal = global;
-		this.isRegistered = registered;
+		this.m_name = name;
+		this.m_type = type;
+		this.m_value = value;
+		this.m_isGlobal = global;
+		this.m_isDeleted = false;
+		this.m_isAdded = false;
+		this.m_isChanged = false;
 	}
 
-	public String	name;
-	public String	type;
-	public String	value;
-	public boolean	isGlobal;
-	public boolean	isRegistered;
-	public boolean	isChanged;
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public VariableData(String name, String type, String value, boolean global, boolean deleted, boolean added )
+	{
+		this.m_name = name;
+		this.m_type = type;
+		this.m_value = value;
+		this.m_isGlobal = global;
+		this.m_isDeleted = deleted;
+		this.m_isAdded = added;
+		this.m_isChanged = false;
+	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void updateFrom( VariableData other )
+	{
+		this.m_name = other.m_name;
+		this.m_type = other.m_type;
+		this.m_value = other.m_value;
+		this.m_isGlobal = other.m_isGlobal;
+		this.m_isDeleted = other.m_isDeleted;
+		this.m_isAdded = other.m_isAdded;
+		this.m_isChanged = other.m_isChanged;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public String getName()
+	{
+		return m_name;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public String getValue()
+	{
+		return m_value;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public String getType()
+	{
+		return m_type;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void setValue( String value )
+	{
+		m_value = value;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public boolean isGlobal()
+	{
+		return m_isGlobal;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public boolean isDeleted()
+	{
+		return m_isDeleted;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public boolean isAdded()
+	{
+		return m_isAdded;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public boolean isChanged()
+	{
+		return m_isChanged;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public String toString()
 	{
-		return "(" + name + " = " + value + ": " + type + ", " + isGlobal
-		        + ", " + isRegistered + ")";
+		return "(" + m_name + " = " + m_value + ": " + m_type + ", " + m_isGlobal + ", " + m_isDeleted + ", " + m_isAdded + ")";
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	@Override
 	public int compareTo(VariableData o)
 	{
 		int result = 1;
-		if ((o.name.equals(name)) && (o.isGlobal == isGlobal))
+		if ((o.m_name.equals(m_name)) && (o.m_isGlobal == m_isGlobal))
 		{
 			result = 0;
 		}

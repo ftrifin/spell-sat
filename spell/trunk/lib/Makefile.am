@@ -28,7 +28,7 @@ SUBDIRS += SPELL_CTX
 endif
 
 if WITH_LISTENER
-SUBDIRS += SPELL_LST  
+SUBDIRS += SPELL_LST 
 endif
 
 endif

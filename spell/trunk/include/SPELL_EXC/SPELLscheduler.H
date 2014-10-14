@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor scheduler.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -87,7 +87,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Starts a prompt status
 		**////////////////////////////////////////////////////////////////////
-		void startPrompt();
+		void startPrompt( const SPELLtime& timeout, bool headless );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Aborts a condition check timer if it was interrupted previously.
@@ -158,6 +158,11 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		bool timerCallback( unsigned long elapsed );
 
+		//////////////////////////////////////////////////////////////////////
+		/** Set the default prompt warning delay
+		**////////////////////////////////////////////////////////////////////
+		void setPromptWarningDelay( unsigned int secs );
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 protected: //-----------------------------------------------------------------
@@ -224,6 +229,11 @@ private: //-------------------------------------------------------------------
 		void notifyTime( bool finished, bool success );
 
 		//////////////////////////////////////////////////////////////////////
+		/** Inject a warning event message
+		**////////////////////////////////////////////////////////////////////
+		void raiseEvent( const std::string& message );
+
+		//////////////////////////////////////////////////////////////////////
 		/** Prepare and start a timer for checks
 		**////////////////////////////////////////////////////////////////////
 		void startTimer();
@@ -249,6 +259,8 @@ private: //-------------------------------------------------------------------
 		SPELLtime                      m_lastNotificationTime;
 		/** Holds the current notification period */
 		SPELLtime                      m_notificationPeriod;
+		/** Holds the default prompt warning delay in seconds */
+		unsigned int                   m_defaultPromptWarningDelay;
 		/** Holds the current notification period index */
 		unsigned int                   m_notificationPeriodIndex;
 		/** True if check is silent */

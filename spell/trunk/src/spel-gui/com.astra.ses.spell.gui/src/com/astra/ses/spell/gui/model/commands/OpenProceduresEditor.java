@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -70,19 +70,17 @@ public class OpenProceduresEditor extends AbstractHandler
 {
 	public static final String	ID	         = "com.astra.ses.spell.gui.commands.OpenProceduresEditor";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private Process	           editorProcess	= null;
+	private String m_arguments = "";
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
+	public OpenProceduresEditor ()
+	{
+	}
 
-	// =========================================================================
-	// # ACCESIBLE METHODS
-	// =========================================================================
+	public void setArguments (String args)
+	{
+		this.m_arguments = args;
+	}
 
 	public CommandResult execute(ExecutionEvent event) throws ExecutionException
 	{
@@ -112,6 +110,7 @@ public class OpenProceduresEditor extends AbstractHandler
 				String editorBinFile = cfg.getProperty(PropertyKey.PROCS_EDITOR);
 				if (editorBinFile != null)
 				{
+					editorBinFile = editorBinFile.replace("%PROCEDURE_FILE%", m_arguments);
 					editorProcess = Runtime.getRuntime().exec(editorBinFile);
 				}
 				else

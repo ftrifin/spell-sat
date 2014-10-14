@@ -5,7 +5,7 @@
 // DESCRIPTION: Utilities for data handling
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,6 +33,7 @@
 #include "SPELL_CTX/SPELLclientMode.H"
 #include "SPELL_CTX/SPELLclientOperation.H"
 #include "SPELL_CTX/SPELLexecutorOperation.H"
+#include "SPELL_CTX/SPELLsharedDataOperation.H"
 #include "SPELL_CTX/SPELLserverFile.H"
 // Project includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutorStatus.H"
@@ -81,7 +82,7 @@ namespace SPELLdataHelper
 	//============================================================================
 	// FUNCTION        :
 	//============================================================================
-	std::string executorOperationToString( const SPELLexecutorOperation& operation );
+	std::string sharedDataOperationToString( const SPELLsharedDataOperation& operation );
 
 	//============================================================================
 	// FUNCTION        :

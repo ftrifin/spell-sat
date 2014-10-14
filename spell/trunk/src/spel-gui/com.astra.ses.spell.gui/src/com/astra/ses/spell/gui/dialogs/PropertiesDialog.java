@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -84,21 +84,8 @@ import com.astra.ses.spell.gui.preferences.keys.FontKey;
  ******************************************************************************/
 public class PropertiesDialog extends TitleAreaDialog
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	public static final String ID = "com.astra.ses.spell.gui.dialogs.PropertiesDialog";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the dialog image icon */
 	private Image m_image;
 	/** Holds the procedure model */
@@ -114,12 +101,7 @@ public class PropertiesDialog extends TitleAreaDialog
 	/** Holds the table viewer */
 	private TableViewer m_historyViewer;
 
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 
-	// =========================================================================
-	// # INNER CLASSES
-	// =========================================================================
 	/** Table viewer content provider for the history table */
 	class HistoryContentProvider implements IStructuredContentProvider
 	{
@@ -139,10 +121,6 @@ public class PropertiesDialog extends TitleAreaDialog
 			return m_history.toArray();
 		}
 	}
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -315,7 +293,7 @@ public class PropertiesDialog extends TitleAreaDialog
 		String[] tokens = history.split("\n");
 		for (String line : tokens)
 		{
-			m_history.add(line.trim());
+			m_history.add(line);
 		}
 	}
 

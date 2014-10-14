@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -115,7 +115,7 @@ public class ConditionDialog extends TitleAreaDialog implements
 	private Button	                      m_tmOption;
 	// /** Holds the custom condition radio */
 	// private Button m_customOption;
-	/** Holds the stacked container for the condition definition widgets */
+	/** Holds the stacked dictionary for the condition definition widgets */
 	private Composite	                  m_stackContainer;
 	/** Holds the stack layout */
 	private StackLayout	                  m_stack;

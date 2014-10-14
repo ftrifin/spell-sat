@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,17 +53,19 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import com.astra.ses.spell.gui.core.interfaces.ICoreContextOperationListener;
+import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
+import com.astra.ses.spell.gui.core.interfaces.listeners.ICoreContextOperationListener;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.server.ContextInfo;
 import com.astra.ses.spell.gui.core.model.types.Level;
 import com.astra.ses.spell.gui.core.utils.Logger;
-import com.astra.ses.spell.gui.extensions.ServerBridge;
+import com.astra.ses.spell.gui.extensions.GuiNotifications;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.model.jobs.BuildProcListJob;
 import com.astra.ses.spell.gui.model.nav.content.BaseProcedureSystemElement;
 import com.astra.ses.spell.gui.model.nav.content.CategoryNode;
 import com.astra.ses.spell.gui.model.nav.content.ProcedureNode;
+import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.views.NavigationView;
 
 /******************************************************************************
@@ -80,6 +82,8 @@ public class ProceduresStructureManager implements ICoreContextOperationListener
 	private Map<String, String>	m_procedureIDs;
 	/** ViewPart */
 	private NavigationView	    m_view;
+	/** Reference to procedure manager */
+	private IProcedureManager   m_pMgr;
 
 	/**************************************************************************
 	 * Constructor
@@ -87,7 +91,8 @@ public class ProceduresStructureManager implements ICoreContextOperationListener
 	public ProceduresStructureManager()
 	{
 		m_root = new CategoryNode("Root");
-		ServerBridge.get().addContextListener(this);
+		GuiNotifications.get().addListener(this, ICoreContextOperationListener.class);
+		m_pMgr = (IProcedureManager) ServiceManager.get(IProcedureManager.class);
 	}
 
 	/***************************************************************************
@@ -188,7 +193,7 @@ public class ProceduresStructureManager implements ICoreContextOperationListener
 	 * @param connectionLost
 	 *            True if the connection has failed
 	 **************************************************************************/
-	public void update(boolean isConnected, boolean connectionLost)
+	public void update(boolean isConnected, boolean connectionLost, boolean refresh)
 	{
 		if (connectionLost || !isConnected)
 		{
@@ -200,10 +205,17 @@ public class ProceduresStructureManager implements ICoreContextOperationListener
 		}
 		else if (isConnected)
 		{
-			Logger.debug("Updating procedure list", Level.PROC, this);
-			BuildProcListJob job = new BuildProcListJob();
-			CommandHelper.executeInProgress(job, true, false);
-			m_procedureIDs = job.getLoadedProcedures();
+			if (refresh)
+			{
+				Logger.debug("Updating procedure list", Level.PROC, this);
+				BuildProcListJob job = new BuildProcListJob();
+				CommandHelper.executeInProgress(job, true, false);
+				m_procedureIDs = job.getLoadedProcedures();
+			}
+			else
+			{
+				m_procedureIDs = m_pMgr.getAvailableProcedures(false);
+			}
 		}
 		init();
 		if (m_view != null)
@@ -220,21 +232,21 @@ public class ProceduresStructureManager implements ICoreContextOperationListener
 	public void notifyContextAttached(ContextInfo ctx)
 	{
 		Logger.debug("Updating model after context attached", Level.GUI, this);
-		update(true,false);
+		update(true,false,false);
 	}
 
 	@Override
 	public void notifyContextDetached()
 	{
 		Logger.debug("Updating model after context detached", Level.GUI, this);
-		update(false,false);
+		update(false,false,false);
 	}
 
 	@Override
 	public void notifyContextError(ErrorData error)
 	{
 		Logger.debug("Updating model after context error", Level.GUI, this);
-		update(false,true);
+		update(false,true,false);
 	}
 
 	@Override

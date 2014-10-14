@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the storage model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -141,8 +141,6 @@ void SPELLwsStorage::storeObject( PyObject* object )
         THROW_EXCEPTION("Unable to store object", "Initialized in read mode", SPELL_ERROR_WSTART);
     }
 
-    std::cerr << "STORE\t" << PYREPR(object) << "\t[" << PYREPR(PyObject_Type(object)) << "]" << std::endl;
-
     // Marshal the object to the persistent storage file
     PyMarshal_WriteObjectToFile( object, m_file, LATEST_MARSHAL_VERSION );
 
@@ -162,8 +160,6 @@ void SPELLwsStorage::storeLong( long value )
     {
         THROW_EXCEPTION("Unable to store long value", "Initialized in read mode", SPELL_ERROR_WSTART);
     }
-
-    std::cerr << "STORE\t" << value << "\t[long]" << std::endl;
 
     // Marshal the object to the persistent storage file
     PyMarshal_WriteLongToFile( value, m_file, LATEST_MARSHAL_VERSION );
@@ -186,8 +182,6 @@ void SPELLwsStorage::storeObjectOrNone( PyObject* object )
     }
     if (object == NULL)
     {
-
-        //m_trace << m_traceCounter++ << "\tSTORE\t(NONE)\t[None]" << std::endl;
 
         // Marshal None to the file
         PyMarshal_WriteObjectToFile( Py_None, m_file, LATEST_MARSHAL_VERSION );

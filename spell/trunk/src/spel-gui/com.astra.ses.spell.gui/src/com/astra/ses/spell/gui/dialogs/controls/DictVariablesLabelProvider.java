@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -56,7 +56,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
-import com.astra.ses.spell.gui.core.model.types.TypedVariable;
+import com.astra.ses.spell.gui.core.model.types.DataVariable;
 import com.astra.ses.spell.gui.core.model.types.ValueType;
 
 /**
@@ -85,9 +85,9 @@ public class DictVariablesLabelProvider extends LabelProvider implements ITableL
     @Override
     public String getColumnText(Object element, int columnIndex)
     {
-    	if (element instanceof TypedVariable)
+    	if (element instanceof DataVariable)
     	{
-		    TypedVariable var = (TypedVariable) element;
+		    DataVariable var = (DataVariable) element;
 		    DictVariablesTableItems item = DictVariablesTableItems.index(columnIndex);
 		    switch(item)
 		    {
@@ -166,7 +166,7 @@ public class DictVariablesLabelProvider extends LabelProvider implements ITableL
     @Override
     public Color getBackground(Object element, int columnIndex)
     {
-	    TypedVariable var = (TypedVariable) element;
+	    DataVariable var = (DataVariable) element;
 	    if (var.isModified())
 	    {
 	    	return Display.getDefault().getSystemColor(SWT.COLOR_YELLOW);

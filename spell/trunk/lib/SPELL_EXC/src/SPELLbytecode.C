@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the bytecode analyzer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -155,47 +155,47 @@ static std::string OPCODES[] =
     "LOAD_CONST",           //101
     "LOAD_NAME",            //102
     "BUILD_TUPLE",          //103
-    "BUILD_LIST",
-    "BUILD_MAP",
-    "LOAD_ATTR",
-    "COMPARE_OP",
-    "IMPORT_NAME",
-    "IMPORT_FROM",
-    "",
-    "JUMP_FORWARD",
-    "JUMP_IF_FALSE",
-    "JUMP_IF_TRUE",
-    "JUMP_ABSOLUTE",
-    "",
-    "",
-    "LOAD_GLOBAL",
-    "",
-    "",
-    "CONTINUE_LOOP",
-    "SETUP_LOOP",
-    "SETUP_EXCEPT",
-    "SETUP_FINALLY",
-    "",
-    "LOAD_FAST",
-    "STORE_FAST",
-    "DELETE_FAST",
-    "",
-    "",
-    "",
-    "RAISE_VARARGS",
-    "CALL_FUNCTION",
-    "MAKE_FUNCTION",
-    "BUILD_SLICE",
-    "MAKE_CLOSURE",
-    "LOAD_CLOSURE",
-    "LOAD_DEREF",
-    "STORE_DEREF",
-    "",
-    "",
-    "CALL_FUNCTION_VAR",
-    "CALL_FUNCTION_KW",
-    "CALL_FUNCTION_VAR_KW",
-    "EXTENDED_ARG"
+    "BUILD_LIST",           //104
+    "BUILD_MAP",            //105
+    "LOAD_ATTR",            //106
+    "COMPARE_OP",           //107
+    "IMPORT_NAME",          //108
+    "IMPORT_FROM",          //109
+    "",                     //110
+    "JUMP_FORWARD",         //111
+    "JUMP_IF_FALSE",        //112
+    "JUMP_IF_TRUE",         //113
+    "JUMP_ABSOLUTE",        //114
+    "",                     //115
+    "",                     //116
+    "LOAD_GLOBAL",          //117
+    "",                     //118
+    "",                     //119
+    "CONTINUE_LOOP",        //120
+    "SETUP_LOOP",           //121
+    "SETUP_EXCEPT",         //122
+    "SETUP_FINALLY",        //123
+    "",                     //124
+    "LOAD_FAST",            //125
+    "STORE_FAST",           //126
+    "DELETE_FAST",          //127
+    "",                     //128
+    "",                     //129
+    "",                     //130
+    "RAISE_VARARGS",        //131
+    "CALL_FUNCTION",        //132
+    "MAKE_FUNCTION",        //133
+    "BUILD_SLICE",          //134
+    "MAKE_CLOSURE",         //135
+    "LOAD_CLOSURE",         //136
+    "LOAD_DEREF",           //137
+    "STORE_DEREF",          //138
+    "",                     //139
+    "",                     //140
+    "CALL_FUNCTION_VAR",    //141
+    "CALL_FUNCTION_KW",     //142
+    "CALL_FUNCTION_VAR_KW", //143
+    "EXTENDED_ARG"          //144
 };
 
 //=============================================================================
@@ -232,6 +232,10 @@ void SPELLbytecode::analyze()
     unsigned int oparg;
     // Stores the previous line
     unsigned int prevLine = 0;
+    // Stores the last opcode
+    unsigned int prevOpCode = 0;
+    // Opcode count in line
+    unsigned short opcodeCount = 0;
 
     // Will be true when there is no more bytecode to process
     bool finished = false;
@@ -239,12 +243,15 @@ void SPELLbytecode::analyze()
     // Try block structure
 	TryBlock tb;
 	tb.try_lineno = 0;
-	tb.bexcept_lineno = 0;
+	tb.end_try_lineno = 0;
 	tb.except_lineno = 0;
-	// Holds the bytecode offset for except statements
+	tb.end_except_lineno = 0;
+	tb.end_lineno = 0;
+	// Holds the bytecode offset for except and finally statements
 	unsigned int except_offset = 0;
+	unsigned int finally_offset = 0;
 
-    while(not finished)
+	while(not finished)
     {
         // Create one BLine info structure per bytecode instruction
         BLine info;
@@ -254,13 +261,61 @@ void SPELLbytecode::analyze()
         info.lineno = PyCode_Addr2Line(m_code, info.offset);
         // Obtain the opcode
         info.opcode = NEXTOP();
+
+        // Track the number of opcodes per line in the lnotab.
+        if ((prevLine>0) && (info.lineno != prevLine))
+        {
+        	opcodeCount = 0;
+        }
+        else
+        {
+        	opcodeCount++;
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////
+        // PHASE 1 - UPDATE PREVIOUS LINE INFORMATION (ALREADY STORED) IF NEEDED
+        //////////////////////////////////////////////////////////////////////////////////
+
+        // #1 Detect binary add. This helps us detect lines that shall be executed together
+        // like when statements spread over several lines with binary add (+\)
+        if ((opcodeCount == 0)&&(prevOpCode == BINARY_ADD)&&(info.opcode==LOAD_CONST))
+        {
+        	LineList::iterator it = m_lines.end();
+        	it--;
+        	BLine prev = *it;
+        	m_lines.pop_back();
+        	prev.keepWithNext = true;
+        	m_lines.push_back(prev);
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////
+        // #2 Special checks for return statements: we may need to update the previous line
+		if (info.opcode == RETURN_VALUE && ((prevOpCode == LOAD_FAST || prevOpCode == LOAD_CONST)))
+		{
+        	LineList::iterator it = m_lines.end();
+        	it--;
+        	BLine prev = *it;
+        	m_lines.pop_back();
+        	prev.returnConst = true;
+        	m_lines.push_back(prev);
+		}
+
+
 		// We will ignore this, for the moment
 		oparg  = 0;
+		// To decide wether store the bline information or not
+		bool storeit = false;
 		if (HAS_ARG(info.opcode)) oparg = NEXTARG();
 
+		//////////////////////////////////////////////////////////////////////////////////
+		// PHASE 2 - BUILD AND STORE NEXT BLINE INFORMATION
+		//////////////////////////////////////////////////////////////////////////////////
         if (( prevLine > 0 ) && ( info.lineno != prevLine ))
         {
-        	info.executable = false;
+        	// Default values
+        	info.executable   = false;
+			info.returnConst  = false;
+			info.keepWithNext = false;
 
         	/** \todo
 			// Depending on the bytecode, either set the block as active,
@@ -270,6 +325,8 @@ void SPELLbytecode::analyze()
 			switch(info.opcode)
 			{
 			case LOAD_NAME:
+			case LOAD_GLOBAL:
+			case LOAD_CONST:
 				callDepth++;
 				info.executable = true;
 				break;
@@ -289,47 +346,74 @@ void SPELLbytecode::analyze()
 				break;
 			}
 			default:
+				info.executable = true;
 				break;
 			}
 
-            // Put the info in place
+            // Store the info
+            m_lines.push_back(info);
+        }
+        // The very first line is always executable, and needs to be stored explicitly
+        else if (prevLine == 0)
+        {
+        	info.executable = true;
+            // Store the info
             m_lines.push_back(info);
         }
 
+		//////////////////////////////////////////////////////////////////////////////////
+		// PHASE 3 - ADDITIONAL INFORMATION FOR TRY BLOCKS, LAST ADDRESS, LAST LINE
+		//////////////////////////////////////////////////////////////////////////////////
         switch(info.opcode)
         {
         case RETURN_VALUE:
-			info.executable = true;
 			m_lastAddr = info.offset;
         	finished = true;
         	break;
         case SETUP_EXCEPT:
-			//std::cerr << "START TRYBLOCK " << info->lineno << " TO OFFSET " << oparg << std::endl;
 			tb.try_lineno = info.lineno;
 			except_offset = info.offset + oparg + 3; // This is the real destination offset
 			break;
+        case SETUP_FINALLY:
+        	finally_offset = info.offset + oparg + 3; // This is the 'finally' destination offset
+        	break;
         case END_FINALLY:
-			tb.end_lineno = info.lineno;
-			//std::cerr << "TRYBLOCK " << tb->try_lineno << "," << tb->bexcept_lineno << "," << tb->except_lineno << "," << tb->end_lineno << std::endl;
-			m_tryBlocks.push_back( tb );
-			tb.try_lineno = 0;
+        	if (tb.try_lineno != 0 && tb.end_lineno == 0)
+        	{
+				tb.end_lineno = info.lineno;
+				tb.end_except_lineno = info.lineno;
+				m_tryBlocks.push_back( tb );
+				tb.try_lineno = 0;
+				tb.end_try_lineno = 0;
+				tb.except_lineno = 0;
+				tb.end_except_lineno = 0;
+				tb.end_lineno = 0;
+        	}
+        	else
+        	{
+        		// Update the last try block to update it with the finally block
+        		TryBlockList::iterator it = m_tryBlocks.end();
+            	it--;
+            	TryBlock prev = *it;
+            	m_tryBlocks.pop_back();
+            	prev.end_except_lineno = prev.end_lineno;
+				prev.end_lineno = info.lineno;
+				m_tryBlocks.push_back( prev );
+        	}
 			break;
 		}
-
-        // Debugging purposes
-        //DUMP;
 
         // This should always happen between a SETUP_EXCEPT and an END_FINALLY
         if ( (tb.try_lineno >0) && (except_offset == info.offset))
         {
         	// The last line before the except
-        	tb.bexcept_lineno = prevLine;
+        	tb.end_try_lineno = prevLine;
         	// The line of the except
         	tb.except_lineno = info.lineno;
-        	//std::cerr << "EXCEPT " << prevLine << "," << info->lineno << std::endl;
         }
 
         prevLine = info.lineno;
+        prevOpCode = info.opcode;
         m_lastLine = info.lineno;
     }
 }
@@ -352,6 +436,40 @@ bool SPELLbytecode::isExecutable( unsigned int lineNo ) const
 }
 
 //=============================================================================
+// METHOD     : SPELLbytecode::isKeepWithNext
+//=============================================================================
+bool SPELLbytecode::isKeepWithNext( unsigned int lineNo ) const
+{
+	LineList::const_iterator it;
+	LineList::const_iterator end = m_lines.end();
+	for(it = m_lines.begin(); it != end; it++)
+	{
+		if ( it->lineno == lineNo )
+		{
+			return it->keepWithNext;
+		}
+	}
+	return false;
+}
+
+//=============================================================================
+// METHOD     : SPELLbytecode::isReturnConstant
+//=============================================================================
+bool SPELLbytecode::isReturnConstant( unsigned int lineNo ) const
+{
+	LineList::const_iterator it;
+	LineList::const_iterator end = m_lines.end();
+	for(it = m_lines.begin(); it != end; it++)
+	{
+		if ( it->lineno == lineNo )
+		{
+			return it->returnConst;
+		}
+	}
+	return false;
+}
+
+//=============================================================================
 // METHOD     : SPELLbytecode::isInTryBlock
 //=============================================================================
 bool SPELLbytecode::isInTryBlock( unsigned int lineNo ) const
@@ -360,7 +478,41 @@ bool SPELLbytecode::isInTryBlock( unsigned int lineNo ) const
 	TryBlockList::const_iterator end = m_tryBlocks.end();
 	for(it = m_tryBlocks.begin(); it != end; it++)
 	{
-		if ( (it->try_lineno < lineNo) && (it->except_lineno > lineNo) )
+		if ( (it->try_lineno < lineNo) && (it->end_try_lineno >= lineNo) )
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+//=============================================================================
+// METHOD     : SPELLbytecode::isInExceptBlock
+//=============================================================================
+bool SPELLbytecode::isInExceptBlock( unsigned int lineNo ) const
+{
+	TryBlockList::const_iterator it;
+	TryBlockList::const_iterator end = m_tryBlocks.end();
+	for(it = m_tryBlocks.begin(); it != end; it++)
+	{
+		if ( (it->except_lineno < lineNo) && (it->end_except_lineno >= lineNo) )
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+//=============================================================================
+// METHOD     : SPELLbytecode::isInFinallyBlock
+//=============================================================================
+bool SPELLbytecode::isInFinallyBlock( unsigned int lineNo ) const
+{
+	TryBlockList::const_iterator it;
+	TryBlockList::const_iterator end = m_tryBlocks.end();
+	for(it = m_tryBlocks.begin(); it != end; it++)
+	{
+		if ( (it->end_except_lineno < lineNo) && (it->end_lineno >= lineNo) )
 		{
 			return true;
 		}
@@ -379,7 +531,7 @@ bool SPELLbytecode::isTryBlockEnd( unsigned int lineNo ) const
 	{
 		if ( (it->try_lineno < lineNo) && (it->except_lineno > lineNo) )
 		{
-			if (it->bexcept_lineno == lineNo) return true;
+			if (it->end_try_lineno == lineNo) return true;
 			return false;
 		}
 	}

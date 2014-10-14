@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor interface definition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -31,6 +31,7 @@
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLchildManager.H"
 #include "SPELL_EXC/SPELLexecutorConfiguration.H"
+#include "SPELL_EXC/SPELLuserAction.H"
 #include "SPELL_EXC/SPELLframeManager.H"
 #include "SPELL_EXC/SPELLschedulerIF.H"
 #include "SPELL_EXC/SPELLcontrollerIF.H"
@@ -282,6 +283,14 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		virtual void pause() = 0;
 
+		//////////////////////////////////////////////////////////////////////
+		/** Interrupt execution from within the SPELL framework (not user command).
+		 * Will hold the Frame Evaluation process on Python side. This method
+		 * is to be called not by CIF (because it overrides the language
+		 * interlock) but by the SPELL framework (adapter, language or drivers).
+		**////////////////////////////////////////////////////////////////////
+		virtual void interrupt() {};
+
     // *******************************************************************
     // INFORMATION ACCESSORS
     // *******************************************************************
@@ -292,13 +301,6 @@ public: //--------------------------------------------------------------------
 		 * \returns The current executor status
 		**////////////////////////////////////////////////////////////////////
 		virtual const SPELLexecutorStatus getStatus() const = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Obtain the current context name
-		 *
-		 * \returns The current context name
-		**////////////////////////////////////////////////////////////////////
-		virtual const std::string getContextName() const = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the procedure instance identifier
@@ -352,6 +354,13 @@ public: //--------------------------------------------------------------------
 		 * \param delay IN: the delay to be used
 		**////////////////////////////////////////////////////////////////////
 		virtual void setExecDelay( const int delay ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the prompt warning delay
+		 *
+		 * \param delay IN: the delay to be used
+		**////////////////////////////////////////////////////////////////////
+		virtual void setPromptWarningDelay( const int delay ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Set the TC confirmation flag
@@ -461,9 +470,9 @@ public: //--------------------------------------------------------------------
 		virtual void executeUserAction() = 0;
 
 		//////////////////////////////////////////////////////////////////////
-		/** Set the user action function name and label
+		/** Set the user action function, name and label
 		**////////////////////////////////////////////////////////////////////
-		virtual void setUserAction( const std::string& functionName, const std::string& actionLabel, const unsigned int severity ) = 0;
+		virtual void setUserAction( const SPELLuserAction& action ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Enable or disable the user action function
@@ -476,14 +485,9 @@ public: //--------------------------------------------------------------------
 		virtual void dismissUserAction() = 0;
 
 		//////////////////////////////////////////////////////////////////////
-		/** Get the user action label if any
+		/** Get the user action information if any
 		**////////////////////////////////////////////////////////////////////
-		virtual const std::string getUserActionLabel() const = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get the user action enabled/disabled state
-		**////////////////////////////////////////////////////////////////////
-		virtual const bool getUserActionEnabled() const = 0 ;
+		virtual const SPELLuserAction getUserAction() const = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Used by the SPELL language to report that a Step() call has been

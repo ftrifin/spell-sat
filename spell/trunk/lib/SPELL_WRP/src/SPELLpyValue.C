@@ -5,7 +5,7 @@
 // DESCRIPTION: Data variable implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -274,13 +274,11 @@ std::string SPELLpyValue::str() const
 	}
 	else if (m_type == DOUBLE)
 	{
-		std::stringstream buf;
-		buf << m_floatValue;
-		std::string val = buf.str();
-		if (val.find(".") == std::string::npos )
-		{
-			val += ".0";
-		}
+		PyObject* pyValue = PyFloat_FromDouble(m_floatValue);
+		PyObject* str = PyObject_Str(pyValue);
+		std::string val = PYSTR(str);
+		Py_DECREF(pyValue);
+		Py_DECREF(str);
 		return val;
 	}
 	else if (m_type == RELTIME )

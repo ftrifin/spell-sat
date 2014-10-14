@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the execution model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,7 +29,6 @@
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutionModel.H"
 #include "SPELL_EXC/SPELLvarInfo.H"
-#include "SPELL_EXC/SPELLscopeInfo.H"
 #include "SPELL_EXC/SPELLexecutor.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_UTIL/SPELLerror.H"
@@ -43,7 +42,6 @@
 SPELLexecutionModel::SPELLexecutionModel( const std::string& modelId,
 		                                  const std::string& filename,
 		                                  PyFrameObject* frame,
-										  bool monitorVars,
 										  std::set<std::string>& initialVariables )
 : SPELLgoto(frame->f_code),
   SPELLbytecode(frame->f_code),
@@ -53,7 +51,6 @@ SPELLexecutionModel::SPELLexecutionModel( const std::string& modelId,
   m_varMonitor(this,frame,initialVariables)
 {
 	m_modelId = modelId;
-	m_monitorVars = monitorVars;
 }
 
 //=============================================================================
@@ -68,38 +65,48 @@ SPELLexecutionModel::~SPELLexecutionModel()
 //=============================================================================
 void SPELLexecutionModel::update()
 {
-	if (m_monitorVars)
+	if (SPELLvariableMonitor::s_enabled)
 	{
 		m_varMonitor.analyze();
 	}
 }
 
 //=============================================================================
-// METHOD: SPELLexecutionModel::inScope()
+// METHOD: SPELLexecutionModel::variableChanged()
 //=============================================================================
-void SPELLexecutionModel::inScope()
+void SPELLexecutionModel::variableChanged( const std::vector<SPELLvarInfo>& added,
+										   const std::vector<SPELLvarInfo>& changed,
+		                                   const std::vector<SPELLvarInfo>& deleted )
 {
-	if (m_monitorVars)
+	if (SPELLvariableMonitor::s_enabled)
 	{
-		SPELLscopeInfo info;
-
-		info.globalRegisteredVariables = m_varMonitor.getRegisteredGlobalVariables();
-		info.localRegisteredVariables = m_varMonitor.getRegisteredLocalVariables();
-
-		if ((info.globalRegisteredVariables.size()>0)||(info.localRegisteredVariables.size()>0))
-		{
-			SPELLexecutor::instance().getCIF().notifyVariableScopeChange(info);
-		}
+		SPELLexecutor::instance().getCIF().notifyVariableChange( added, changed, deleted );
 	}
 }
 
 //=============================================================================
-// METHOD: SPELLexecutionModel::variableChanged()
+// METHOD: SPELLexecutionModel::scopeChanged()
 //=============================================================================
-void SPELLexecutionModel::variableChanged( const std::vector<SPELLvarInfo>& changed )
+void SPELLexecutionModel::scopeChanged()
 {
-	if (m_monitorVars)
+	if (SPELLvariableMonitor::s_enabled)
 	{
-		SPELLexecutor::instance().getCIF().notifyVariableChange( changed );
+		SPELLvariableMonitor::VarMap globals = m_varMonitor.getGlobalVariables();
+		SPELLvariableMonitor::VarMap locals = m_varMonitor.getLocalVariables();
+		std::vector<SPELLvarInfo> globalsV;
+		std::vector<SPELLvarInfo> localsV;
+		for(SPELLvariableMonitor::VarMap::const_iterator it = globals.begin(); it != globals.end(); it++)
+		{
+			globalsV.push_back( SPELLvarInfo( it->second.varName,
+					                          it->second.varType,
+					                          it->second.varValue, true) );
+		}
+		for(SPELLvariableMonitor::VarMap::const_iterator it = locals.begin(); it != locals.end(); it++)
+		{
+			localsV.push_back( SPELLvarInfo( it->second.varName,
+					                          it->second.varType,
+					                          it->second.varValue, false) );
+		}
+		SPELLexecutor::instance().getCIF().notifyVariableScopeChange( m_varMonitor.getScopeName(), globalsV, localsV );
 	}
 }

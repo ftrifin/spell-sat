@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor logging mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -309,7 +309,7 @@ public: //--------------------------------------------------------------------
 		 * \param filename IN: should be the procedure id / script name
 		 * \param timestamp IN: the time id for the file name header
 		**////////////////////////////////////////////////////////////////////
-		void setLogFile( std::string filename, std::string timestamp );
+		void setLogFile( const std::string& filename, const std::string timestamp );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get the log file name
@@ -348,7 +348,7 @@ public: //--------------------------------------------------------------------
 		 * \param sev IN: message severity
 		 * \param lev IN: message level
 		**////////////////////////////////////////////////////////////////////
-		void log( std::string msg, LogSeverity sev, LogLevel lev );
+		void log( const std::string& msg, LogSeverity sev, LogLevel lev );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Log call for executor side

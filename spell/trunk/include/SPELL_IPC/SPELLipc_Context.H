@@ -5,7 +5,7 @@
 // DESCRIPTION: Inter process communication, data definitions for context process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -46,6 +46,8 @@ namespace MessageId
 {
 	/** Executor operations */
 	static const std::string MSG_ID_EXEC_OP("MSG_EXEC_OP");
+	/** Shared data operations */
+	static const std::string MSG_ID_SHARED_DATA_OP("MSG_SHARED_DATA_OP");
 	/** Sent as a response when a requested peer is lost */
 	static const std::string  MSG_PEER_LOST("MSG_PEER_LOST");
 };
@@ -61,6 +63,8 @@ namespace MessageField
 	static const std::string  FIELD_CODE_NAME("CodeName");
 	/** Holds the procedure code */
 	static const std::string  FIELD_PROC_CODE("ProcCode");
+	/** Refresh flag */
+	static const std::string  FIELD_REFRESH("Refresh");
 	/** Holds a server file lines (data) */
 	static const std::string  FIELD_SERVER_FILE("ServerFile");
 	/** Holds the GUI connection mode (commanding, monitoring) */
@@ -77,6 +81,31 @@ namespace MessageField
 	static const std::string FIELD_FILE_NAME("FileName");
 	/** Holds a directory name */
 	static const std::string FIELD_DIR_NAME("DirName");
+	/** Holds shared data variable name(s)  */
+	static const std::string FIELD_SHARED_VARIABLE("SharedVar");
+	/** Holds shared data variable value(s)  */
+	static const std::string FIELD_SHARED_VALUE("SharedValue");
+	/** Holds shared data variable expected value(s)  */
+	static const std::string FIELD_SHARED_EXPECTED("SharedExpected");
+	/** Holds shared data variable change flag  */
+	static const std::string FIELD_SHARED_SUCCESS("SharedSuccess");
+	/** Holds shared data variable scope  */
+	static const std::string FIELD_SHARED_SCOPE("SharedScope");
+	/** Shared data operation*/
+	static const std::string  FIELD_SHARED_OP("SharedOperation");
+
+	/** Default execution parameters defined for the Context */
+	static const std::string FIELD_RUN_INTO("RunInto");
+	static const std::string FIELD_EXEC_DELAY("ExecDelay");
+	static const std::string FIELD_PROMPT_DELAY("PromptWarningDelay");
+	static const std::string FIELD_BY_STEP("ByStep");
+	static const std::string FIELD_FORCE_TC_CONFIRM("ForceTcConfirm");
+	static const std::string FIELD_SAVE_STATE_MODE("SaveStateMode");
+	static const std::string FIELD_WATCH_VARIABLES("WatchVariables");
+	static const std::string FIELD_MAX_VERBOSITY("MaxVerbosity");
+	static const std::string FIELD_BROWSABLE_LIB("BrowsableLib");
+
+
 };
 
 /** Defines values for the message fields */
@@ -104,6 +133,20 @@ namespace MessageValue
 	static const std::string  DATA_EXOP_DETACH("DETACH");
 	/** Executor failed */
 	static const std::string  DATA_EXOP_CRASH("CRASH");
+	/** Executor status change */
+	static const std::string  DATA_EXOP_STATUS("STATUS");
+	/** Executor execution summary */
+	static const std::string  DATA_EXOP_SUMMARY("SUMMARY");
+	/** Executor failed */
+	static const std::string  DATA_EXOP_UNKNOWN("UNKNOWN");
+
+	// Context operation codes (FIELD_CTXOP)
+	/** Modify shared data */
+	static const std::string  DATA_SET_SHARED_DATA("SET_SHARED_DATA");
+	static const std::string  DATA_ADD_SHARED_SCOPE("ADD_SHARED_SCOPE");
+	static const std::string  DATA_DEL_SHARED_DATA("DEL_SHARED_DATA");
+	static const std::string  DATA_DEL_SHARED_SCOPE("DEL_SHARED_SCOPE");
+	static const std::string  DATA_CLEAR_SHARED_SCOPE("CLEAR_SHARED_SCOPE");
 
 	// Client operation codes (FIELD_CLOP)
 	/** Client logged in */
@@ -125,6 +168,10 @@ namespace MessageValue
     static const std::string DATA_CTX_KILLED("KILLED");
     static const std::string DATA_CTX_STARTING("STARTING");
     static const std::string DATA_CTX_STOPPING("STOPPING");
+
+    //###############################################################################
+    //# Shared data variables
+    static const std::string DATA_GLOBAL_SCOPE("_GLOBAL_SCOPE_");
 };
 
 /** Defines context process messages */
@@ -207,25 +254,30 @@ namespace ContextMessages
 	/** Response to procedure recovery list */
 	static const std::string  RSP_RECOVERY_LIST("RSP_RECOVERY_LIST");
 
-	/** Request for procedure recovery list */
+	/** Request for procedure ASRUN list */
+	static const std::string  REQ_ASRUN_LIST("REQ_ASRUN_LIST");
+	/** Response to procedure ASRUN list */
+	static const std::string  RSP_ASRUN_LIST("RSP_ASRUN_LIST");
+
+	/** Request for procedure recovery */
 	static const std::string  REQ_RECOVER_EXEC("REQ_RECOVER_EXEC");
-	/** Response to procedure recovery list */
+	/** Response to procedure recovery */
 	static const std::string  RSP_RECOVER_EXEC("RSP_RECOVER_EXEC");
 
-	/** Request for procedure recovery list */
+	/** Request for procedure recovery deletion */
 	static const std::string  REQ_DELETE_RECOVERY("REQ_DELETE_RECOVERY");
-	/** Response to procedure recovery list */
+	/** Response to procedure recovery deletion */
 	static const std::string  RSP_DELETE_RECOVERY("RSP_DELETE_RECOVERY");
-
-	/** Request for dumping interpreter info */
-	static const std::string  REQ_DUMP_INTERPRETER("REQ_DUMP_INTERPRETER");
-	/** Response */
-	static const std::string  RSP_DUMP_INTERPRETER("RSP_DUMP_INTERPRETER");
 
 	/** Request for removing controlling client (forced) */
 	static const std::string  REQ_REMOVE_CONTROL("REQ_REMOVE_CONTROL");
 	/** Response */
 	static const std::string  RSP_REMOVE_CONTROL("RSP_REMOVE_CONTROL");
+
+	/** Request for putting in background */
+	static const std::string  REQ_SET_BACKGROUND("REQ_SET_BACKGROUND");
+	/** Response */
+	static const std::string  RSP_SET_BACKGROUND("RSP_SET_BACKGROUND");
 
 	/** Request for file listing */
 	static const std::string  REQ_LIST_FILES("REQ_LIST_FILES");
@@ -241,6 +293,19 @@ namespace ContextMessages
 	static const std::string  REQ_INPUT_FILE("REQ_INPUT_FILE");
 	/** Response */
 	static const std::string  RSP_INPUT_FILE("RSP_INPUT_FILE");
+
+	/** Request for the current time */
+	static const std::string  REQ_CURRENT_TIME("REQ_CURRENT_TIME");
+	/** Response */
+	static const std::string  RSP_CURRENT_TIME("RSP_CURRENT_TIME");
+
+	/** Get/Set Context execution DFLTs */
+	static const std::string REQ_GET_CTX_EXEC_DFLT("REQ_GET_CTX_EXEC_DFLT");
+	static const std::string RSP_GET_CTX_EXEC_DFLT("RSP_GET_CTX_EXEC_DFLT");
+
+	static const std::string REQ_SET_CTX_EXEC_DFLT("REQ_SET_CTX_EXEC_DFLT");
+	static const std::string RSP_SET_CTX_EXEC_DFLT("RSP_SET_CTX_EXEC_DFLT");
+
 
 	// ################################################################################
 	// MESSAGES FROM LISTENER
@@ -298,12 +363,42 @@ namespace ContextMessages
 	static const std::string  MSG_CLIENT_OP("MSG_CLIENT_OP");
 	/** Sent by context to GUIs when a executor changes the status, is open/closed... */
 	static const std::string  MSG_EXEC_OP("MSG_EXEC_OP");
+	/** Sent by context when special operations within context are performed */
+	static const std::string  MSG_CTX_OP("MSG_CONTEXT_OP");
 	/** Sent by context to GUIs when a executor changes the configuration */
 	static const std::string  MSG_EXEC_CONFIG("MSG_EXEC_CONFIG");
 	/** Sent by context to GUIs when there is an executor control error in context side */
 	static const std::string  MSG_EXEC_ERROR("MSG_EXEC_ERROR");
 	/** Sent by context to GUIs when the listener connection is lost */
 	static const std::string  MSG_LISTENER_LOST("MSG_LISTENER_LOST");
+
+	// ################################################################################
+	// # MESSAGES FOR SHARED DATA
+	// ################################################################################
+
+	/** Sent by procedures to assign shared data values */
+	static const std::string  REQ_SET_SHARED_DATA("REQ_SET_SHARED_DATA");
+	static const std::string  RSP_SET_SHARED_DATA("RSP_SET_SHARED_DATA");
+
+	/** Sent by procedures to get shared data values */
+	static const std::string  REQ_GET_SHARED_DATA("REQ_GET_SHARED_DATA");
+	static const std::string  RSP_GET_SHARED_DATA("RSP_GET_SHARED_DATA");
+
+	/** Sent by procedures to erase shared data values */
+	static const std::string  REQ_DEL_SHARED_DATA("REQ_DEL_SHARED_DATA");
+	static const std::string  RSP_DEL_SHARED_DATA("RSP_DEL_SHARED_DATA");
+
+	/** Sent by procedures to get shared data keys */
+	static const std::string  REQ_GET_SHARED_DATA_KEYS("REQ_GET_SHARED_DATA_KEYS");
+	static const std::string  RSP_GET_SHARED_DATA_KEYS("RSP_GET_SHARED_DATA_KEYS");
+
+	/** Sent by procedures to manipulate shared data scopes */
+	static const std::string  REQ_GET_SHARED_DATA_SCOPES("REQ_GET_SHARED_DATA_SCOPES");
+	static const std::string  RSP_GET_SHARED_DATA_SCOPES("RSP_GET_SHARED_DATA_SCOPES");
+	static const std::string  REQ_ADD_SHARED_DATA_SCOPE("REQ_ADD_SHARED_DATA_SCOPE");
+	static const std::string  RSP_ADD_SHARED_DATA_SCOPE("RSP_ADD_SHARED_DATA_SCOPE");
+	static const std::string  REQ_DEL_SHARED_DATA_SCOPE("REQ_DEL_SHARED_DATA_SCOPE");
+	static const std::string  RSP_DEL_SHARED_DATA_SCOPE("RSP_DEL_SHARED_DATA_SCOPE");
 };
 
 /*@}*/

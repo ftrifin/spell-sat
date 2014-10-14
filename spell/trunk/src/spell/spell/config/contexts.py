@@ -5,7 +5,7 @@
 ## DESCRIPTION: Context configuration model
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -56,7 +56,7 @@ from xml.dom.minidom import Node
 __all__ = [ 'ContextConfig' ]
 
 # List of properties that should appear in a context entity
-PROPERTIES = ['driver','spacecraft','satname','family','gcs','procpath','libpath','description']
+PROPERTIES = ['driver','spacecraft','satname','family','gcs','procpath','libpath', 'output_dir', 'input_dir', 'description']
 
 ################################################################################
 class ContextConfig(ConfigItem):
@@ -132,6 +132,14 @@ class ContextConfig(ConfigItem):
     #===========================================================================            
     def getLibPath(self):
         return self["libpath"]
+
+    #===========================================================================            
+    def getOutputPath(self):
+        return self["output_dir"]
+
+    #===========================================================================            
+    def getInputPath(self):
+        return self["input_dir"]
 
     #===========================================================================            
     def getDescription(self):

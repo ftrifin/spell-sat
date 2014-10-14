@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -58,14 +58,14 @@ import com.astra.ses.spell.gui.core.model.notification.DisplayData;
 import com.astra.ses.spell.gui.core.model.notification.ItemNotification;
 import com.astra.ses.spell.gui.core.model.types.ExecutionMode;
 import com.astra.ses.spell.gui.interfaces.IPresentationNotifier;
-import com.astra.ses.spell.gui.interfaces.IProcedureItemsListener;
-import com.astra.ses.spell.gui.interfaces.IProcedureMessageListener;
 import com.astra.ses.spell.gui.interfaces.ProcedurePresentationAdapter;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureItemsListener;
+import com.astra.ses.spell.gui.interfaces.listeners.IGuiProcedureMessageListener;
 import com.astra.ses.spell.gui.presentation.shell.controls.ShellTerminal;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
 public class ShellPresentation extends ProcedurePresentationAdapter implements
-        IProcedureMessageListener, IProcedureItemsListener
+        IGuiProcedureMessageListener, IGuiProcedureItemsListener
 {
 	private static final String	ID	               = "com.astra.ses.spell.gui.presentation.Shell";
 	private static final String	PRESENTATION_TITLE	= "Shell";
@@ -192,4 +192,10 @@ public class ShellPresentation extends ProcedurePresentationAdapter implements
 		if (!data.getExecutionMode().equals(ExecutionMode.MANUAL)) return;
 		// TODO
 	}
+
+	@Override
+    public String getListenerId()
+    {
+	    return "Shell presentation";
+    }
 }

@@ -5,7 +5,7 @@
 ## DESCRIPTION: Helpers for resource management
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -86,7 +86,9 @@ class SetResource_Helper(WrapperHelper):
         self._setActionString( ACTION_CANCEL ,  "Skip the modification of the GCS resource " + repr(self.__parameter) + " and return failure (False)")
         self._setActionString( ACTION_REPEAT ,  "Repeat the modification of the GCS resource " + repr(self.__parameter))
         
-        
+        # Store information for possible failures
+        self.setFailureInfo("RSC", self.__parameter)
+
         self._notifyValue( repr(self.__parameter), repr(self.__value), NOTIF_STATUS_PR, "Injecting")
         
         self._write("Setting ground resource " + repr(self.__parameter) + " value to " + repr(self.__value))
@@ -145,6 +147,9 @@ class GetResource_Helper(WrapperHelper):
         self.__parameter = args[0]
         if type(self.__parameter)!=str:
             self.__parameter = self.__parameter.name()
+
+        # Store information for possible failures
+        self.setFailureInfo("RSC", self.__parameter)
 
         self._setActionString( ACTION_SKIP   ,  "Skip the acquisition of the GCS resource " + repr(self.__parameter) + " and return None")
         self._setActionString( ACTION_CANCEL ,  "Skip the acquisition of the GCS resource " + repr(self.__parameter) + " and return None")

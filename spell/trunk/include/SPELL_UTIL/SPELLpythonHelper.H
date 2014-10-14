@@ -5,7 +5,7 @@
 // DESCRIPTION: Python utilities and manipulation functions
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -472,8 +472,6 @@ private: //-------------------------------------------------------------------
 		PyObject* getModule( const std::string& module );
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
-		/** Holds the list of paths used for the Python path. */
-		std::vector<std::string> m_pythonPath;
 		/** True if initialized */
 		bool m_initialized;
 		/** Holds the helper instance */

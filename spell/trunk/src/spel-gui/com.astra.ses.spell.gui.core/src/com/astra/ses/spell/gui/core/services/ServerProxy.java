@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,7 +53,7 @@ import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.Vector;
 
-import com.astra.ses.spell.gui.core.CoreExtensions;
+import com.astra.ses.spell.gui.core.CoreNotifications;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessage;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageAttachCtx;
 import com.astra.ses.spell.gui.core.comm.messages.SPELLmessageCloseCtx;
@@ -80,33 +80,14 @@ import com.astra.ses.spell.gui.core.utils.Logger;
  ******************************************************************************/
 public class ServerProxy extends BaseProxy implements IServerProxy
 {
-	// =========================================================================
-	// # STATIC DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	private static IContextProxy	     s_ctx	= null;
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
 	/** Service identifier */
 	public static final String	         ID	   = "com.astra.ses.spell.gui.ListenerProxy";
 
-	// =========================================================================
-	// # INSTANCE DATA MEMBERS
-	// =========================================================================
-
-	// PRIVATE -----------------------------------------------------------------
 	/** Holds the list of context information objects */
 	private TreeMap<String, ContextInfo>	m_contextInfos;
 	/** Hods the current listener information */
 	private ServerInfo	                    m_currentServer;
-
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
-	// =========================================================================
-	// # ACCESSIBLE METHODS
-	// =========================================================================
 
 	/***************************************************************************
 	 * Constructor
@@ -123,13 +104,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 	// SERVER PROXY SETUP METHODS
 	// ##########################################################################
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#getCurrentServerID
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public String getCurrentServerID()
 	{
@@ -137,13 +114,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		return m_currentServer.getName();
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#getCurrentServer
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public ServerInfo getCurrentServer()
 	{
@@ -158,12 +131,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		m_contextInfos = null;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#changeServer()
-	 */
+	 **************************************************************************/
 	@Override
 	public void changeServer(ServerInfo server) throws ServerError
 	{
@@ -188,11 +158,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see com.astra.ses.spell.gui.core.model.services.IServerProxy#connect()
-	 */
+	 **************************************************************************/
 	@Override
 	public void connect() throws ServerError
 	{
@@ -203,18 +171,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		try
 		{
 			Logger.debug("Connecting proxy", Level.COMM, this);
-			if (m_currentServer.getTunnelUser() != null)
-			{
-				Logger.info("Using tunneled connection", Level.COMM, this);
-				if (m_currentServer.getTunnelPassword() == null)
-				{
-					Logger.error("No password information", Level.COMM, this);
-					return;
-				}
-			}
 			performConnect( m_currentServer );
-			CoreExtensions.get().fireListenerConnected(m_currentServer);
-			Logger.debug("Connected", Level.COMM, this);
+			Logger.debug("Connected, fire listener connected to " + m_currentServer.getHost() + ":" + m_currentServer.getPort(), Level.COMM, this);
+			CoreNotifications.get().fireListenerConnected(m_currentServer);
 		}
 		catch (Exception e)
 		{
@@ -224,12 +183,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#disconnect()
-	 */
+	 **************************************************************************/
 	@Override
 	public void disconnect() throws ServerError
 	{
@@ -237,6 +193,7 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		try
 		{
 			performDisconnect();
+			CoreNotifications.get().fireListenerDisconnected();
 		}
 		catch (Exception e)
 		{
@@ -248,12 +205,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#openContext()
-	 */
+	 **************************************************************************/
 	@Override
 	public void openContext(String ctxName) throws ServerError
 	{
@@ -266,7 +220,7 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 			{
 				ContextInfo info = getContextInfo(ctxName);
 				Logger.info("Context open: " + ctxName, Level.PROC, this);
-				CoreExtensions.get().fireContextStarted(info);
+				CoreNotifications.get().fireContextStarted(info);
 			}
 		}
 		catch (Exception ex)
@@ -275,12 +229,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#closeContext()
-	 */
+	 **************************************************************************/
 	@Override
 	public void closeContext(String ctxName) throws ServerError
 	{
@@ -293,7 +244,7 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 			{
 				ContextInfo info = getContextInfo(ctxName);
 				Logger.info("Context stopped: " + ctxName, Level.COMM, this);
-				CoreExtensions.get().fireContextStopped(info);
+				CoreNotifications.get().fireContextStopped(info);
 			}
 		}
 		catch (Exception ex)
@@ -302,12 +253,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#destroyContext()
-	 */
+	 **************************************************************************/
 	@Override
 	public void destroyContext(String ctxName) throws ServerError
 	{
@@ -325,7 +273,7 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 			{
 				ContextInfo info = getContextInfo(ctxName);
 				Logger.info("Context destroyed: " + ctxName, Level.COMM, this);
-				CoreExtensions.get().fireContextStopped(info);
+				CoreNotifications.get().fireContextStopped(info);
 			}
 		}
 		catch (Exception ex)
@@ -334,12 +282,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#attachContext()
-	 */
+	 **************************************************************************/
 	@Override
 	public void attachContext(String ctxName) throws ServerError
 	{
@@ -372,21 +317,16 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#detachContext()
-	 */
+	 **************************************************************************/
 	@Override
 	public void detachContext() throws ServerError
 	{
 		try
 		{
-			if (s_ctx.isConnected())
-			{
-				s_ctx.detach();
-			}
+			// Will do nothing if not connected
+			s_ctx.disconnect();
 		}
 		catch (Exception ex)
 		{
@@ -394,13 +334,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#getAvailableContexts
-	 * ()
-	 */
+	 **************************************************************************/
 	@Override
 	public Vector<String> getAvailableContexts() throws ServerError
 	{
@@ -440,12 +376,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		return list;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#getContextInfo()
-	 */
+	 **************************************************************************/
 	@Override
 	public ContextInfo getContextInfo(String ctxName) throws ServerError
 	{
@@ -469,41 +402,59 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		return info;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/***************************************************************************
 	 * 
-	 * @see
-	 * com.astra.ses.spell.gui.core.model.services.IServerProxy#connectionLost()
-	 */
+	 **************************************************************************/
 	@Override
 	public void connectionLost(ErrorData data)
 	{
 		Logger.error("Connection to listener lost: " + data.getMessage(), Level.COMM, this);
 		m_contextInfos.clear();
 		data.setOrigin("SRV");
-		CoreExtensions.get().fireListenerError(data);
+		CoreNotifications.get().fireListenerError(data);
+		
+		IContextProxy cproxy = (IContextProxy) ServiceManager.get(IContextProxy.class);
+		if (cproxy.isConnected())
+		{
+			Logger.warning("Disconnecting from context due to listener connection failure", Level.COMM, this);
+			try
+            {
+	            cproxy.disconnect();
+	            CoreNotifications.get().fireContextError(data);
+            }
+            catch (Exception e)
+            {
+	            e.printStackTrace();
+            }
+		}
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void connectionFailed(ErrorData data)
 	{
 		Logger.error("Connection to listener failed: " + data.getMessage(), Level.PROC, this);
 		data.setOrigin("SRV");
 		forceDisconnect();
-		CoreExtensions.get().fireListenerError(data);
+		CoreNotifications.get().fireListenerError(data);
 	}
 
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
 	@Override
 	public void connectionClosed()
 	{
 		Logger.info("Connection to listener closed", Level.PROC, this);
 		forceDisconnect();
-		CoreExtensions.get().fireListenerDisconnected();
+		CoreNotifications.get().fireListenerDisconnected();
 	}
 
-	/* (non-Javadoc)
-     * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#processIncomingMessage(com.astra.ses.spell.gui.core.comm.messages.SPELLmessage)
-     */
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
     @Override
     public boolean processIncomingMessage(SPELLmessage msg)
     {
@@ -521,9 +472,9 @@ public class ServerProxy extends BaseProxy implements IServerProxy
 		return false;
     }
 
-	/* (non-Javadoc)
-     * @see com.astra.ses.spell.gui.core.interfaces.IBaseProxy#processIncomingRequest(com.astra.ses.spell.gui.core.comm.messages.SPELLmessage)
-     */
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
     @Override
     public SPELLmessageResponse processIncomingRequest(SPELLmessage msg)
     {

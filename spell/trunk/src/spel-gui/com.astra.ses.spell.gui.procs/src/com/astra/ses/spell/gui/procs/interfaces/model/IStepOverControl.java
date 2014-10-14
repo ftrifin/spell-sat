@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 8, 2012
 //
-// Copyright (C) 2008, 2011 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -46,15 +46,26 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.procs.interfaces.model;
 
+import java.util.List;
+
 import com.astra.ses.spell.gui.procs.interfaces.model.IExecutionInformation.StepOverMode;
 
-public interface IStepOverControl
+public interface IStepOverControl extends IStackMovements
 {
 	public StepOverMode getMode();
 	public void setMode( StepOverMode mode );
-	public void onExecutionCall();
+	public boolean isSteppingOver();
+	
+	public void onProcedureReady();
+	public void preInitialize( List<String> stack, boolean fullStack );
+	public void onExecutionCall( String code, String function, int lineNo );
 	public void onExecutionLine();
 	public void onExecutionReturn();
-	public boolean isSteppingOver();
+	public void updateCurrentLine( int stackIndex, int lineNo );
+	
+	public String getCodeId();
+	public String getFunctionName();
+	public int getLineNo();
+	
 	public void reset();
 }

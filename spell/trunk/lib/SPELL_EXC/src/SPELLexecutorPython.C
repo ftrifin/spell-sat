@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor Python bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -28,6 +28,7 @@
 // System includes ---------------------------------------------------------
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutor.H"
+#include "SPELL_EXC/SPELLuserAction.H"
 #include "SPELL_EXC/SPELLexecutorUtils.H"
 // Project includes --------------------------------------------------------
 #include "structmember.h"
@@ -182,6 +183,16 @@ static PyObject* Executor_SetStep( PyObject* self, PyObject* args );
 // DESCRIPTION     : Notify arbitrary data
 //============================================================================
 static PyObject* Executor_Notify( PyObject* self, PyObject* args );
+//============================================================================
+// FUNCTION        : Executor_GetControllingHost
+// DESCRIPTION     : Get the controlling host
+//============================================================================
+static PyObject* Executor_GetControllingHost( PyObject* self, PyObject* args );
+//============================================================================
+// FUNCTION        : Executor_SetExecutionDelay
+// DESCRIPTION     : set execution delay
+//============================================================================
+static PyObject* Executor_SetExecutionDelay( PyObject* self, PyObject* args );
 
 
 //============================================================================
@@ -221,7 +232,9 @@ static PyMethodDef Executor_Methods[] =
     {"enableUserAction",      Executor_EnableUserAction,   METH_NOARGS, "Enable the user action function"},
     {"disableUserAction",     Executor_DisableUserAction,  METH_NOARGS, "Disable the user action function"},
     {"setStep" ,              Executor_SetStep,            METH_VARARGS, "Set current step name"},
+    {"setExecutionDelay",     Executor_SetExecutionDelay,  METH_VARARGS, "Set execution delay"},
     {"notify",      		  Executor_Notify,   		   METH_VARARGS, "Notify items"},
+    {"getControllingHost",    Executor_GetControllingHost, METH_NOARGS, "Get the controlling host"},
     {NULL, NULL, 0, NULL} /* Sentinel */
 };
 
@@ -365,7 +378,29 @@ static PyObject* Executor_StartPrompt( PyObject* self, PyObject* args )
     DEBUG("[EXECPY] Start prompt" );
 	try
 	{
-		SPELLexecutor::instance().getScheduler().startPrompt();
+	    // Get the arguments list and config dictionary
+	    PyObject* argumentsObj = NULL;
+	    PyObject* configObj = NULL;
+
+	    if (PyTuple_Size( args )>=1) argumentsObj = PyTuple_GetItem( args, 0 );
+	    if (PyTuple_Size( args )==2) configObj = PyTuple_GetItem( args, 1 );
+
+	    DEBUG("[EXECPY] Arguments " + PYREPR(argumentsObj) );
+	    DEBUG("[EXECPY] Configuration " + PYREPR(configObj) );
+
+	    SPELLpyArgs arguments(argumentsObj, configObj);
+
+	    SPELLtime timeout;
+	    if (arguments.hasModifier(LanguageModifiers::Timeout))
+	    {
+	    	timeout = arguments.getModifier_Timeout();
+	    }
+	    else
+	    {
+	    	timeout.set(0,0);
+	    }
+	    bool headless = SPELLexecutor::instance().getConfiguration().isHeadless();
+		SPELLexecutor::instance().getScheduler().startPrompt( timeout, headless );
 	}
 	catch(SPELLcoreException& ex)
 	{
@@ -697,7 +732,12 @@ static PyObject* Executor_SetUserAction( PyObject* self, PyObject* args )
     	PyObject* pySev = PyDict_GetItemString(configObj, LanguageModifiers::Severity.c_str());
     	severity = PyInt_AsLong(pySev);
 	}
-    SPELLexecutor::instance().setUserAction(funcName,label,severity);
+    SPELLuserAction action;
+    action.setAction(funcName);
+    action.setLabel(label);
+    action.setSeverity(severity);
+    action.enable(true);
+	SPELLexecutor::instance().setUserAction(action);
     Py_RETURN_NONE;
 }
 
@@ -768,4 +808,44 @@ static PyObject* Executor_SetStep( PyObject* self, PyObject* args )
     PyObject* descObj = PyTuple_GetItem(args,1);
     SPELLexecutor::instance().displayStage( PYSSTR(idObj), PYSSTR(descObj) );
     Py_RETURN_NONE;
+}
+
+//============================================================================
+// FUNCTION        : Executor_SetExecutionDelay
+//============================================================================
+static PyObject* Executor_SetExecutionDelay( PyObject* self, PyObject* args )
+{
+    DEBUG("[EXECPY] Set execution delay");
+
+    PyObject* delayObj = PyTuple_GetItem(args,0);
+    if (PyLong_Check(delayObj))
+    {
+    	SPELLexecutor::instance().setExecDelay( PyLong_AsLong(delayObj) );
+    }
+    else if (PyInt_Check(delayObj))
+    {
+    	SPELLexecutor::instance().setExecDelay( PyInt_AsLong(delayObj) );
+    }
+    else if (PyFloat_Check(delayObj))
+    {
+    	SPELLexecutor::instance().setExecDelay( PyLong_AsLong(PyLong_FromDouble( PyFloat_AsDouble(delayObj)) ) );
+    }
+    Py_RETURN_NONE;
+}
+
+//============================================================================
+// FUNCTION        : Executor_GetControllingHost
+//============================================================================
+static PyObject* Executor_GetControllingHost( PyObject* self, PyObject* args )
+{
+    DEBUG("[EXECPY] Get controlling host");
+    std::string host = SPELLexecutor::instance().getConfiguration().getControlHost();
+    if (host.empty())
+    {
+        Py_RETURN_NONE;
+    }
+    else
+    {
+        return Py_BuildValue("s", host.c_str());
+    }
 }

@@ -1,10 +1,10 @@
 NEWS
 ****
 
-2012-08-15 - Note About Building The Software
+2011-07-26 - Note About Building The Software
 =============================================
 
-The version of Python required to compile SPELL is the 2.5.x series.
+   The version of Python required to compile SPELL is the 2.5.x series
 with an official patch that comes only as of version 2.7. It is very
 likely that you will install it in an alternate folder such as /opt.
 

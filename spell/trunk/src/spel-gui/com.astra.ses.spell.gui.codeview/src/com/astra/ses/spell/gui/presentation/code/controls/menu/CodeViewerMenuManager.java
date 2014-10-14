@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-08-26
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -61,16 +61,18 @@ import org.eclipse.swt.widgets.MenuItem;
 
 import com.astra.ses.spell.gui.core.model.types.BreakpointType;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.model.commands.ClearBreakpoints;
 import com.astra.ses.spell.gui.model.commands.CmdGotoLine;
 import com.astra.ses.spell.gui.model.commands.CmdRun;
 import com.astra.ses.spell.gui.model.commands.SetBreakpoint;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
+import com.astra.ses.spell.gui.presentation.code.CodeModelProxy;
 import com.astra.ses.spell.gui.presentation.code.controls.CodeViewer;
 import com.astra.ses.spell.gui.presentation.code.controls.CodeViewerColumn;
 import com.astra.ses.spell.gui.presentation.code.dialogs.SearchDialog;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
+import com.astra.ses.spell.gui.types.CmdConstants;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 /*******************************************************************************
  * 
@@ -84,6 +86,8 @@ public class CodeViewerMenuManager
 	private CodeViewer m_viewer;
 	/** Procedure data provider */
 	private IProcedure m_model;
+	/** Code proxy */
+	private CodeModelProxy m_proxy;
 	/** Menu */
 	private Menu m_menu;
 
@@ -92,10 +96,11 @@ public class CodeViewerMenuManager
 	 * 
 	 * @param parent
 	 **************************************************************************/
-	public CodeViewerMenuManager(CodeViewer viewer, IProcedure model )
+	public CodeViewerMenuManager(CodeViewer viewer, IProcedure model, CodeModelProxy proxy)
 	{
 		m_viewer = viewer;
 		m_model = model;
+		m_proxy = proxy;
 		m_menu = new Menu(viewer.getGrid());
 
 		m_menu.addMenuListener(new MenuListener()
@@ -161,7 +166,7 @@ public class CodeViewerMenuManager
 	private boolean isExecutableLine()
 	{
 		ClientMode mode = m_model.getRuntimeInformation().getClientMode();
-		if (!mode.equals(ClientMode.CONTROLLING))
+		if (!mode.equals(ClientMode.CONTROL))
 			return false;
 		int tableSelectedItems = m_viewer.getGrid().getSelectionCount();
 		if (tableSelectedItems == 1)
@@ -172,6 +177,28 @@ public class CodeViewerMenuManager
 				return false;
 			if (code.startsWith("#"))
 				return false;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	/**************************************************************************
+	 * Check if control actions can be performed
+	 *************************************************************************/
+	private boolean isGoodForRunUntil()
+	{
+		ClientMode mode = m_model.getRuntimeInformation().getClientMode();
+		if (!mode.equals(ClientMode.CONTROL))
+			return false;
+		int tableSelectedItems = m_viewer.getGrid().getSelectionCount();
+		if (tableSelectedItems == 1)
+		{
+			GridItem item = m_viewer.getGrid().getSelection()[0];
+			int idx = item.getParent().indexOf(item);
+			if (idx <= m_proxy.getCurrentLineNo()) return false;
 			return true;
 		}
 		else
@@ -202,7 +229,7 @@ public class CodeViewerMenuManager
 		}
 
 		// This item appears no matter if a line is selected or not
-		if (mode.equals(ClientMode.CONTROLLING) && breakpointsDoable())
+		if (mode.equals(ClientMode.CONTROL) && breakpointsDoable())
 		{
 			/*
 			 * Clear breakpoints
@@ -319,7 +346,7 @@ public class CodeViewerMenuManager
 	{
 		BreakpointType type = BreakpointType.UNKNOWN;
 		GridItem[] selection = m_viewer.getGrid().getSelection();
-		final int lineNo = m_viewer.getGrid().indexOf(selection[0])+1;
+		final int lineNo = m_viewer.getGrid().indexOf(selection[0]) + 1;
 
 		if (gotoDoable())
 		{
@@ -337,34 +364,39 @@ public class CodeViewerMenuManager
 					args.put(CmdGotoLine.ARG_PROCID, m_model.getProcId());
 					args.put(CmdGotoLine.ARG_LINENO, String.valueOf(lineNo));
 					CommandHelper.execute(CmdGotoLine.ID, args);
+					m_viewer.setSelection(null);
 				}
 			});
 
-			/*
-			 * Run to this line
-			 */
-			MenuItem runToLine = new MenuItem(m_menu, SWT.PUSH);
-			runToLine.setText("Run until this line");
-			runToLine.addSelectionListener(new SelectionAdapter()
+			if (isGoodForRunUntil())
 			{
-				@Override
-				public void widgetSelected(SelectionEvent e)
+				/*
+				 * Run to this line
+				 */
+				MenuItem runToLine = new MenuItem(m_menu, SWT.PUSH);
+				runToLine.setText("Run until this line");
+				runToLine.addSelectionListener(new SelectionAdapter()
 				{
-					BreakpointType type = BreakpointType.TEMPORARY;
-
-					HashMap<String, String> args = new HashMap<String, String>();
-					args.put(SetBreakpoint.ARG_PROCID, m_model.getProcId());
-					args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
-					args.put(SetBreakpoint.ARG_TYPE, type.toString());
-					CommandHelper.execute(SetBreakpoint.ID, args);
-
-					m_viewer.onLineChanged( m_model.getExecutionManager().getLine(lineNo) );
-					
-					HashMap<String, String> runArgs = new HashMap<String, String>();
-					runArgs.put(CmdRun.ARG_PROCID, m_model.getProcId());
-					CommandHelper.execute(CmdRun.ID, runArgs);
-				}
-			});
+					@Override
+					public void widgetSelected(SelectionEvent e)
+					{
+						BreakpointType type = BreakpointType.TEMPORARY;
+	
+						HashMap<String, String> args = new HashMap<String, String>();
+						args.put(SetBreakpoint.ARG_PROCID, m_model.getProcId());
+						args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
+						args.put(SetBreakpoint.ARG_TYPE, type.toString());
+						CommandHelper.execute(SetBreakpoint.ID, args);
+	
+						m_viewer.onLineChanged(m_proxy.getLine(lineNo));
+	
+						HashMap<String, String> runArgs = new HashMap<String, String>();
+						runArgs.put(CmdRun.ARG_PROCID, m_model.getProcId());
+						CommandHelper.execute(CmdConstants.CMDRUN_HANDLER, runArgs);
+						m_viewer.setSelection(null);
+					}
+				});
+			}
 
 			/*
 			 * Separator
@@ -378,9 +410,9 @@ public class CodeViewerMenuManager
 			/*
 			 * Get the line's breakpoint type
 			 */
-			type = m_model.getExecutionManager().getLine(lineNo-1).getBreakpoint();
+			type = m_proxy.getLine(lineNo - 1).getBreakpoint();
 
-			if ( type != null && type.equals(BreakpointType.PERMANENT))
+			if (type != null && type.equals(BreakpointType.PERMANENT))
 			{
 				/*
 				 * Remove permanent breakpoint
@@ -398,8 +430,8 @@ public class CodeViewerMenuManager
 						args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
 						args.put(SetBreakpoint.ARG_TYPE, type.toString());
 						CommandHelper.execute(SetBreakpoint.ID, args);
-						
-						m_viewer.onLineChanged( m_model.getExecutionManager().getLine(lineNo) );
+
+						m_viewer.onLineChanged(m_proxy.getLine(lineNo));
 					}
 				});
 			}
@@ -422,8 +454,8 @@ public class CodeViewerMenuManager
 						args.put(SetBreakpoint.ARG_LINENO, String.valueOf(lineNo));
 						args.put(SetBreakpoint.ARG_TYPE, type.toString());
 						CommandHelper.execute(SetBreakpoint.ID, args);
-						
-						m_viewer.onLineChanged( m_model.getExecutionManager().getLine(lineNo) );
+
+						m_viewer.onLineChanged(m_proxy.getLine(lineNo));
 					}
 				});
 			}

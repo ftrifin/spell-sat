@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -60,6 +60,11 @@ public interface IProcedurePresentation extends IAdaptable
 	public static final String	ELEMENT_NAME	= "name";
 	public static final String	ELEMENT_DESC	= "description";
 	public static final String	ELEMENT_CLASS	= "class";
+
+	/**************************************************************************
+	 * Invoked when the presentation is unloaded
+	 *************************************************************************/
+	public void dispose();
 
 	/**************************************************************************
 	 * Obtain the extension identifier.
@@ -125,6 +130,11 @@ public interface IProcedurePresentation extends IAdaptable
 	 * Set the line to show, if applicable
 	 *************************************************************************/
 	public void showLine(int lineNo);
+
+	/**************************************************************************
+	 * Set the line to show, if applicable
+	 *************************************************************************/
+	public void showCurrentLine();
 
 	/**************************************************************************
 	 * Adapt the presentation to the given class

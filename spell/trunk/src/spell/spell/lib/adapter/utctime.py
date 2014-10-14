@@ -5,7 +5,7 @@
 ## DESCRIPTION: UTC time interface
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -40,6 +40,7 @@
 import datetime,time
 from spell.lib.exception import DriverException
 from spell.lib.registry import REGISTRY
+from spell.utils.log import *
 
 #*******************************************************************************
 # Exceptions 
@@ -77,14 +78,17 @@ TOMORROW_STR = 'TOMORROW'
 
 ################################################################################
 class TIME(object):
+
+    __fmt = None
+    
     #===========================================================================
     def __init__(self, timestamp):
         ttime = ttime_class()
         self._val = None
-        
         if isinstance(timestamp, TIME):
             if isinstance(timestamp._val, str):
                 self._val = ttime.cnv(timestamp._val)
+                self.__fmt = ttime.fmt()
             else:
                 self._val = timestamp._val
         elif isinstance(timestamp, datetime.datetime) or isinstance(timestamp, datetime.timedelta):
@@ -94,9 +98,14 @@ class TIME(object):
                 self._val = timestamp
             else:
                 self._val = ttime.cnv(timestamp)
+                self.__fmt = ttime.fmt()
         else:
             self._val = ttime.cnv(timestamp)
-        if self._val is None:
+	    
+	#Setting time format
+	self.__fmt = ttime.fmt()
+        
+	if self._val is None:
             raise DriverException("Invalid input for date/time: " + repr(timestamp))
     
     #===========================================================================
@@ -207,8 +216,7 @@ class TIME(object):
         val = self.value()
         res = None
         if isinstance(val, datetime.datetime):
-            res = val.strftime('%d-%b-%Y %H:%M:%S')
-            if val.microsecond != 0: res = res + ".%06i" % val.microsecond
+            res = val.strftime(self.__fmt)
         elif isinstance(val, datetime.timedelta):
             res = ('%+04i %02i:%02i:%02i' 
                 % (val.days, val.seconds // 3600, 
@@ -274,6 +282,7 @@ class ttime_class(object):
 
     __isinitialized = False
     __instance = None
+    __fmt = None
     
     #===========================================================================
     def __new__(cls):
@@ -287,16 +296,19 @@ class ttime_class(object):
             return
         super(ttime_class, self).__init__()
         self.__isinitialized = True
+        self.__fmt = '%d-%b-%Y %H:%M:%S'
+
+    #===========================================================================
+    def fmt(self):
+        return self.__fmt
     
     #===========================================================================
     def cnv(self, timestamp):
         
         mydt = datetime.datetime(1,1,1)
         evaluated = False
-
         datefmtlist = [ 
-            '%Y-%j-%H:%M:%S',    '%Y-%j-%H:%M',    '%Y-%j',
-            '%Y-%j %H:%M:%S',    '%Y-%j %H:%M',    '%Y-%j',
+            '%Y.%j.%H.%M.%S',    '%Y.%j.%H.%M',    '%Y.%j',
             '%d-%b-%Y %H:%M:%S', '%d-%b-%Y %H:%M', '%d-%b-%Y',
             '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d',
             '%Y/%m/%d %H:%M:%S', '%Y/%m/%d %H:%M', '%Y/%m/%d',
@@ -310,7 +322,7 @@ class ttime_class(object):
         ]
         
         abshourfmtlist = [
-            '%H:%M:%S', '%H:%M:%S', '%H:%M',
+            '%H.%M.%S', '%H:%M:%S', '%H:%M:%S', '%H:%M',
         ]
 
         # Split timestamp and microseconds
@@ -319,18 +331,21 @@ class ttime_class(object):
         
         if isinstance(timestamp, float):
             ms = (timestamp - int(timestamp)) * 1000000
+        
         elif isinstance(timestamp, str):
-            items = timestamp.split('.')
-            timestamp = items[0]
-            if len(items) > 1: ms = int(items[1].ljust(6, '0'))
+            # Check if the seconds are in mm:ss format. Otherwise dont check for microsecods
+            if not timestamp.find(':') == -1:
+                items = timestamp.split('.')
+                timestamp = items[0]
+                if len(items) > 1: ms = int(items[1].ljust(6, '0'))
 
         # - ISO, European or OpenVMS date formats
-
         for fmt in datefmtlist:
             if not evaluated:
                 try:
                     val = mydt.strptime(timestamp, fmt)
                     val = val.replace(microsecond = ms)
+                    self.__fmt = fmt;
                     evaluated = True
                 except:
                     pass

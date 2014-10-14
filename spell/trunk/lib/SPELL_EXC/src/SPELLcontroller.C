@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor controller
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,6 +33,7 @@
 #include "SPELL_UTIL/SPELLpythonMonitors.H"
 #include "SPELL_WRP/SPELLconstants.H"
 #include "SPELL_WRP/SPELLregistry.H"
+#include "SPELL_WRP/SPELLdriverManager.H"
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutor.H"
 #include "SPELL_EXC/SPELLcontroller.H"
@@ -73,7 +74,6 @@ void SPELLcontroller::reset()
     m_mainProc = "";
     m_currentProc = "";
     m_skipping = false;
-    m_execDelay = 0;
 
     m_abort = false;
     m_error = false;
@@ -82,6 +82,7 @@ void SPELLcontroller::reset()
     m_recover = false;
     m_reload = false;
     m_wantPause = false;
+    m_wantInterrupt = false;
 
     m_recoverEvent.set();
     m_controllerLock.set();
@@ -129,8 +130,8 @@ void SPELLcontroller::setStatus( const SPELLexecutorStatus& st )
         LOG_INFO("Procedure status: " + SPELLexecutorUtils::statusToString(st));
         SPELLstatusInfo info(st);
         info.condition = getCondition();
-        info.actionLabel = SPELLexecutor::instance().getUserActionLabel();
-        info.actionEnabled = SPELLexecutor::instance().getUserActionEnabled();
+        info.actionLabel = SPELLexecutor::instance().getUserAction().getLabel();
+        info.actionEnabled = SPELLexecutor::instance().getUserAction().isEnabled();
 
 		SPELLexecutor::instance().getCIF().notifyStatus( info );
     }
@@ -204,16 +205,6 @@ void SPELLcontroller::setAutoRun()
 }
 
 //=============================================================================
-// METHOD    : SPELLcontroller::setExecutionDelay
-//=============================================================================
-void SPELLcontroller::setExecutionDelay( const long delay )
-{
-    m_execDelay = delay;
-    if (m_execDelay < 0) m_execDelay = 0;
-	DEBUG("[C] Set execution delay to " + ISTR(m_execDelay) + " msec");
-}
-
-//=============================================================================
 // METHOD    : SPELLcontroller::enableRunInto
 //=============================================================================
 void SPELLcontroller::enableRunInto( const bool enable )
@@ -279,13 +270,38 @@ void SPELLcontroller::run()
             return;
         }
 
-        // Wait until language is processed
-		if (m_controllerLock.isClear())
-		{
-			SPELLexecutor::instance().getCIF().warning("Performing driver operation, will process the command", LanguageConstants::SCOPE_SYS );
-		}
         executeCommand(cmd);
     }
+}
+
+//=============================================================================
+// METHOD    : SPELLcontroller::notifyCommandToCore
+//=============================================================================
+void SPELLcontroller::notifyCommandToCore( const std::string& id )
+{
+	// Notify the adapter and the driver to give the chance
+	// to abort ongoing operations if needed
+	if (id == CMD_ABORT ||
+		id == CMD_PAUSE ||
+		id == CMD_INTERRUPT ||
+		id == CMD_SKIP  ||
+		id == CMD_RUN)
+	{
+		bool controlled = SPELLexecutor::instance().getConfiguration().hasControlClient();
+		if (controlled)
+		{
+			DEBUG("[C] Notify command " + id + " to core IN");
+			SPELLdriverManager::instance().onCommand(id);
+			DEBUG("[C] Notify command to core OUT");
+		}
+		else
+		{
+			DEBUG("[C] Notify command " + id + " to core IN (NOCLT)");
+			SPELLsafeThreadOperations tops("SPELLcontroller::onCommand()");
+			SPELLdriverManager::instance().onCommand(id);
+			DEBUG("[C] Notify command to core OUT");
+		}
+	}
 }
 
 //=============================================================================
@@ -294,13 +310,19 @@ void SPELLcontroller::run()
 void SPELLcontroller::executeCommand( const ExecutorCommand& cmd )
 {
 	// If a (repeatable) command is being executed, discard this one
-	if (isCommandPending() && (cmd.id != CMD_ABORT) && (cmd.id != CMD_FINISH) && (cmd.id != CMD_PAUSE) && (cmd.id != CMD_CLOSE))
+	if (isCommandPending() &&
+	    (cmd.id != CMD_ABORT) &&
+	    (cmd.id != CMD_FINISH) &&
+	    (cmd.id != CMD_INTERRUPT) &&
+	    (cmd.id != CMD_PAUSE) &&
+	    (cmd.id != CMD_CLOSE))
 	{
-		DEBUG("[C] Discarding command " + cmd.id);
+		LOG_WARN("Discarding command " + cmd.id);
 		return;
 	}
-	// Will hold dispatching mechanism until command executed
-	DEBUG("[C] Now executing command " + cmd.id);
+
+	LOG_INFO("Now executing command " + cmd.id);
+
     startCommandProcessing();
 
     if (cmd.id == CMD_ABORT)
@@ -357,6 +379,10 @@ void SPELLcontroller::executeCommand( const ExecutorCommand& cmd )
     {
         doPause();
     }
+    else if (cmd.id == CMD_INTERRUPT)
+    {
+        doInterrupt();
+    }
     else if (cmd.id == CMD_SCRIPT)
     {
     	/** \todo determine when to override */
@@ -380,10 +406,14 @@ void SPELLcontroller::executeCommand( const ExecutorCommand& cmd )
     {
         LOG_ERROR("[C] UNRECOGNISED COMMAND: " + cmd.id)
     }
-	DEBUG("[C] Command execution finished " + cmd.id);
 	m_mailbox.commandProcessed();
+
 	// The command has finished, release the dispatcher
 	setCommandFinished();
+	DEBUG("[C] Command execution finished " + cmd.id);
+
+	//TEMPORARILY DISABLED: it creates deadlocks.
+	// notifyCommandToCore( cmd.id );
 }
 
 //=============================================================================
@@ -501,8 +531,8 @@ void SPELLcontroller::doPause()
 	switch(currentStatus)
     {
     case STATUS_RUNNING: // Allowed status
-    case STATUS_WAITING: // Allowed status
     case STATUS_PROMPT: // Allowed status
+    case STATUS_WAITING: // Allowed status
         break;
     case STATUS_PAUSED:
     	return;
@@ -514,10 +544,63 @@ void SPELLcontroller::doPause()
 
     DEBUG("[C] Do pause");
 
+    // If there is something ongoing, warn the user
+    if (m_controllerLock.isClear())
+    {
+    	SPELLexecutor::instance().getCIF().warning("Procedure will pause", LanguageConstants::SCOPE_SYS );
+    }
+
     DEBUG("[C] Set step mode");
     setMode( MODE_STEP );
     // Enable the pause flag for the line event to hold the execution
     m_wantPause = true;
+	// Enable the stepping mechanism
+	m_execLock.clear();
+
+    DEBUG("[C] Do pause done");
+}
+
+//=============================================================================
+// METHOD    : SPELLcontroller::doInterrupt
+//=============================================================================
+void SPELLcontroller::doInterrupt()
+{
+	SPELLexecutorStatus currentStatus = getStatus();
+
+	switch(currentStatus)
+    {
+    case STATUS_RUNNING: // Allowed status
+    case STATUS_PAUSED: // Allowed status
+    case STATUS_WAITING: // Allowed status
+        break;
+    default:
+        DEBUG("[C] Discard interrupt command in current status " + SPELLexecutorUtils::statusToString(currentStatus));
+        return;
+    }
+    if (m_error) return; // Do not continue on error
+
+    // Do not process interrupt if there is nothing ongoing
+    if (!m_controllerLock.isClear() && !SPELLexecutor::instance().getScheduler().waiting())
+    {
+        DEBUG("[C] Discard interrupt command as no driver operation is ongoing");
+    	SPELLexecutor::instance().getCIF().write("No ongoing operations to be interrupted", LanguageConstants::SCOPE_SYS );
+    	return;
+    }
+    else
+    {
+    	SPELLexecutor::instance().getCIF().warning("Interrupt current operation", LanguageConstants::SCOPE_SYS );
+    }
+
+    DEBUG("[C] Do interrupt");
+
+    DEBUG("[C] Set step mode");
+    setMode( MODE_STEP );
+    setStatus( STATUS_INTERRUPTED );
+    // Enable the pause flag for the line event to hold the execution
+    m_wantPause = true;
+    // Enable the interrupt flag to report the correct status
+    m_wantInterrupt = true;
+
 	// Enable the stepping mechanism
 	m_execLock.clear();
 
@@ -528,11 +611,10 @@ void SPELLcontroller::doPause()
     }
     else
     {
-        SPELLexecutor::instance().getScheduler().interruptWait();
+    	SPELLexecutor::instance().getScheduler().interruptWait();
     }
 
-
-    DEBUG("[C] Do pause done");
+    DEBUG("[C] Do interrupt done");
 }
 
 //=============================================================================
@@ -669,7 +751,6 @@ void SPELLcontroller::doSkip()
     if (!SPELLexecutor::instance().canSkip())
     {
         LOG_WARN("[C] Cannot skip current line");
-        SPELLexecutor::instance().getCIF().warning("Cannot skip this line", LanguageConstants::SCOPE_SYS );
         return;
     }
 
@@ -681,6 +762,7 @@ void SPELLcontroller::doSkip()
     if (waitAborted)
     {
     	SPELLexecutor::instance().getCIF().warning("Wait condition aborted", LanguageConstants::SCOPE_SYS );
+    	setStatus(STATUS_PAUSED);
     }
     else
     {
@@ -782,7 +864,13 @@ void SPELLcontroller::doWait()
     if (m_abort || m_error) return;
     DEBUG("[C] Wait in");
 	m_wantPause = false;
-    setStatus( STATUS_PAUSED );
+
+	// Set PAUSED unless entering INTERRUPTED status
+	if (!m_wantInterrupt)
+	{
+		setStatus( STATUS_PAUSED );
+	}
+	m_wantInterrupt = false;
 
 	// Execution lock
     {
@@ -838,7 +926,7 @@ void SPELLcontroller::callbackEventLine( PyFrameObject* frame, const std::string
 		}
 		else
 		{
-			usleep(m_execDelay * 1000);
+			usleep( SPELLexecutor::instance().getConfiguration().getExecDelay() * 1000 );
 		}
     }
     else

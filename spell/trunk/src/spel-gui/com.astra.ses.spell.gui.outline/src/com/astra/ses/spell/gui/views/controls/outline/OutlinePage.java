@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-09-01
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,13 +59,14 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.part.Page;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.interfaces.IProcedureView;
 import com.astra.ses.spell.gui.model.outline.OutlineContentProvider;
 import com.astra.ses.spell.gui.model.outline.OutlineDecoratingLabelProvider;
 import com.astra.ses.spell.gui.model.outline.nodes.OutlineNode;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.services.IViewManager;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 import com.astra.ses.spell.gui.views.ProcedureView;
 
 /******************************************************************************
@@ -139,7 +140,7 @@ public class OutlinePage extends Page
 					IProcedure proc = mgr.getProcedure(m_procId);
 					// Get the view
 					IViewManager vmgr = (IViewManager) ServiceManager.get(IViewManager.class);
-					ProcedureView view = vmgr.getProcView(m_procId);
+					IProcedureView view = vmgr.getProcedureView(m_procId);
 					// This command can only be executed while the procedure is
 					// paused
 					ExecutorStatus st = proc.getRuntimeInformation()
@@ -154,7 +155,8 @@ public class OutlinePage extends Page
 					case FINISHED:
 					case INTERRUPTED:
 						// Switch the view
-						view.showLine(node.getLineNo());
+						// THIS SHOULD BE REMOVED: showline is not generic
+						((ProcedureView)view).showLine(node.getLineNo());
 					default:
 					}
 				}

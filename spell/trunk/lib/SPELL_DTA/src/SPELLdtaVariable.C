@@ -5,7 +5,7 @@
 // DESCRIPTION: Data variable implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -538,7 +538,7 @@ bool SPELLdtaVariable::inferTypeFromValue()
 {
 	if (!m_value.isNone())
 	{
-		m_type = m_value.type();
+		m_type = m_value.typeStr();
 		return true;
 	}
 	else

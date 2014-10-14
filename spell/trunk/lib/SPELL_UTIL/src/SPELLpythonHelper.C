@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Python helper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -156,8 +156,11 @@ void SPELLpythonHelper::importAllFrom( const std::string& package )
     for( count = 0; count < keyCount; count++ )
     {
         PyObject* key = PyList_GetItem( keyList, count );
-        PyObject* value = PyDict_GetItem( moduleDict, key );
-        PyDict_SetItem( main_dict, key, value );
+        if (!PyDict_Contains(main_dict,key))
+        {
+        	PyObject* value = PyDict_GetItem( moduleDict, key );
+        	PyDict_SetItem( main_dict, key, value );
+        }
     }
     DEBUG("[PYH] Imported all from module " + package);
 }
@@ -186,7 +189,7 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
             // If the import of user libraries has been done, do nothing
             if (PyDict_Contains( main_dict, STRPY("__USERLIB__")) )
             {
-                DEBUG("[PYH] No need to re-import user libraries");
+                LOG_WARN("[PYH] No need to re-import user libraries");
                 return;
             }
 
@@ -303,10 +306,10 @@ void SPELLpythonHelper::updateUserLibrary( PyObject* main_dict, const std::strin
         {
             PyObject* value = PyDict_GetItem( main_dict, key );
             PyDict_SetItem( moduleDict, key, value );
-            LOG_INFO("       . updated " + PYSSTR(key));
+            //LOG_INFO("       . updated " + PYSSTR(key));
         }
     }
-    DEBUG("     [PYH] Update done");
+    //DEBUG("     [PYH] Update done");
 }
 
 //============================================================================
@@ -325,9 +328,12 @@ void SPELLpythonHelper::importUserLibrary( PyObject* main_dict, const std::strin
     for( count = 0; count < keyCount; count++ )
     {
         PyObject* key = PyList_GetItem( keyList, count );
-        PyObject* value = PyDict_GetItem( moduleDict, key );
-        PyDict_SetItem( main_dict, key, value );
-        LOG_INFO("       . imported " + PYSSTR(key));
+        if (!PyDict_Contains( main_dict, key ))
+        {
+        	PyObject* value = PyDict_GetItem( moduleDict, key );
+        	PyDict_SetItem( main_dict, key, value );
+            LOG_INFO("       . imported " + PYSSTR(key));
+        }
     }
     DEBUG("     [PYH] Import done");
 }
@@ -550,27 +556,24 @@ void SPELLpythonHelper::initialize()
     }
 
     char* home = getenv( "SPELL_HOME" );
-    char* cots = getenv( "SPELL_COTS" );
     if (home == NULL)
     {
         THROW_EXCEPTION("Unable to initialize", "SPELL_HOME variable not defined", SPELL_ERROR_ENVIRONMENT);
     }
-    if (cots == NULL)
-    {
-        THROW_EXCEPTION("Unable to initialize", "SPELL_COTS variable not defined", SPELL_ERROR_ENVIRONMENT);
-    }
     std::string homestr = home;
-    std::string cotsstr = cots;
 
     LOG_INFO("[PYH] Initializing Python path");
 
     addToPath(".");
-    addToPath( cotsstr +  PATH_SEPARATOR + "lib" + PATH_SEPARATOR + "python2.5" );
-    addToPath( cotsstr +  PATH_SEPARATOR + "lib" + PATH_SEPARATOR + "python2.5" + PATH_SEPARATOR + "site-packages" );
-    addToPath( cotsstr +  PATH_SEPARATOR + "lib" + PATH_SEPARATOR + "python2.5" + PATH_SEPARATOR + "lib-dynload" );
     addToPath( homestr );
     addToPath( homestr + PATH_SEPARATOR + "lib" );
     addToPath( homestr + PATH_SEPARATOR + "spell" );
+    addToPath( homestr + PATH_SEPARATOR + "drivers" );
+    char *pythonpath = getenv("PYTHONPATH");
+    if (pythonpath != NULL)
+    {
+        addToPath(pythonpath);
+    }
 
     // Initialize the system arguments to empty list (no script is executed)
     char** argv = new char*[1];
@@ -590,6 +593,7 @@ void SPELLpythonHelper::loadFramework()
     importAllFrom("spell.lang.modifiers");
     importAllFrom("spell.lang.user");
     importAllFrom("spell.lib.adapter.utctime");
+    importAllFrom("spell.lib.adapter.file");
     importAllFrom("math");
 }
 
@@ -609,15 +613,21 @@ void SPELLpythonHelper::finalize()
 //=============================================================================
 void SPELLpythonHelper::addToPath( const std::string& path )
 {
-    m_pythonPath.push_back(path);
     LOG_INFO("[PYH] Append to python path: " + path);
-    std::vector<std::string>::iterator it;
+
+    // Retrieve first the current path
     std::string libs = "";
-    for( it = m_pythonPath.begin(); it != m_pythonPath.end(); it++)
+    PyObject* sys = PySys_GetObject( (char*) "path" );
+    int size = PyList_Size(sys);
+    for(int idx=0; idx<size; idx++)
     {
-        if (libs.size()>0) libs += ":";
-        libs += (*it);
+    	std::string path_element = PYSTR(PyList_GetItem(sys,idx));
+    	if (!libs.empty()) libs += ":";
+    	libs += path_element;
     }
+	if (!libs.empty()) libs += ":";
+	libs += path;
+
     PySys_SetPath( const_cast<char*>(libs.c_str()) );
 }
 
@@ -869,7 +879,15 @@ std::string SPELLpythonHelper::readProcedureFile( const std::string& filename )
         {
             std::string line = "";
             std::getline(file,line);
-            source += line + "\n";
+            if (!file.eof() || !line.empty())
+            {
+               source += line + "\n";
+            }
+        }
+        
+        if (!source.empty())
+        {
+           source +="exit";
         }
     }
     catch(...)
@@ -1064,8 +1082,7 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
     // Fail if the line comes before the start of the code block.
     if (new_lineno < frame->f_code->co_firstlineno)
     {
-        LOG_ERROR("[PYH] Unable to set new line: line comes before start of code block");
-        return false;
+    	THROW_EXCEPTION("Cannot set new line", "Line comes before start of code block", SPELL_ERROR_PYTHON_API);
     }
 
     /* We're now ready to look at the bytecode. */
@@ -1085,8 +1102,7 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
      * restriction (but with a different error message). */
     if (code[new_lasti] == DUP_TOP || code[new_lasti] == POP_TOP)
     {
-        LOG_ERROR("[PYH] Unable to set new line: cannot go inside a try/except block");
-        return false;
+    	THROW_EXCEPTION("Cannot set new line", "Cannot go inside a try/except block", SPELL_ERROR_PYTHON_API);
     }
 
     /* You can't jump into or out of a 'finally' block because the 'try'
@@ -1116,14 +1132,16 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
             in_finally[blockstack_top-1] = 0;
             break;
         case POP_BLOCK:
-            assert(blockstack_top > 0);
-            setup_op = code[blockstack[blockstack_top-1]];
-            if (setup_op == SETUP_FINALLY)
+            if(blockstack_top > 0)
             {
-                in_finally[blockstack_top-1] = 1;
-            }
-            else {
-                blockstack_top--;
+				setup_op = code[blockstack[blockstack_top-1]];
+				if (setup_op == SETUP_FINALLY)
+				{
+					in_finally[blockstack_top-1] = 1;
+				}
+				else {
+					blockstack_top--;
+				}
             }
             break;
         case END_FINALLY:
@@ -1180,8 +1198,7 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
     /* After all that, are we jumping into / out of a 'finally' block? */
     if (new_lasti_setup_addr != f_lasti_setup_addr)
     {
-        LOG_ERROR("[PYH] Unable to set new line: cannot go outside the try/except block");
-        return false;
+    	THROW_EXCEPTION("Cannot set new line", "Cannot jump outside a try/except block", SPELL_ERROR_PYTHON_API);
     }
 
     /* Police block-jumping (you can't jump into the middle of a block)
@@ -1231,8 +1248,7 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
     /* Are we jumping into a block? */
     if (new_iblock > min_iblock)
     {
-        LOG_ERROR("[PYH] Unable to set new line: cannot jump into a block");
-        return false;
+    	THROW_EXCEPTION("Cannot set new line", "Cannot jump inside a block", SPELL_ERROR_PYTHON_API);
     }
 
     /* Pop any blocks that we're jumping out of. */

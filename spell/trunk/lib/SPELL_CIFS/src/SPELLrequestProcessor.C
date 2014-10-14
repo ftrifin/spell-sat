@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the message request processor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -75,7 +75,7 @@ void SPELLrequestProcessor::processMessageForChild( const SPELLipcMessage& msg )
     if (SPELLexecutor::instance().getChildManager().hasChild() &&
     	SPELLexecutor::instance().getChildManager().getChildId() == procId)
     {
-        if (msg.getId() == ContextMessages::MSG_EXEC_OP)
+		if (msg.getId() == ContextMessages::MSG_EXEC_OP)
         {
         	DEBUG("[CIF] Notifying child operation");
             std::string operation = msg.get(MessageField::FIELD_EXOP);
@@ -88,6 +88,29 @@ void SPELLrequestProcessor::processMessageForChild( const SPELLipcMessage& msg )
             {
             	DEBUG("[CIF] Child killed");
                 SPELLexecutor::instance().getChildManager().notifyChildKilled();
+            }
+            else if ( operation == MessageValue::DATA_TYPE_STATUS )
+            {
+    			std::string status = msg.get(MessageField::FIELD_EXEC_STATUS);
+    			SPELLexecutorStatus childStatus = SPELLexecutorUtils::stringToStatus(status);
+    			if (childStatus == STATUS_ERROR)
+    			{
+    				std::string childError = msg.get(MessageField::FIELD_ERROR);
+    				std::string childErrorReason = msg.get(MessageField::FIELD_REASON);
+    				LOG_INFO("[CIF] Error info: " + childError + ": " + childErrorReason);
+    				SPELLexecutor::instance().getChildManager().notifyChildError( childError, childErrorReason );
+    			}
+    			else if (childStatus == STATUS_ABORTED)
+    			{
+    				std::string childError = "Child execution did not finish";
+    				std::string childErrorReason = "Execution was aborted";
+    				SPELLexecutor::instance().getChildManager().notifyChildError( childError, childErrorReason );
+    			}
+    			else
+    			{
+    				SPELLexecutor::instance().getChildManager().notifyChildStatus( childStatus );
+    			}
+    			LOG_INFO("[CIF] Child status: " + status );
             }
             else
             {
@@ -115,21 +138,28 @@ void SPELLrequestProcessor::processGetConfig( const SPELLipcMessage& msg, SPELLi
 {
     DEBUG("[CIF] Request to get executor config");
     response.setId(ExecutorMessages::RSP_GET_CONFIG);
-    SPELLexecutorConfig& config = SPELLexecutor::instance().getConfiguration();
-    response.set(ExecutorConstants::RunInto, config.getRunInto() ? True : False);
+    SPELLexecutorConfig config = SPELLexecutor::instance().getConfiguration();
+    response.set(ExecutorConstants::RunInto, config.isRunInto() ? True : False);
+
     std::string execDelay = ISTR(config.getExecDelay());
-    std::string byStep = config.getByStep() ? True : False;
-    std::string browsableLib = config.getBrowsableLib() ? True : False;
-    std::string forceTcConfirm = config.getForceTcConfirm() ? True : False;
+    std::string promptDelay = ISTR(config.getPromptWarningDelay());
+    std::string byStep = config.isByStep() ? True : False;
+    std::string browsableLib = config.isBrowsableLib() ? True : False;
+    std::string forceTcConfirm = config.isForceTcConfirm() ? True : False;
+
     response.set(ExecutorConstants::ExecDelay, execDelay);
+    response.set(ExecutorConstants::PromptDelay, promptDelay);
     response.set(ExecutorConstants::ByStep, byStep);
     response.set(ExecutorConstants::BrowsableLib, browsableLib );
     response.set(ExecutorConstants::ForceTcConfirm, forceTcConfirm);
+
     LOG_INFO("Current executor configuration:");
-    LOG_INFO("    exec delay   : " + execDelay);
-    LOG_INFO("    by step      : " + byStep);
-    LOG_INFO("    browsable lib: " + browsableLib);
-    LOG_INFO("    force confirm: " + forceTcConfirm);
+    LOG_INFO("           run into   : " + (config.isRunInto() ? True : False) );
+    LOG_INFO("           exec delay : " + execDelay);
+    LOG_INFO(" prompt warning delay : " + promptDelay);
+    LOG_INFO("              by step : " + byStep);
+    LOG_INFO("        browsable lib : " + browsableLib);
+    LOG_INFO("        force confirm : " + forceTcConfirm);
     DEBUG("[CIF] Request to get executor config done");
 }
 
@@ -171,18 +201,24 @@ void SPELLrequestProcessor::processSetConfig( const SPELLipcMessage& msg, SPELLi
     response.setId(ExecutorMessages::RSP_SET_CONFIG);
     std::string runInto = msg.get(ExecutorConstants::RunInto);
     std::string execDelay = msg.get(ExecutorConstants::ExecDelay);
+    std::string promptDelay = msg.get(ExecutorConstants::PromptDelay);
     std::string byStep = msg.get(ExecutorConstants::ByStep);
     std::string browsableLib = msg.get(ExecutorConstants::BrowsableLib);
     std::string forceTcConfirm = msg.get(ExecutorConstants::ForceTcConfirm);
+
+
     LOG_INFO("New executor configuration ----------------------------------");
     LOG_INFO("   Run into  : " + runInto);
     LOG_INFO("   Delay     : " + execDelay);
+    LOG_INFO(" Prompt Delay: " + promptDelay);
     LOG_INFO("   By step   : " + byStep);
     LOG_INFO("   Br. lib   : " + browsableLib);
     LOG_INFO("   TC confirm: " + forceTcConfirm);
     LOG_INFO("-------------------------------------------------------------");
+
     SPELLexecutor::instance().setRunInto( (runInto == True) );
     SPELLexecutor::instance().setExecDelay( STRI( execDelay ));
+    SPELLexecutor::instance().setPromptWarningDelay ( STRI( promptDelay ));
     SPELLexecutor::instance().setByStep( (byStep == True) );
     SPELLexecutor::instance().setBrowsableLib( (browsableLib == True) );
     SPELLexecutor::instance().setForceTcConfirm( forceTcConfirm == True );
@@ -219,45 +255,14 @@ void SPELLrequestProcessor::processClearBreakpoints( const SPELLipcMessage& msg,
 }
 
 //=============================================================================
-// METHOD: SPELLrequestProcessor::processNotificationForChild
+// METHOD: SPELLrequestProcessor::processCheckVariablesEnabled
 //=============================================================================
-void SPELLrequestProcessor::processNotificationForChild( const SPELLipcMessage& msg, SPELLipcMessage& response )
+void SPELLrequestProcessor::processCheckVariablesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response )
 {
-    std::string procId = msg.get(MessageField::FIELD_PROC_ID);
-
-    if (msg.get(MessageField::FIELD_DATA_TYPE) == MessageValue::DATA_TYPE_STATUS)
-    {
-        if (SPELLexecutor::instance().getChildManager().hasChild() &&
-        	SPELLexecutor::instance().getChildManager().getChildId() == procId)
-        {
-            response.setId(msg.getId());
-            std::string status = msg.get(MessageField::FIELD_EXEC_STATUS);
-            SPELLexecutorStatus childStatus = SPELLexecutorUtils::stringToStatus(status);
-        	DEBUG("[CIF] Notifying child status: " + status);
-            if (childStatus == STATUS_ERROR)
-            {
-                std::string childError = msg.get(MessageField::FIELD_ERROR);
-                std::string childErrorReason = msg.get(MessageField::FIELD_REASON);
-                LOG_INFO("[CIF] Error info: " + childError + ": " + childErrorReason);
-                SPELLexecutor::instance().getChildManager().notifyChildError( childError, childErrorReason );
-            }
-            else if (childStatus == STATUS_ABORTED)
-            {
-                std::string childError = "Child execution did not finish";
-                std::string childErrorReason = "Execution was aborted";
-                SPELLexecutor::instance().getChildManager().notifyChildError( childError, childErrorReason );
-            }
-            else
-            {
-                SPELLexecutor::instance().getChildManager().notifyChildStatus( childStatus );
-            }
-            LOG_INFO("[CIF] Child status: " + status );
-        }
-        else
-        {
-            LOG_ERROR("[CIF] No such child procedure: " + procId);
-        }
-    }
+    // Update the response message
+    response.setId(ExecutorMessages::RSP_WVARIABLES_ENABLED);
+    bool enabled = SPELLexecutor::instance().getVariableManager().isEnabled();
+    response.set( MessageField::FIELD_WVARIABLES_ENABLED, enabled ? "True" : "False");
 }
 
 //=============================================================================
@@ -266,11 +271,7 @@ void SPELLrequestProcessor::processNotificationForChild( const SPELLipcMessage& 
 void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPELLipcMessage& response )
 {
     // Update the response message
-    response.setId(ExecutorMessages::RSP_VARIABLE_NAMES);
-
-    std::string whichOnes = msg.get( MessageField::FIELD_VARIABLE_GET );
-
-    std::vector<SPELLvarInfo> vars;
+    response.setId(ExecutorMessages::RSP_GET_VARIABLES);
 
 	if (msg.get( MessageField::FIELD_CHUNK ) != "")
 	{
@@ -285,19 +286,9 @@ void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPE
 	}
 	else
 	{
-		if (!SPELLexecutor::instance().getVariableManager().isEnabled())
-		{
-			DEBUG("Variable manager is disabled");
-			response.setType(MSG_TYPE_ERROR);
-			response.set( MessageField::FIELD_ERROR, "Cannot retrieve variables");
-			response.set( MessageField::FIELD_REASON, "Variable analysis is disabled in configuration");
-			response.set( MessageField::FIELD_FATAL, PythonConstants::False );
-			return;
-		}
-
 		if (!SPELLexecutor::instance().getVariableManager().isStatusValid())
 		{
-			DEBUG("Variable manager is not in valid status");
+			LOG_WARN("Variable manager is not in valid status");
 			response.setType(MSG_TYPE_ERROR);
 			response.set( MessageField::FIELD_ERROR, "Cannot retrieve variables");
 			response.set( MessageField::FIELD_REASON, "Variable analysis cannot be done in the current status");
@@ -305,38 +296,24 @@ void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPE
 			return;
 		}
 
-	    if (whichOnes == MessageValue::AVAILABLE_ALL)
+		std::vector<SPELLvarInfo> localVars;
+		std::vector<SPELLvarInfo> globalVars;
+
+		if (!SPELLexecutor::instance().getVariableManager().isEnabled())
 		{
-	    	vars = SPELLexecutor::instance().getVariableManager().getAllVariables();
+			LOG_WARN("Variable manager is disabled: trigger analysis on demand");
+			SPELLexecutor::instance().getVariableManager().analyze();
 		}
-	    else if (whichOnes == MessageValue::AVAILABLE_GLOBALS)
-		{
-	    	vars = SPELLexecutor::instance().getVariableManager().getGlobalVariables();
-		}
-	    else if (whichOnes == MessageValue::AVAILABLE_LOCALS)
-		{
-	    	vars = SPELLexecutor::instance().getVariableManager().getLocalVariables();
-		}
-	    else if (whichOnes == MessageValue::REGISTERED_ALL)
-		{
-	    	vars = SPELLexecutor::instance().getVariableManager().getRegisteredVariables();
-		}
-	    else if (whichOnes == MessageValue::REGISTERED_GLOBALS)
-		{
-	    	vars = SPELLexecutor::instance().getVariableManager().getRegisteredGlobalVariables();
-		}
-	    else if (whichOnes == MessageValue::REGISTERED_LOCALS)
-		{
-	    	vars = SPELLexecutor::instance().getVariableManager().getRegisteredLocalVariables();
-		}
+
+		globalVars = SPELLexecutor::instance().getVariableManager().getGlobalVariables();
+		localVars = SPELLexecutor::instance().getVariableManager().getLocalVariables();
 
 		std::string names = "";
 		std::string types = "";
 		std::string values = "";
 		std::string globals = "";
-		std::string registereds = "";
 
-		for(unsigned int index = 0; index<vars.size(); index++)
+		for(unsigned int index = 0; index<globalVars.size(); index++)
 		{
 			if (names != "")
 			{
@@ -344,13 +321,26 @@ void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPE
 				types += VARIABLE_SEPARATOR;
 				values += VARIABLE_SEPARATOR;
 				globals += VARIABLE_SEPARATOR;
-				registereds += VARIABLE_SEPARATOR;
 			}
-			names += vars[index].varName;
-			types += vars[index].varType;
-			values += vars[index].varValue;
-			globals += vars[index].isGlobal ? "True" : "False";
-			registereds += vars[index].isRegistered ? "True" : "False";
+			names += globalVars[index].varName;
+			types += globalVars[index].varType;
+			values += globalVars[index].varValue;
+			globals += "True";
+		}
+
+		for(unsigned int index = 0; index<localVars.size(); index++)
+		{
+			if (names != "")
+			{
+				names += VARIABLE_SEPARATOR;
+				types += VARIABLE_SEPARATOR;
+				values += VARIABLE_SEPARATOR;
+				globals += VARIABLE_SEPARATOR;
+			}
+			names += localVars[index].varName;
+			types += localVars[index].varType;
+			values += localVars[index].varValue;
+			globals += "False";
 		}
 
 		// Chunk if needed
@@ -377,7 +367,6 @@ void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPE
 				response.set( MessageField::FIELD_VARIABLE_NAME, names );
 				response.set( MessageField::FIELD_VARIABLE_TYPE, types );
 				response.set( MessageField::FIELD_VARIABLE_GLOBAL, globals );
-				response.set( MessageField::FIELD_VARIABLE_REGISTERED, registereds );
 				response.set( MessageField::FIELD_TOTAL_CHUNKS, "0");
 				response.set( MessageField::FIELD_VARIABLE_VALUE, values );
 				DEBUG("No chunks done");
@@ -388,7 +377,6 @@ void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPE
 				response.set( MessageField::FIELD_VARIABLE_NAME, names );
 				response.set( MessageField::FIELD_VARIABLE_TYPE, types );
 				response.set( MessageField::FIELD_VARIABLE_GLOBAL, globals );
-				response.set( MessageField::FIELD_VARIABLE_REGISTERED, registereds );
 				response.set( MessageField::FIELD_TOTAL_CHUNKS, ISTR(m_valueChunks.size()));
 				response.set( MessageField::FIELD_VARIABLE_VALUE, m_valueChunks[0] );
 				DEBUG("Given chunk 0 (size " + ISTR(m_valueChunks[0].size())+ ")");
@@ -400,65 +388,10 @@ void SPELLrequestProcessor::processGetVariables( const SPELLipcMessage& msg, SPE
 			response.set( MessageField::FIELD_VARIABLE_NAME, names );
 			response.set( MessageField::FIELD_VARIABLE_TYPE, types );
 			response.set( MessageField::FIELD_VARIABLE_GLOBAL, globals );
-			response.set( MessageField::FIELD_VARIABLE_REGISTERED, registereds );
 			response.set( MessageField::FIELD_TOTAL_CHUNKS, "0");
 			response.set( MessageField::FIELD_VARIABLE_VALUE, values );
 		}
 	}
-}
-
-//=============================================================================
-// METHOD: SPELLrequestProcessor::processVariableWatch
-//=============================================================================
-void SPELLrequestProcessor::processVariableWatch( const SPELLipcMessage& msg, SPELLipcMessage& response )
-{
-    // Update the response message
-    response.setId(ExecutorMessages::RSP_VARIABLE_WATCH);
-
-    std::string name = msg.get( MessageField::FIELD_VARIABLE_NAME );
-    std::string value;
-    std::string type;
-    bool global = (msg.get( MessageField::FIELD_VARIABLE_GLOBAL ) == "True");
-
-    SPELLvarInfo info(name,type,value,global,false);
-	bool success = SPELLexecutor::instance().getVariableManager().registerVariable( info );
-
-	if (success)
-	{
-		response.set( MessageField::FIELD_VARIABLE_VALUE, info.varValue );
-		response.set( MessageField::FIELD_VARIABLE_TYPE, info.varType );
-	}
-	else
-	{
-		response.set( MessageField::FIELD_VARIABLE_VALUE, "???" );
-		response.set( MessageField::FIELD_VARIABLE_TYPE, "???" );
-	}
-}
-
-//=============================================================================
-// METHOD: SPELLrequestProcessor::processVariableNoWatch
-//=============================================================================
-void SPELLrequestProcessor::processVariableNoWatch( const SPELLipcMessage& msg, SPELLipcMessage& response )
-{
-    // Update the response message
-    response.setId(ExecutorMessages::RSP_VARIABLE_NOWATCH);
-
-    std::string name = msg.get( MessageField::FIELD_VARIABLE_NAME );
-    bool global = (msg.get( MessageField::FIELD_VARIABLE_GLOBAL ) == "True");
-
-    SPELLvarInfo info(name,"","",global,true);
-	SPELLexecutor::instance().getVariableManager().unregisterVariable( info );
-}
-
-//=============================================================================
-// METHOD: SPELLrequestProcessor::processWatchNothing
-//=============================================================================
-void SPELLrequestProcessor::processWatchNothing( const SPELLipcMessage& msg, SPELLipcMessage& response )
-{
-    // Update the response message
-    response.setId(ExecutorMessages::RSP_WATCH_NOTHING);
-
-	SPELLexecutor::instance().getVariableManager().unregisterAll();
 }
 
 //=============================================================================
@@ -474,20 +407,9 @@ void SPELLrequestProcessor::processChangeVariable( const SPELLipcMessage& msg, S
     bool global = (msg.get( MessageField::FIELD_VARIABLE_GLOBAL ) == "True");
 
     // Type and registration flag are not important here
-    SPELLvarInfo info(name,"",valueExpression,global,false);
+    SPELLvarInfo info(name,"",valueExpression,global);
 
 	SPELLexecutor::instance().getVariableManager().changeVariable( info );
-}
-
-//=============================================================================
-// METHOD: SPELLrequestProcessor::processSaveState
-//=============================================================================
-void SPELLrequestProcessor::processSaveState( const SPELLipcMessage& msg, SPELLipcMessage& response )
-{
-    // Update the response message
-    response.setId(ExecutorMessages::RSP_SAVE_STATE);
-
-	SPELLexecutor::instance().save();
 }
 
 //=============================================================================
@@ -524,7 +446,6 @@ void SPELLrequestProcessor::processGetDictionary( const SPELLipcMessage& msg, SP
 		SPELLsafePythonOperations ops("SPELLrequestProcessor::processGetDictionary");
 
 		PyObject* dict = SPELLexecutor::instance().getVariableManager().getVariableRef(dictName);
-		PyTypeObject* type = reinterpret_cast<PyTypeObject*>(dict->ob_type);
 
 		if (dict == NULL)
 		{
@@ -532,9 +453,9 @@ void SPELLrequestProcessor::processGetDictionary( const SPELLipcMessage& msg, SP
 			//TODO maybe raise an expection/warning
 			contents = None;
 		}
-		else if ( std::string(type->tp_name) == "spell.lib.adapter.data.DataContainer" )
+		else if ( isDataContainer(dict) )
 		{
-			DEBUG("Analyzing dictionary " + dictName);
+			DEBUG("Getting data container " + dictName);
 
 			SPELLdtaContainerObject* containerObj = reinterpret_cast<SPELLdtaContainerObject*>(dict);
 			PyObject* keyList = containerObj->container->getKeys();
@@ -590,6 +511,48 @@ void SPELLrequestProcessor::processGetDictionary( const SPELLipcMessage& msg, SP
 				contents+= varCode;
 			}
 		}
+		else if ( SPELLpythonHelper::instance().isDatabase(dict) )
+		{
+			DEBUG("Getting SPELL database " + dictName);
+
+			PyObject* keyList = SPELLpythonHelper::instance().callMethod(dict, "keys", NULL);
+			unsigned int numKeys = PyList_Size(keyList);
+			DEBUG( ISTR(numKeys) + " keys to read");
+			for(unsigned int index = 0; index< numKeys; index++)
+			{
+				PyObject* key = PyList_GetItem(keyList,index);
+				Py_XINCREF(key);
+				PyObject* value = PyObject_GetItem(dict,key);
+				Py_XINCREF(value);
+				std::string valueStr = PYSSTR(value);
+				std::string varCode = PYSSTR(key)      + VARIABLE_PROPERTY_SEPARATOR +  valueStr;
+				Py_XDECREF(key);
+				Py_XDECREF(value);
+				if (contents.size()>0) contents += VARIABLE_SEPARATOR;
+				contents+= varCode;
+			}
+		}
+		else if ( PyDict_Check(dict) )
+		{
+			DEBUG("Getting dictionary " + dictName);
+
+			PyObject* keyList = PyDict_Keys(dict);
+			unsigned int numKeys = PyList_Size(keyList);
+			DEBUG( ISTR(numKeys) + " keys to read");
+			for(unsigned int index = 0; index< numKeys; index++)
+			{
+				PyObject* key = PyList_GetItem(keyList,index);
+				Py_XINCREF(key);
+				PyObject* value = PyDict_GetItem(dict,key);
+				Py_XINCREF(value);
+				std::string valueStr = PYSSTR(value);
+				std::string varCode = PYSSTR(key)      + VARIABLE_PROPERTY_SEPARATOR +  valueStr;
+				Py_XDECREF(key);
+				Py_XDECREF(value);
+				if (contents.size()>0) contents += VARIABLE_SEPARATOR;
+				contents+= varCode;
+			}
+		}
 		else
 		{
 			contents = PYREPR(dict);
@@ -638,6 +601,15 @@ void SPELLrequestProcessor::processGetDictionary( const SPELLipcMessage& msg, SP
 }
 
 //=============================================================================
+// METHOD: SPELLrequestProcessor::isDataContainer
+//=============================================================================
+bool SPELLrequestProcessor::isDataContainer(PyObject* dict)
+{
+    PyTypeObject* type = reinterpret_cast<PyTypeObject*>(dict->ob_type);
+    return std::string(type->tp_name) == "spell.lib.adapter.data.DataContainer";
+}
+
+//=============================================================================
 // METHOD: SPELLrequestProcessor::processUpdateDictionary
 //=============================================================================
 void SPELLrequestProcessor::processUpdateDictionary( const SPELLipcMessage& msg, SPELLipcMessage& response )
@@ -657,25 +629,22 @@ void SPELLrequestProcessor::processUpdateDictionary( const SPELLipcMessage& msg,
 
     DEBUG("Update dictionary contents for " + dictName);
 
+	// These requests run on a different thread than the interpreter's, therefore the
+	// thread safe operations need to be requested. AFTER this, the GIL must be acquired
+	// in order to perform the evaluation of expressions.
+	//RACC 15-MAY SPELLsafeThreadOperations ops;
+	SPELLsafePythonOperations ops("SPELLrequestProcessor::processUpdateDictionary");
+
 	PyObject* dict = SPELLexecutor::instance().getVariableManager().getVariableRef(dictName);
 	Py_XINCREF(dict);
-
-	PyTypeObject* type = reinterpret_cast<PyTypeObject*>(dict->ob_type);
 
 	if (dict == NULL)
 	{
 		LOG_ERROR("Dictionary " + dictName + " not found");
 	}
-	else if ( std::string(type->tp_name) == "spell.lib.adapter.data.DataContainer" )
+	else if ( isDataContainer(dict) )
 	{
-		// These requests run on a different thread than the interpreter's, therefore the
-		// thread safe operations need to be requested. AFTER this, the GIL must be acquired
-		// in order to perform the evaluation of expressions.
-		//RACC 15-MAY SPELLsafeThreadOperations ops;
-		SPELLsafePythonOperations ops("SPELLrequestProcessor::processUpdateDictionary");
-
-		DEBUG("Updating dictionary " + dictName);
-
+		DEBUG("Updating data container " + dictName);
 
 		SPELLdtaContainerObject* containerObj = reinterpret_cast<SPELLdtaContainerObject*>(dict);
 		std::string varData = msg.get( MessageField::FIELD_DICT_CONTENTS );
@@ -749,6 +718,79 @@ void SPELLrequestProcessor::processUpdateDictionary( const SPELLipcMessage& msg,
 			containerObj->container->setNotificationsEnabled(true);
 		}
 
+		DEBUG("Updating data container done");
+	}
+	else if(SPELLpythonHelper::instance().isDatabase(dict))
+	{
+		DEBUG("Updating SPELL database " + dictName);
+
+		std::string varData = msg.get( MessageField::FIELD_DICT_CONTENTS );
+		std::string error = "";
+
+		std::vector<std::string> fields = SPELLutils::tokenize(varData, VARIABLE_PROPERTY_SEPARATOR_STR);
+
+		std::string varName = fields[0];
+		std::string varValue = fields[1];
+
+		DEBUG("Updating variable " + varName + "=" + varValue);
+		try
+		{
+			PyObject* value = SPELLpythonHelper::instance().eval(varValue,false);
+			Py_INCREF(value);
+			PyObject* key = SSTRPY(varName);
+			Py_INCREF(key);
+			PyObject_SetItem(dict,key,value);
+			SPELLpythonHelper::instance().checkError();
+		}
+		catch(SPELLcoreException& ex)
+		{
+			error = "  - variable '" + varName + "': " + ex.what();
+		}
+
+		if (error != "")
+		{
+			response = SPELLipcHelper::createErrorResponse( ExecutorMessages::RSP_UPD_DICTIONARY, msg);
+			response.set( MessageField::FIELD_ERROR, error);
+			response.set( MessageField::FIELD_REASON, "");
+			response.set( MessageField::FIELD_FATAL, PythonConstants::False);
+		}
+		DEBUG("Updating dictionary done");
+	}
+	// Update of regular dictionaries
+	else if (PyDict_Check(dict))
+	{
+		DEBUG("Updating dictionary " + dictName);
+
+		std::string varData = msg.get( MessageField::FIELD_DICT_CONTENTS );
+		std::string error = "";
+
+		std::vector<std::string> fields = SPELLutils::tokenize(varData, VARIABLE_PROPERTY_SEPARATOR_STR);
+
+		std::string varName = fields[0];
+		std::string varValue = fields[1];
+
+		DEBUG("Updating variable " + varName + "=" + varValue);
+		try
+		{
+			PyObject* value = SPELLpythonHelper::instance().eval(varValue,false);
+			Py_INCREF(value);
+			PyObject* key = SSTRPY(varName);
+			Py_INCREF(key);
+			PyObject_SetItem(dict,key,value);
+			SPELLpythonHelper::instance().checkError();
+		}
+		catch(SPELLcoreException& ex)
+		{
+			error = "  - variable '" + varName + "': " + ex.what();
+		}
+
+		if (error != "")
+		{
+			response = SPELLipcHelper::createErrorResponse( ExecutorMessages::RSP_UPD_DICTIONARY, msg);
+			response.set( MessageField::FIELD_ERROR, error);
+			response.set( MessageField::FIELD_REASON, "");
+			response.set( MessageField::FIELD_FATAL, PythonConstants::False);
+		}
 		DEBUG("Updating dictionary done");
 	}
 	else

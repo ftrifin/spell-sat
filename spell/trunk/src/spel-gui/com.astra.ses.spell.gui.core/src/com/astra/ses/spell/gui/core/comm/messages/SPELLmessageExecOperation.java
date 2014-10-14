@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:58
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -51,18 +51,19 @@ package com.astra.ses.spell.gui.core.comm.messages;
 import java.util.TreeMap;
 
 import com.astra.ses.spell.gui.core.interfaces.IMessageField;
-import com.astra.ses.spell.gui.core.interfaces.IMessageValue;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
 import com.astra.ses.spell.gui.core.model.types.ExecutorOperation;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
+import com.astra.ses.spell.gui.core.model.types.ExecutorOperationSummary;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class SPELLmessageExecOperation extends SPELLmessageOneway
 {
-	private String	          m_procId;
-	private ExecutorOperation	m_operation;
-	private ClientMode	      m_clientMode;
-	private String	          m_clientKey;
-	private ExecutorStatus	  m_execStatus;
+	private String m_procId;
+	private ExecutorOperation m_operation;
+	private ClientMode m_clientMode;
+	private String m_clientKey;
+	private ExecutorStatus m_status;
+	private ExecutorOperationSummary m_summary;
 
 	public SPELLmessageExecOperation(TreeMap<String, String> data)
 	{
@@ -70,11 +71,11 @@ public class SPELLmessageExecOperation extends SPELLmessageOneway
 		try
 		{
 			m_procId = get(IMessageField.FIELD_PROC_ID);
-			m_operation = ExecutorOperation
-			        .valueOf(get(IMessageField.FIELD_EXEC_OP));
-			m_clientMode = ClientMode.CONTROLLING;
+			m_operation = ExecutorOperation.valueOf(get(IMessageField.FIELD_EXEC_OP));
+			m_clientMode = ClientMode.CONTROL;
 			m_clientKey = null;
-			m_execStatus = ExecutorStatus.UNKNOWN;
+			m_summary = new ExecutorOperationSummary();
+			m_status = ExecutorStatus.UNKNOWN;
 			if (hasKey(IMessageField.FIELD_GUI_KEY))
 			{
 				m_clientKey = get(IMessageField.FIELD_GUI_KEY);
@@ -82,13 +83,20 @@ public class SPELLmessageExecOperation extends SPELLmessageOneway
 			if (hasKey(IMessageField.FIELD_GUI_MODE))
 			{
 				String mstr = get(IMessageField.FIELD_GUI_MODE);
-				if (mstr.equals(IMessageValue.CLIENT_MODE_MONITOR))
-				{
-					m_clientMode = ClientMode.MONITORING;
-				}
+				m_clientMode = ClientMode.valueOf(mstr);
 			}
-			m_execStatus = ExecutorStatus
-			        .valueOf(get(IMessageField.FIELD_EXEC_STATUS));
+			if (hasKey(IMessageField.FIELD_STAGE_ID))
+			{
+				m_summary.stageId = get(IMessageField.FIELD_STAGE_ID);
+			}
+			if (hasKey(IMessageField.FIELD_STAGE_TL))
+			{
+				m_summary.stageTitle = get(IMessageField.FIELD_STAGE_TL);
+			}
+			if (hasKey(IMessageField.FIELD_EXEC_STATUS))
+			{
+				m_status = ExecutorStatus.valueOf(get(IMessageField.FIELD_EXEC_STATUS));
+			}
 		}
 		catch (MessageException ex)
 		{
@@ -116,8 +124,13 @@ public class SPELLmessageExecOperation extends SPELLmessageOneway
 		return m_clientKey;
 	}
 
-	public ExecutorStatus getProcStatus()
+	public ExecutorStatus getStatus()
 	{
-		return m_execStatus;
+		return m_status;
+	}
+	
+	public ExecutorOperationSummary getSummary()
+	{
+		return m_summary;
 	}
 }

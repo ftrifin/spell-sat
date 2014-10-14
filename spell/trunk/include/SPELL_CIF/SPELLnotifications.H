@@ -5,7 +5,7 @@
 // DESCRIPTION: Notification data structures
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -57,7 +57,7 @@ NotificationType;
 
 //============================================================================
 /** Notification information structure */
-typedef struct ItemNotification_
+/*typedef struct ItemNotification_
 {
     NotificationType       type;
     std::string            name;
@@ -67,8 +67,93 @@ typedef struct ItemNotification_
     std::string            time;
     std::string            stack;
 }
-ItemNotification;
+ItemNotification;*/
 //============================================================================
 
+// DEFINES /////////////////////////////////////////////////////////////////
+
+
+
+//============================================================================
+/** String mappings for notification types */
+namespace NotificationValue
+{
+//###############################################################################
+//# UI notification type values
+	/** Notification data type item */
+	static const std::string DATA_NOTIF_TYPE_ITEM("ITEM");
+	/** Notification data type value */
+	static const std::string DATA_NOTIF_TYPE_VAL("VALUE");
+	/** Notification data type verification */
+	static const std::string DATA_NOTIF_TYPE_VERIF("VERIFICATION");
+	/** Notification data type execution */
+	static const std::string DATA_NOTIF_TYPE_EXEC("EXECUTION");
+	/** Notification data type system */
+	static const std::string DATA_NOTIF_TYPE_SYS("SYSTEM");
+	/** Notification data type time */
+	static const std::string DATA_NOTIF_TYPE_TIME("TIME");
+
+//###############################################################################
+//# UI notification status values
+	/** Success operation */
+	static const std::string DATA_NOTIF_STATUS_OK("SUCCESS");
+	/** In progress operation */
+	static const std::string DATA_NOTIF_STATUS_PR("IN PROGRESS");
+	/** Failed operation */
+	static const std::string DATA_NOTIF_STATUS_FL("FAILED");
+	/** Skipped operation */
+	static const std::string DATA_NOTIF_STATUS_SP("SKIPPED");
+
+
+} //namespace NotificationValue
+
+//============================================================================
+namespace NotificationSeparator
+{
+	/** Separator for file and data lines */
+	//static const std::string CODE_SEPARATOR("%C%");
+	/** Separator for items in notifications */
+	static const std::string ARG_SEPARATOR(",,");
+	/** Separator for keys and values in prompts */
+	//static const std::string KEY_SEPARATOR(":");
+	/** Separator for options in prompts */
+	//static const std::string OPT_SEPARATOR("|");
+};
+
+
+//============================================================================
+/** String mappings for notification types */
+static std::string NOTIF_TYPE_STR[] =
+{
+	NotificationValue::DATA_NOTIF_TYPE_ITEM,
+	NotificationValue::DATA_NOTIF_TYPE_VAL,
+	NotificationValue::DATA_NOTIF_TYPE_VERIF,
+	NotificationValue::DATA_NOTIF_TYPE_EXEC,
+	NotificationValue::DATA_NOTIF_TYPE_SYS,
+	NotificationValue::DATA_NOTIF_TYPE_TIME
+};
+
+class ItemNotification
+{
+public:
+
+    std::string getTokenizedTime();
+    std::string getTokenizedComment();
+    int getSuccessfulCount();
+
+    NotificationType       type;
+    std::string            name;
+    std::string            value;
+    std::string            status;
+    std::string            comment;
+    std::string            time;
+    std::string            stack;
+
+
+//protected: //-----------------------------------------------------------------
+
+
+
+};
 /*@}*/
 #endif

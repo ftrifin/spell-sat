@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -52,11 +52,11 @@ import org.eclipse.core.expressions.PropertyTester;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.procs.interfaces.IProcedureManager;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public class ProcedureConfigurableTester extends PropertyTester
 {
@@ -89,7 +89,7 @@ public class ProcedureConfigurableTester extends PropertyTester
 			if (st.equals(ExecutorStatus.LOADED)) return false;
 			if (st.equals(ExecutorStatus.FINISHED)) return false;
 			// We must be controlling
-			if (!proc.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROLLING)) { return false; }
+			if (!proc.getRuntimeInformation().getClientMode().equals(ClientMode.CONTROL)) { return false; }
 			return true;
 		}
 		else

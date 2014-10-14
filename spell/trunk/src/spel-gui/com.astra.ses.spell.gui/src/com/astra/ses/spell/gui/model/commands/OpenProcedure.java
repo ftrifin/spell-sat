@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -48,66 +48,30 @@
 ///////////////////////////////////////////////////////////////////////////////
 package com.astra.ses.spell.gui.model.commands;
 
-import org.eclipse.core.commands.AbstractHandler;
-import org.eclipse.core.commands.ExecutionEvent;
-import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
 
-import com.astra.ses.spell.gui.core.interfaces.IServerProxy;
-import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.core.model.server.ServerInfo.ServerRole;
 import com.astra.ses.spell.gui.model.commands.helpers.CommandHelper;
 import com.astra.ses.spell.gui.model.jobs.OpenLocalProcedureJob;
-import com.astra.ses.spell.gui.services.IRuntimeSettings;
-import com.astra.ses.spell.gui.services.IRuntimeSettings.RuntimeProperty;
 
 /**
  */
-public class OpenProcedure extends AbstractHandler
+public class OpenProcedure extends OpenProcedureBase
 {
 	public static final String ID = "com.astra.ses.spell.gui.commands.OpenProcedure";
-
-	/***************************************************************************
-	 * The constructor.
-	 **************************************************************************/
-	public OpenProcedure()
-	{
-	}
 
 	/***************************************************************************
 	 * The command has been executed, so extract extract the needed information
 	 * from the application context.
 	 **************************************************************************/
-	public CommandResult execute(ExecutionEvent event) throws ExecutionException
+	public CommandResult doPerformOpen( IWorkbenchWindow window, String procId )
 	{
-		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-
-		IServerProxy proxy = (IServerProxy) ServiceManager.get(IServerProxy.class);
-		ServerRole role = proxy.getCurrentServer().getRole();
-		if (role != ServerRole.COMMANDING)
+		OpenLocalProcedureJob job = new OpenLocalProcedureJob(procId);
+		CommandHelper.executeInProgress(job, true, true);
+		if (job.result != CommandResult.SUCCESS)
 		{
-			MessageDialog.openError(window.getShell(), "Cannot open", "Cannot open procedures on the current server,\n"
-			        + "the role is monitoring");
-			return CommandResult.NO_EFFECT;
+			MessageDialog.openError(window.getShell(), "Open procedure error", job.message);
 		}
-
-		IRuntimeSettings runtime = (IRuntimeSettings) ServiceManager.get(IRuntimeSettings.class);
-		String procId = (String) runtime.getRuntimeProperty(RuntimeProperty.ID_NAVIGATION_VIEW_SELECTION);
-		if (procId != null)
-		{
-			OpenLocalProcedureJob job = new OpenLocalProcedureJob(procId);
-			CommandHelper.executeInProgress(job, true, true);
-			if (job.result != CommandResult.SUCCESS)
-			{
-				MessageDialog.openError(window.getShell(), "Open procedure error", job.message);
-			}
-			return job.result;
-		}
-		else
-		{
-			return CommandResult.NO_EFFECT;
-		}
+		return job.result;
 	}
 }

@@ -5,7 +5,7 @@
 ## DESCRIPTION: File wrapper
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -23,23 +23,21 @@
 ## along with SPELL. If not, see <http://www.gnu.org/licenses/>.
 ##
 ###################################################################################
-import os,sys
+import os
 from spell.lang.constants import READ,WRITE,READ_WRITE,APPEND
 from spell.lib.exception import DriverException
 
 ###################################################################################
 class File():
     
-    __filename = None
-    __file = None
-    __fd = None
-    __mode = None
-    
     #==============================================================================
     def __init__(self, filename):
-        self.__filename = os.path.abspath(filename)
+        self.__filename = filename
+        if self.isDir():
+            self.__mode = READ
+        else:
+            self.__mode = None
         self.__file = None
-        self.__mode = None
         self.__fd = None 
         
     #==============================================================================
@@ -55,24 +53,64 @@ class File():
         return os.path.dirname(self.__filename)
     
     #==============================================================================
+    def __add__(self,other):
+        return self.append(other)
+    
+    #==============================================================================
+    def append(self,other):
+        
+        if self.isOpen():
+            raise DriverException("Cannot append path", "File object is open")
+
+        if self.isFile():
+            raise DriverException("Cannot append path", "Cannot append to a file")
+        
+        if type(other)==str:
+            self.__filename += os.sep + other
+        elif isinstance(other,File):
+            self.__filename += os.sep + other.filename()
+        else:
+            raise DriverException("Cannot append to path", "Expected file object or string")
+        
+        return self
+
+    #==============================================================================
     def exists(self):
         return os.path.exists(self.__filename)
     
     #==============================================================================
-    def isdir(self):
+    def isDir(self):
         return os.path.isdir(self.__filename)
     
     #==============================================================================
-    def isfile(self):
+    def isFile(self):
         return os.path.isfile(self.__filename)
+
+    #==============================================================================
+    def delete(self):
+        if not self.exists():
+            raise DriverException("Cannot delete " + repr(self), "File not found") 
+        if not self.canWrite():
+            raise DriverException("Cannot delete " + repr(self), "Not enough permissions")
+        try:
+            if self.isDir():
+                os.rmdir(self.__filename)
+            else:
+                os.remove(self.__filename)
+        except OSError,ex:
+            raise DriverException("Cannot delete " + repr(self), repr(ex))
     
     #==============================================================================
     def canWrite(self):
-        return os.access(self.__filename, os.W_OK)
+        if os.access(self.__filename, os.W_OK):
+            return (self.__mode == WRITE or self.__mode == READ_WRITE or self.__mode == APPEND)
+        return False
     
     #==============================================================================
     def canRead(self):
-        return os.access(self.__filename, os.R_OK)
+        if os.access(self.__filename, os.R_OK):
+            return (self.__mode == READ or self.__mode == READ_WRITE)
+        return False
     
     #==============================================================================
     def isOpen(self):
@@ -99,17 +137,17 @@ class File():
             if not self.exists():
                 raise DriverException("Cannot open " + repr(self.__filename) + " for read", "Not found")
     
-            if not self.canRead():
+            if not os.access(self.__filename, os.R_OK):
                 raise DriverException("Cannot open " + repr(self.__filename) + " for read", "Permission denied")
             
         elif mode == READ_WRITE or mode == WRITE or mode == APPEND:
             
-            if self.isdir():
+            if self.isDir():
                 raise DriverException("Cannot open " + repr(self.__filename) + " in this mode", "It is a directory")
         
             if self.exists():
                 
-                if not self.canWrite():
+                if not os.access(self.__filename, os.W_OK):
                     raise DriverException("Cannot open " + repr(self.__filename) + " for R/W", "Permission denied")
             else:
                 if not os.access(self.dirname(), os.W_OK):
@@ -117,23 +155,26 @@ class File():
 
         try:
             
-            if self.isdir():
+            if self.isDir():
                 self.__fd = os.open(self.__filename, os.O_RDONLY)
             else:
-                modeStr = 'r'
                 if mode == READ:
-                    pass
+                    modeStr = 'r'
                 elif mode == WRITE:
-                    modeStr = 'w'
+                    modeStr = 'w+'
                     if not self.exists(): modeStr = 'a' + modeStr
                 elif mode == READ_WRITE:
-                    modeStr = 'rw'
+                    modeStr = 'rw+'
                     if not self.exists(): modeStr = 'a' + modeStr
                 elif mode == APPEND:
-                    modeStr  = 'a'
+                    modeStr  = 'a+'
                 else:
                     raise DriverException("Cannot open " + repr(self.__filename), "Unsupported mode: " + repr(mode))
+                
                 self.__file = file(self.__filename, modeStr)
+                
+                if self.__file.closed:
+                    raise DriverException("Cannot open " + repr(self.__filename), "Failed to open file descriptor")
 
             self.__mode = mode
         
@@ -150,10 +191,12 @@ class File():
     def close(self):
         try:
             if self.isOpen():
-                if self.isfile():
+                if self.isFile():
                     self.__file.close()
                 else:
                     os.close(self.__fd)
+                self.__file = None
+                self.__fd = None
         except Exception,ex:
             raise DriverException("Cannot close " + repr(self.__filename), str(ex))
 
@@ -162,7 +205,7 @@ class File():
         try:
             if not self.isOpen():
                 raise DriverException("Cannot flush file", "File is not open")
-            if self.isdir():
+            if self.isDir():
                 raise DriverException("Cannot flush file", "It is a directory")
             if not self.canWrite():
                 raise DriverException("Cannot flush file", "Permission denied")
@@ -182,7 +225,7 @@ class File():
         try:
             if not self.isOpen():
                 raise DriverException("Cannot write to file", "File is not open")
-            if self.isdir():
+            if self.isDir():
                 raise DriverException("Cannot write to file", "It is a directory")
             if not self.canWrite():
                 raise DriverException("Cannot write to file", "Permission denied")
@@ -205,22 +248,26 @@ class File():
             raise DriverException("Cannot write to file", "Expected a string as input, received " + repr(type(data)))
         self.write(data + "\n")
 
-
     #==============================================================================
     def read(self):
-        if not self.isOpen():
-            raise DriverException("Cannot read file lines", "File is not open")
-        if not self.canRead():
-            raise DriverException("Cannot read file lines", "Permission denied")
-        
-        if self.isdir():
+        if self.isDir():
+            if not self.canRead():
+                raise DriverException("Cannot read directory contents", "Permission denied")
+            
             return self.__list()
         else:
+            if not self.canRead():
+                raise DriverException("Cannot read file lines", "Permission denied")
+            
+            if not self.isOpen():
+                raise DriverException("Cannot read file lines", "File is not open")
+            
             if self.__mode != READ and self.__mode != READ_WRITE:
                 raise DriverException("Cannot read file lines", "Incorrect file mode")
             lines = []
             try:
                 lines = self.__file.readlines()
+                self.__file.seek(0)
             except Exception,ex:
                 raise DriverException("Cannot read file lines", str(ex))
             return lines
@@ -229,7 +276,7 @@ class File():
     def truncate(self):
         if not self.isOpen():
             raise DriverException("Cannot truncate file", "File is not open")
-        if self.isdir():
+        if self.isDir():
             raise DriverException("Cannot truncate file", "It is a directory")
         if not self.canWrite():
             raise DriverException("Cannot truncate file", "Permission denied")
@@ -239,3 +286,11 @@ class File():
             self.__file.truncate()
         except Exception,ex:
             raise DriverException("Cannot truncate file", str(ex))
+
+    #==============================================================================
+    def __str__(self):
+        return str(self.__filename)
+    
+    #==============================================================================
+    def __repr__(self):
+        return repr(self.__filename)

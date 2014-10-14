@@ -5,7 +5,7 @@
 // DESCRIPTION: Main CIF object interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -37,8 +37,12 @@
 #include "SPELL_CIF/SPELLcifStartupInfo.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_EXC/SPELLvarInfo.H"
-#include "SPELL_EXC/SPELLscopeInfo.H"
 #include "SPELL_PRD/SPELLprocedureSourceCode.H"
+
+#include "SPELL_SYN/SPELLthread.H"
+#include "SPELL_SYN/SPELLevent.H"
+
+#include "SPELL_EXC/SPELLexecutorConfiguration.H"
 
 /** \addtogroup SPELL_CIF */
 /*@{*/
@@ -63,6 +67,10 @@ void ClientIF_Install();
 
 
 // DEFINES /////////////////////////////////////////////////////////////////
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 /**
@@ -122,17 +130,17 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Set the close condition to true.
 		**////////////////////////////////////////////////////////////////////
-		virtual void canClose() = 0;
+		virtual void canClose();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Check if the user/server wants the executor to be closed.
 		**////////////////////////////////////////////////////////////////////
-		virtual void waitClose() = 0;
+		virtual void waitClose();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Reset the user/server close condition.
 		**////////////////////////////////////////////////////////////////////
-		virtual void resetClose() = 0;
+		virtual void resetClose();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the currently configured verbosity level.
@@ -184,48 +192,20 @@ public: //--------------------------------------------------------------------
 		const bool isManual() const;
 
 		//////////////////////////////////////////////////////////////////////
-		/** Check if the user library is browsable
+		/** Get SPELL Executor Configuration
 		 *
-		 * \returns True if the library is browsable
+		 * \returns SPELLExecutorConfig
 		**////////////////////////////////////////////////////////////////////
-		const bool isBrowsableLib() const {
-			return m_browsableLib;
-		};
+		SPELLexecutorConfig& getExecutorConfig() {
+			return m_config;
+		}
 
 		//////////////////////////////////////////////////////////////////////
-		/** Get the procedure arguments if any.
+		/** Set the maximum allowed verbosity level.
 		 *
-		 *\returns The procedure argument string if any
+		 * \param verbosityFilter IN: The maximum verbosity level
 		**////////////////////////////////////////////////////////////////////
-		virtual std::string getArguments() = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get the procedure condition if any.
-		 *
-		 * \returns The procedure condition string if any
-		**////////////////////////////////////////////////////////////////////
-		virtual std::string getCondition() = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get the procedure open mode 'automatic' parameter.
-		 *
-		 * \returns True if the procedure will run in automatic mode.
-		**////////////////////////////////////////////////////////////////////
-		virtual bool isAutomatic() = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get the procedure open mode 'visible' parameter.
-		 *
-		 * \returns True if the procedure will run in visible mode.
-		**////////////////////////////////////////////////////////////////////
-		virtual bool isVisible() = 0;
-
-		//////////////////////////////////////////////////////////////////////
-		/** Get the procedure open mode 'blocking' parameter.
-		 *
-		 * \returns True if the procedure will run in blocking mode.
-		**////////////////////////////////////////////////////////////////////
-		virtual bool isBlocking() = 0;
+		void setVerbosityFilter( int vFilter);
 
     //====================================================================
     // Python bindings start
@@ -272,46 +252,51 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Send a line notification to the client
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyLine() = 0;
+		//virtual void notifyLine() = 0;
+		virtual void notifyLine();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a call notification to the client
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyCall() = 0;
+		//virtual void notifyCall() = 0;
+		virtual void notifyCall();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a return notification to the client
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyReturn() = 0;
+		//virtual void notifyReturn() = 0;
+		virtual void notifyReturn();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a status notification to the client
 		 *
 		 * \param st IN: current status information
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyStatus( const SPELLstatusInfo& st ) = 0;
+		//virtual void notifyStatus( const SPELLstatusInfo& st ) = 0;
+		virtual void notifyStatus( const SPELLstatusInfo& st );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify user action set
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyUserActionSet( const std::string& label, const unsigned int severity ) = 0;
+		virtual void notifyUserActionSet( const std::string& label, const unsigned int severity );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify user action unset
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyUserActionUnset() = 0;
+		virtual void notifyUserActionUnset();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify user action enable/disable
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyUserActionEnable( bool enable ) = 0;
+		virtual void notifyUserActionEnable( bool enable );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send an item notification to the client
 		 *
 		 * \param notification IN: notification data
 		**////////////////////////////////////////////////////////////////////
-		virtual void notify( ItemNotification notification ) = 0;
+		//virtual void notify( ItemNotification notification ) = 0;
+		virtual void notify( ItemNotification notification );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send an error notification to the client
@@ -320,28 +305,32 @@ public: //--------------------------------------------------------------------
 		 * \param reason IN: error cause, if known
 		 * \param fatal IN: true if the error cannot be recovered
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyError( const std::string& error, const std::string& reason, bool fatal ) = 0;
+		virtual void notifyError( const std::string& error, const std::string& reason, bool fatal );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a write message to the client with default configuration
 		 *
 		 * \param msg IN: message text
+		 * \param scope IN: Scope unsigned integer
 		**////////////////////////////////////////////////////////////////////
-		virtual void write( const std::string& msg, unsigned int scope = 2) = 0;
+		//virtual void write( const std::string& msg, unsigned int scope = 2) = 0;
+		virtual void write( const std::string& msg, unsigned int scope = 2);
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a warning message to the client
 		 *
 		 * \param msg IN: message text
 		**////////////////////////////////////////////////////////////////////
-		virtual void warning( const std::string& msg, unsigned int scope = 2) = 0;
+		//virtual void warning( const std::string& msg, unsigned int scope = 2) = 0;
+		virtual void warning( const std::string& msg, unsigned int scope = 2);
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a error message to the client
 		 *
 		 * \param msg IN: message text
 		**////////////////////////////////////////////////////////////////////
-		virtual void error( const std::string& msg, unsigned int scope = 2 ) = 0;
+		//virtual void error( const std::string& msg, unsigned int scope = 2 ) = 0;
+		virtual void error( const std::string& msg, unsigned int scope = 2 );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Send a log message
@@ -355,17 +344,22 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \param definition IN: prompt parameters
 		**////////////////////////////////////////////////////////////////////
-		virtual std::string prompt( const SPELLpromptDefinition& definition ) = 0;
+		//virtual std::string prompt( const SPELLpromptDefinition& definition ) = 0;
+		virtual std::string prompt( const SPELLpromptDefinition& definition );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify a variable change.
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyVariableChange( const std::vector<SPELLvarInfo>& changed ) {;};
+		virtual void notifyVariableChange( const std::vector<SPELLvarInfo>& added,
+				                           const std::vector<SPELLvarInfo>& changed,
+				                           const std::vector<SPELLvarInfo>& deleted );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify a variable scope change.
 		**////////////////////////////////////////////////////////////////////
-		virtual void notifyVariableScopeChange( const SPELLscopeInfo& info ) {;};
+		virtual void notifyVariableScopeChange( const std::string& scopeName,
+				                                const std::vector<SPELLvarInfo>& globals,
+				                                const std::vector<SPELLvarInfo>& locals );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Substitute the current ASRUN file by the given one
@@ -373,6 +367,38 @@ public: //--------------------------------------------------------------------
 		 * \param asrunFile IN: the new asrun file
 		**////////////////////////////////////////////////////////////////////
 		void useAsRun( const std::string& asrunFile );
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Open subprocedure.
+		 *
+		 * \param procId IN: identifier of the subprocedure
+		 * \param callingLine IN: line where the procedure start call is
+		 * \param args IN: arguments for the subprocedure
+		 * \param automatic IN: automatic mode flag
+		 * \param blocking IN: blocking mode flag
+		 * \param visible IN: visible mode flag
+		 *
+		 * \returns The procedure identifier with instance number.
+		**////////////////////////////////////////////////////////////////////
+		std::string openSubprocedure( const std::string& procId,
+									  int callingLine,
+									  const std::string& args, bool automatic, bool blocking, bool visible );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Close the given child procedure.
+		 *
+		 * \param procId IN: child procedure identifier.
+		**////////////////////////////////////////////////////////////////////
+		void closeSubprocedure( const std::string& procId );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Kill the given child procedure.
+		 *
+		 * \param procId IN: child procedure identifier.
+		**////////////////////////////////////////////////////////////////////
+		void killSubprocedure( const std::string& procId );
+
 
     //====================================================================
     // Python bindings end
@@ -382,9 +408,23 @@ public: //--------------------------------------------------------------------
 		void disableNotifications() { m_notificationsEnabled = false; };
 		bool notificationsEnabled() const { return m_notificationsEnabled; };
 
+	//====================================================================
+	// Shared data handling
+	//====================================================================
+		virtual std::string setSharedData( const std::string& name, const std::string& value, const std::string& expected, const std::string& scope ) { return "";};
+		virtual std::string clearSharedData( const std::string& name, const std::string& scope )  { return "";};
+		virtual std::string getSharedData( const std::string& name, const std::string& scope )  { return "";};
+		virtual std::string getSharedDataKeys( const std::string& scope )  { return ""; };
+		virtual std::string getSharedDataScopes()  { return ""; };
+		virtual void removeSharedDataScope( const std::string& scope )  { return; };
+		virtual void removeSharedDataScopes()  { return; };
+		virtual void addSharedDataScope( const std::string& scope )  { return; };
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
+
 protected: //-----------------------------------------------------------------
+
 
     // EXCEPTIONS ////////////////////////////////////////////////////////////
     // ENUMS /////////////////////////////////////////////////////////////////
@@ -398,6 +438,122 @@ protected: //-----------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		unsigned int getNumExecutions() const;
 
+		//////////////////////////////////////////////////////////////////////
+		/** Return the FullStack or the Stack when the fullstack
+		 * is not available.
+		**////////////////////////////////////////////////////////////////////
+		std::string getAvailableStack();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyLine
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyLine() {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyCall
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyCall() {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyReturn
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyReturn() {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyStatus
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyStatus( const SPELLstatusInfo& st ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Notify
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificNotify( ItemNotification notification ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of NotifyError
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyError( const std::string& error, const std::string& reason, bool fatal ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Write
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificWrite( const std::string& msg, unsigned int scope = 2) {;};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Warning
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificWarning( const std::string& msg, unsigned int scope = 2 ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code of Error
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificError( const std::string& msg, unsigned int scope = 2 ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code for Prompt
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificPrompt( const SPELLpromptDefinition& def, std::string& rawAnswer, std::string& answerToShow ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code for SetupgetParentProcId
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificSetup( const SPELLcifStartupInfo& info ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Specific code for Setup
+		 *////////////////////////////////////////////////////////////////////
+		virtual void specificCleanup( bool force ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** See Notify user action set
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyUserActionSet( const std::string& label, const unsigned int severity ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** See Notify user action unset
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyUserActionUnset() {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** See Notify user action enable/disable
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyUserActionEnable( bool enable ) {;};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** See Notify a variable change.
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyVariableChange( const std::vector<SPELLvarInfo>& added,
+				                           const std::vector<SPELLvarInfo>& changed,
+				                           const std::vector<SPELLvarInfo>& deleted ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** See Notify a variable scope change.
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyVariableScopeChange( const std::string& scopeName,
+				                                const std::vector<SPELLvarInfo>& globals,
+				                                const std::vector<SPELLvarInfo>& locals ) {;};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** See OpenSubprocedure
+		**////////////////////////////////////////////////////////////////////
+		virtual std::string specificOpenSubprocedure( const std::string& procId,
+											  int callingLine,
+											  const std::string& args, bool automatic, bool blocking, bool visible ) { return ""; };
+
+		//////////////////////////////////////////////////////////////////////
+		/** See CloseSubprocedure
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificCloseSubprocedure( const std::string& procId ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** See KillSubprocedure
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificKillSubprocedure( const std::string& procId ) {;};
+
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 	    /** Holds the timestamp identifier used for file generation like AsRun */
@@ -408,10 +564,24 @@ protected: //-----------------------------------------------------------------
 		int m_ctxPort;
 		/** Holds the AsRUN file generator */
 		SPELLasRun* m_asRun;
-		/** Borwsable lib flag */
-		bool m_browsableLib;
 		/** Notifications enabled flag */
 		bool m_notificationsEnabled;
+
+
+		/** Last line notification time */
+		/** Optimization: prevent redundant line notifications */
+		std::string m_lastStack;
+
+		/** True if error was reported */
+		bool m_errorState;
+
+		/** Event for cleaning up connections */
+		SPELLevent m_finishEvent;
+
+		/** Holds the executor startup configuration */
+		SPELLexecutorConfig     	 m_config;
+
+
 
 private: //-------------------------------------------------------------------
 
@@ -428,8 +598,10 @@ private: //-------------------------------------------------------------------
 		bool m_manualMode;
 		/** Current verbosity level */
 		int m_verbosity;
-		/** Maximum verbosity level */
-		int m_verbosityFilter;
+
+		/** Synchronization with line notification timer */
+		SPELLmutex m_lineLock;
+
 };
 
 /*@}*/

@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -53,7 +53,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
-import com.astra.ses.spell.gui.extensions.ServerBridge;
+import com.astra.ses.spell.gui.extensions.GuiNotifications;
 import com.astra.ses.spell.gui.services.IRuntimeSettings;
 import com.astra.ses.spell.gui.services.IViewManager;
 import com.astra.ses.spell.gui.services.RuntimeSettingsService;
@@ -150,7 +150,7 @@ public class Activator extends AbstractUIPlugin
 	{
 		ServiceManager.get(IViewManager.class).subscribe();
 		ServiceManager.get(IRuntimeSettings.class).subscribe();
-		ServerBridge.get().setup();
+		GuiNotifications.get().subscribe();
 	}
 
 	/***************************************************************************
@@ -160,7 +160,7 @@ public class Activator extends AbstractUIPlugin
 	{
 		ServiceManager.get(IViewManager.class).cleanup();
 		ServiceManager.get(IRuntimeSettings.class).cleanup();
-		ServerBridge.get().cleanup();
+		GuiNotifications.get().unsubscribe();
 	}
 
 	/***************************************************************************

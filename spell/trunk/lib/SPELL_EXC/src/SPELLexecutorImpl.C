@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -83,21 +83,17 @@ std::string dispatchDataType( int what )
 //=============================================================================
 SPELLexecutorImpl::SPELLexecutorImpl()
     : SPELLexecutorIF(),
-      m_monitoringClients(),
       m_importChecker()
 {
     m_initialized        = false;
     m_initStepDone       = false;
+    m_initLines.clear();
     m_cif                = NULL;
     m_frameManager       = NULL;
     m_instanceId         = "";
     m_parentId           = "";
     m_childId            = "";
-    m_contextName        = "";
-    m_controllingClient  = "";
     m_procPath = "";
-
-    m_config = new SPELLexecutorConfig();
 
     m_scheduler          = NULL;
     m_callstack          = NULL;
@@ -105,10 +101,7 @@ SPELLexecutorImpl::SPELLexecutorImpl()
     m_childMgr           = NULL;
     m_varManager         = NULL;
 
-    m_userActionLabel = "";
-    m_userActionEnabled = false;
-    m_userActionFunction = "";
-    m_userActionSeverity = 0;
+    m_userAction.reset();
     m_gotoTarget = "";
 
     m_childMgr = new SPELLchildManager();
@@ -126,7 +119,7 @@ SPELLexecutorImpl::~SPELLexecutorImpl()
     {
         delete m_childMgr;
     }
-    delete m_config;
+
 }
 
 //=============================================================================
@@ -169,14 +162,6 @@ const SPELLexecutorStatus SPELLexecutorImpl::getStatus() const
 }
 
 //=============================================================================
-// METHOD    : SPELLexecutorImpl::getContextName
-//=============================================================================
-const std::string SPELLexecutorImpl::getContextName() const
-{
-    return m_contextName;
-}
-
-//=============================================================================
 // METHOD    : SPELLexecutorImpl::getInstanceId
 //=============================================================================
 const std::string SPELLexecutorImpl::getInstanceId() const
@@ -206,45 +191,33 @@ void SPELLexecutorImpl::prepare( const std::string& instanceId, const SPELLconte
     if (!m_initialized)
     {
         m_instanceId = instanceId;
-		setContextName( ctxConfig.getName());
 
-        // Get the executor configuration from the CIF. The CIF
-        // has taken this config from the SPELL context via the login message.
-        m_config->setArguments( m_cif->getArguments() );
-        m_config->setCondition( m_cif->getCondition() );
-        m_config->setAutomatic( m_cif->isAutomatic() );
-        m_config->setVisible ( m_cif->isVisible() );
-        m_config->setBlocking( m_cif->isBlocking() );
-        m_config->setBrowsableLib( m_cif->isBrowsableLib() );
-
-        // Get other configuration parameters from the context configuration file
-        m_config->setRunInto( (ctxConfig.getExecutorParameter(ExecutorConstants::RunInto) == True) );
-        m_config->setByStep( (ctxConfig.getExecutorParameter(ExecutorConstants::ByStep) == True) );
-        m_config->setExecDelay( STRI((ctxConfig.getExecutorParameter(ExecutorConstants::ExecDelay))) );
-        m_config->setBrowsableLib( (ctxConfig.getExecutorParameter(ExecutorConstants::BrowsableLib) == True) );
-        m_config->setForceTcConfirm( (ctxConfig.getExecutorParameter(ExecutorConstants::ForceTcConfirm) == True) );
-        std::string saveMode = ctxConfig.getExecutorParameter(ExecutorConstants::SaveStateMode);
-        m_config->setSaveStateMode( saveMode );
-        std::string wvMode = ctxConfig.getExecutorParameter(ExecutorConstants::WatchVariables);
-        bool wvEnabled = wvMode == ExecutorConstants::ENABLED;
-        m_config->setWatchEnabled( wvEnabled );
-        m_varManager->setEnabled( wvEnabled );
-
+        //Get from CTX Config
         m_inputDir = SPELLutils::resolvePath( ctxConfig.getInputDirectory() );
         m_outputDir = SPELLutils::resolvePath( ctxConfig.getOutputDirectory() );
 
         // Report the current configuration
-        LOG_INFO("[E] Arguments        : " + m_config->getArguments()  );
-        LOG_INFO("[E] Condition        : " + m_config->getCondition()  );
-        LOG_INFO("[E] Automatic mode   : " + BSTR( m_config->getAutomatic() ));
-        LOG_INFO("[E] Visible mode     : " + BSTR( m_config->getVisible()   ));
-        LOG_INFO("[E] Blocking mode    : " + BSTR( m_config->getBlocking()  ));
-        LOG_INFO("[E] Browsable lib    : " + BSTR( m_config->getBrowsableLib()  ));
-        LOG_INFO("[E] TC Confirm       : " + BSTR( m_config->getForceTcConfirm()  ));
-        LOG_INFO("[E] Save state mode  : " + saveMode );
-        LOG_INFO("[E] Watch variables  : " + wvMode );
+        LOG_INFO("EXECUTOR CONFIGURATION (" + getInstanceId() + ")");
+        LOG_INFO("[E] Headless         : " + BSTR(getConfiguration().isHeadless()) );
+        LOG_INFO("[E] Parent           : " + getConfiguration().getParentProcId() );
+        LOG_INFO("[E] Arguments        : " + getConfiguration().getArguments()  );
+        LOG_INFO("[E] Condition        : " + getConfiguration().getCondition()  );
+        LOG_INFO("[E] Automatic mode   : " + BSTR( getConfiguration().isAutomatic() ));
+        LOG_INFO("[E] Visible mode     : " + BSTR( getConfiguration().isVisible()   ));
+        LOG_INFO("[E] Blocking mode    : " + BSTR( getConfiguration().isBlocking()  ));
+        LOG_INFO("[E] Browsable lib    : " + BSTR( getConfiguration().isBrowsableLib()  ));
+        LOG_INFO("[E] TC Confirm       : " + BSTR( getConfiguration().isForceTcConfirm()  ));
+        LOG_INFO("[E] Save state mode  : " + getConfiguration().getSaveStateMode() );
+        LOG_INFO("[E] Watch variables  : " + BSTR(getConfiguration().isWatchEnabled()) );
         LOG_INFO("[E] Input directory  : " + m_inputDir );
         LOG_INFO("[E] Output directory : " + m_outputDir );
+        LOG_INFO("[E] Run Into         : " + BSTR(getConfiguration().isRunInto()));
+        LOG_INFO("[E] Exec Delay       : " + ISTR(getConfiguration().getExecDelay()));
+        LOG_INFO("[E] Prompt Delay     : " + ISTR(getConfiguration().getPromptWarningDelay()));
+        LOG_INFO("[E] By Step          : " + BSTR(getConfiguration().isByStep()));
+        LOG_INFO("[E] Max Verbosity    : " + ISTR(getConfiguration().getMaxVerbosity()));
+
+        m_scheduler->setPromptWarningDelay(getConfiguration().getPromptWarningDelay());
 
         m_initialized = true;
     }
@@ -264,18 +237,16 @@ void SPELLexecutorImpl::prepare( const std::string& instanceId, const SPELLconte
     // If there is a condition available, we set it to the controller. The controller
     // will read and evaluate it and hold the execution until the condition is
     // fullfilled.
-    if (m_config->getCondition() != "")
+    if (getConfiguration().getCondition() != "")
     {
-        m_controller->setCondition( m_config->getCondition() );
+        m_controller->setCondition( getConfiguration().getCondition() );
     }
 
     // Reset any user action function previously set
-    m_userActionFunction = "";
-    m_userActionLabel = "";
-    m_userActionEnabled = false;
+    m_userAction.reset();
 
     // Configure the initial step over mode in the callstack
-    if (m_config->getRunInto()==true)
+    if (getConfiguration().isRunInto()==true)
     {
     	m_callstack->stepOver( SO_ALWAYS_INTO );
     }
@@ -295,13 +266,13 @@ void SPELLexecutorImpl::installCallingArguments()
     DEBUG("[E] Installing calling arguments");
 
     PyObject* argDict = NULL;
-    if (m_config->getArguments() != "")
+    if (getConfiguration().getArguments() != "")
     {
         try
         {
             // Evaluate the argument string. It is expected to be a Python dictionary.
             // No error check is done for this.
-            argDict = SPELLpythonHelper::instance().eval(m_config->getArguments(),false);
+            argDict = SPELLpythonHelper::instance().eval(getConfiguration().getArguments(),false);
         }
         catch(SPELLcoreException& ex)
         {
@@ -412,20 +383,18 @@ void SPELLexecutorImpl::executeInternal( bool doReset )
 		m_cif->resetClose();
 
         // Establish initial run-into value now (after reset)
-        m_controller->enableRunInto( m_config->getRunInto() );
-
-        // Mark the procedure start time
-        m_controller->setStartTime();
-
-        // If in automatic and backgorund mode, set the controller in play mode accordingly
-        // IMPORTANT If in automatic and foreground mode, it is the GUI who sends the run command
-        if ( m_config->getAutomatic() && !m_config->getVisible())
-		{
-        	m_controller->setAutoRun();
-		}
+        m_controller->enableRunInto( getConfiguration().isRunInto() );
 
         // The client will know that the executor is ready to go
         m_controller->setStatus(STATUS_LOADED);
+
+        // If in automatic and backgorund mode, set the controller in play mode accordingly
+        // IMPORTANT If in automatic and foreground mode, it is the GUI who sends the run command
+        if (  getConfiguration().isHeadless() || (getConfiguration().isAutomatic() && (!getConfiguration().isVisible()) ) )
+		{
+    		DEBUG("[E] Set autorun");
+        	m_controller->setAutoRun();
+		}
 
         DEBUG("[E] Launching execution");
         // Execute the procedure/script. This triggers the procedure
@@ -659,10 +628,10 @@ void SPELLexecutorImpl::recover()
 //=============================================================================
 void SPELLexecutorImpl::finalize()
 {
-    DEBUG("[E] Finalizing, user request closure")
-    // Release the CIF lock, the controller received the close command
-    // so we can proceed
-    m_cif->canClose();
+  DEBUG("[E] Finalizing, user request closure")
+  // Release the CIF lock, the controller received the close command
+  // so we can proceed
+  m_cif->canClose();
 }
 
 //=============================================================================
@@ -681,9 +650,10 @@ void SPELLexecutorImpl::loadExecutionEnvironment()
 	// Create proc dictionary object and install it
 	PyObject* procObj = PyDict_New();
 	PyObject* pname = SSTRPY(m_instanceId);
-	PyObject* arguments = SSTRPY(m_config->getArguments());
+	PyObject* arguments = SSTRPY(getConfiguration().getArguments());
 	PyObject* outputDataDir = SSTRPY( m_outputDir );
 	PyObject* inputDataDir = SSTRPY( m_inputDir );
+	PyObject* parentId = SSTRPY( getConfiguration().getParentProcId() );
 
 	PyDict_SetItemString( procObj, DatabaseConstants::NAME.c_str(), pname);
 	PyDict_SetItemString( procObj, DatabaseConstants::ARGS.c_str(), arguments);
@@ -691,6 +661,7 @@ void SPELLexecutorImpl::loadExecutionEnvironment()
 	PyDict_SetItemString( procObj, DatabaseConstants::PREV_STEP.c_str(), Py_None);
 	PyDict_SetItemString( procObj, DatabaseConstants::OUTPUT_DATA.c_str(), outputDataDir);
 	PyDict_SetItemString( procObj, DatabaseConstants::INPUT_DATA.c_str(), inputDataDir);
+	PyDict_SetItemString( procObj, DatabaseConstants::PARENT.c_str(), parentId);
 
 	SPELLpythonHelper::instance().install( procObj,  DatabaseConstants::PROC );
 
@@ -719,16 +690,16 @@ void SPELLexecutorImpl::loadDriver()
 
 	LOG_INFO("Loading driver")
 	// Prepare and load the SPELL driver
-	SPELLdriverManager::instance().setup( m_contextName );
+	SPELLdriverManager::instance().setup( getConfiguration().getContextName() );
 
 	// Enable TC confirmation if so said the config
-    if (m_config->getForceTcConfirm())
+    if (getConfiguration().isForceTcConfirm())
     {
     	setForceTcConfirmInternal(true);
     }
 
 	// Load the driver language specifics
-	SPELLcontextConfig& ctxConfig = SPELLconfiguration::instance().getContext( m_contextName );
+	SPELLcontextConfig& ctxConfig = SPELLconfiguration::instance().getContext( getConfiguration().getContextName() );
 	std::string driverName = ctxConfig.getDriverName();
 	SPELLdriverConfig& drvConfig = SPELLconfiguration::instance().getDriver( driverName );
 
@@ -740,7 +711,9 @@ void SPELLexecutorImpl::loadDriver()
 
 	// Import modifiers
 	std::string package = "";
-	if (SPELLutils::isFile( path + PATH_SEPARATOR + "modifiers.py" ))
+	std::string moduleFile = path + PATH_SEPARATOR + "modifiers.py";
+	DEBUG("[E] Checking for module " + moduleFile);
+	if (SPELLutils::isFile( moduleFile ))
 	{
 		package = drvConfig.getIdentifier() + ".modifiers";
 		DEBUG("[E] Importing driver package " + package);
@@ -748,7 +721,9 @@ void SPELLexecutorImpl::loadDriver()
 	}
 
 	// Import constants
-	if (SPELLutils::isFile( path + PATH_SEPARATOR + "constants.py" ))
+	moduleFile = path + PATH_SEPARATOR + "constants.py";
+	DEBUG("[E] Checking for module " + moduleFile);
+	if (SPELLutils::isFile( moduleFile ))
 	{
 		package = drvConfig.getIdentifier() + ".constants";
 		DEBUG("[E] Importing driver package " + package);
@@ -756,6 +731,8 @@ void SPELLexecutorImpl::loadDriver()
 	}
 
 	// Import functions
+	moduleFile = path + PATH_SEPARATOR + "functions.py";
+	DEBUG("[E] Checking for module " + moduleFile);
 	if (SPELLutils::isFile( path + PATH_SEPARATOR + "functions.py" ))
 	{
 		package = drvConfig.getIdentifier() + ".functions";
@@ -840,6 +817,10 @@ const SPELLexecutorImpl::AfterError SPELLexecutorImpl::handleExecutionError()
                 	SPELLnoCommandProcessing nc;
                     // Recover the state in the frame
                     m_frameManager->fixState();
+                    // Set the callstack in recovery mode so that
+                    // the next module call event is not processed, and
+                    // therefore add a spurious element to the stack
+                    m_callstack->setRecoveryMode();
                 }
                 catch(SPELLcoreException& ex)
                 {
@@ -917,36 +898,55 @@ void SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what,
     //DEBUG("     event type " + etype);
     //std::cerr << "[DISPATCH] Dispatch event in " + procId + ":" + ISTR(lineno) + " (" + name + ") at " + PYCREPR(frame) << std::endl;
 
-    // Do not use notifications before INIT step
-    getCIF().disableNotifications();
-
     // Notify the frame manager to update the frame. This way, the internal models are
     // created/updated at the proper time following the procedure execution. This call
     // must be done before any other call to the frame manager that makes use of the
     // 'procedure execution model object', because it is first created at this point.
 	m_frameManager->updateCurrentFrame(frame, what );
 
-    // Init step feature
-    if ( (what == PyTrace_LINE) &&
-            (!m_initStepDone)      &&
-            checkInitStep( lineno )   )
-    {
-        //DEBUG("[DISPATCH] Override dispatch event " + procId + ":" + ISTR(lineno) + " (" + name + ") at " + PYCREPR(frame))
-        return;
-    }
-    else
-    {
-    	// Re-enable notifications once INIT step is reached
-        getCIF().enableNotifications();
-    }
+	// INIT step feature
+	// IMPORTANT for this first if, there is no frame model until the first CALL dispatch
+	// has been processed. So we cannot use getModel() until then. That is why we have
+	// first the check to be PyTrace_LINE.
+	if (!m_initStepDone &&
+		what == PyTrace_LINE &&
+		m_frameManager->isAtInitialFrame() &&
+		m_frameManager->getModel().hasInitStep())
+	{
+        getCIF().disableNotifications();
 
+		if (checkInitStep(lineno))
+		{
+			m_initLines.push_back(lineno);
+			return;
+		}
+		else
+		{
+			LOG_INFO("INIT step mode finished");
+			// Use the callstack to notify the executed lines during INIT step, all together,
+			// to the controlling client. We do not care about dispatch and control during
+			// init mode, but we want to mark the appropriate lines as executed.
+			std::list<unsigned int>::const_iterator it;
+			for( it = m_initLines.begin(); it != m_initLines.end(); it++ )
+			{
+				getCallstack().callbackEventLine(frame, procId, (*it), name);
+			}
+			m_initLines.clear();
+
+         	// Re-enable notifications once INIT step is reached
+            getCIF().enableNotifications();
+		}
+	}
 
     // Browsable lib feature: if the flag is enabled, allow browsing inside the user library.
     // this means that dispatch shall continue when notUserLib is false --> we make it true.
-    notUserLib = notUserLib | m_config->getBrowsableLib();
+    notUserLib = notUserLib | getConfiguration().isBrowsableLib();
 
     // By-step feature: if enabled, pause on each Step statement
-    if (m_config->getByStep()) checkByStep(lineno);
+    // Note that checkByStep cannot be used on the very first CALL notification
+    // as the current SPELLexecutionModel is not created yet, therefore there would
+    // be a segmentation fault.
+    if ( (what == PyTrace_LINE) && getConfiguration().isByStep()) checkByStep(lineno);
 
     // Breakpoint feature: pause on the breakpoints
     checkBreakpoint(procId,lineno);
@@ -1023,13 +1023,8 @@ void SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what,
                 break;
             }
         }
-//        else
-//        {
-//            DEBUG("[DISPATCH] Wont dispatch");
-//        }
 		lineno = frame->f_lineno;
 		repeat = m_controller->shallRepeat();
-        //DEBUG("[DISPATCH] Shall repeat: " + BSTR(repeat));
     }
 
     // If we are terminating/aborting the execution, tell the frame to move to the end of
@@ -1041,7 +1036,6 @@ void SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what,
     }
 
 //    DEBUG("[DISPATCH] EXIT dispatch event in " + procId + ":" + ISTR(frame->f_lineno));
-    //std::cerr << "[DISPATCH] Exit dispatch event " + procId + ":" + ISTR(lineno) + " (" + name + ") at " + PYCREPR(frame) << std::endl;
 }
 
 //=============================================================================
@@ -1081,10 +1075,10 @@ bool SPELLexecutorImpl::processException( PyObject* data, int lineno )
 //=============================================================================
 void SPELLexecutorImpl::setRunInto( const bool enabled )
 {
-    if (m_config->getRunInto() != enabled)
+    if (getConfiguration().isRunInto() != enabled)
     {
         LOG_INFO("[EXEC] Run into flag set to " + (enabled ? STR("ENABLED") : STR("DISABLED")))
-        m_config->setRunInto(enabled);
+        getConfiguration().setRunInto(enabled);
         m_controller->enableRunInto(enabled);
     }
 }
@@ -1094,10 +1088,10 @@ void SPELLexecutorImpl::setRunInto( const bool enabled )
 //=============================================================================
 void SPELLexecutorImpl::setByStep( const bool enabled )
 {
-    if (m_config->getByStep() != enabled)
+    if (getConfiguration().isByStep() != enabled)
     {
         LOG_INFO("[EXEC] By step flag set to " + (enabled ? STR("ENABLED") : STR("DISABLED")))
-        m_config->setByStep(enabled);
+        getConfiguration().setByStep(enabled);
         /** \todo configure for dispatch */
     }
 }
@@ -1107,10 +1101,10 @@ void SPELLexecutorImpl::setByStep( const bool enabled )
 //=============================================================================
 void SPELLexecutorImpl::setBrowsableLib( const bool enabled )
 {
-    if (m_config->getBrowsableLib() != enabled)
+    if (getConfiguration().isBrowsableLib() != enabled)
     {
         LOG_INFO("[EXEC] Browsable lib flag set to " + (enabled ? STR("ENABLED") : STR("DISABLED")))
-        m_config->setBrowsableLib(enabled);
+        getConfiguration().setBrowsableLib(enabled);
         /** \todo configure for dispatch */
     }
 }
@@ -1120,11 +1114,23 @@ void SPELLexecutorImpl::setBrowsableLib( const bool enabled )
 //=============================================================================
 void SPELLexecutorImpl::setExecDelay( const int delay )
 {
-    if (m_config->getExecDelay() != delay)
+    if (getConfiguration().getExecDelay() != delay)
     {
-        LOG_INFO("[EXEC] Execution delay set to " + ISTR(delay))
-        m_config->setExecDelay(delay);
-        m_controller->setExecutionDelay(delay);
+        LOG_INFO("[EXEC] Execution delay set to " + ISTR(delay) + " milliseconds")
+        getConfiguration().setExecDelay(delay);
+    }
+}
+
+//=============================================================================
+// METHOD    : SPELLexecutorImpl::setPromptWarningDelay
+//=============================================================================
+void SPELLexecutorImpl::setPromptWarningDelay( const int delay )
+{
+    if (getConfiguration().getPromptWarningDelay() != delay)
+    {
+        LOG_INFO("[EXEC] Prompt warning delay set to " + ISTR(delay))
+        getConfiguration().setPromptWarningDelay(delay);
+        m_scheduler->setPromptWarningDelay(delay);
     }
 }
 
@@ -1133,10 +1139,10 @@ void SPELLexecutorImpl::setExecDelay( const int delay )
 //=============================================================================
 void SPELLexecutorImpl::setForceTcConfirm( const bool force )
 {
-	if (m_config->getForceTcConfirm() != force )
+	if (getConfiguration().isForceTcConfirm() != force )
 	{
 		LOG_INFO("[EXEC] Set force TC confirmation to " + BSTR(force));
-		m_config->setForceTcConfirm(force);
+		getConfiguration().setForceTcConfirm(force);
 		setForceTcConfirmInternal(force);
 	}
 }
@@ -1161,7 +1167,7 @@ void SPELLexecutorImpl::command( const ExecutorCommand& cmd, const bool high_pri
 {
     SPELLmonitor m(m_cmdLock);
     DEBUG("[E] Issuing command " + cmd.id);
-	m_controller->command( cmd, true, high_priority );
+	m_controller->command( cmd, (cmd.id != CMD_ABORT), high_priority );
 }
 
 //=============================================================================
@@ -1198,6 +1204,17 @@ void SPELLexecutorImpl::pause()
 	ExecutorCommand cmd_pause;
 	cmd_pause.id = CMD_PAUSE;
 	m_controller->command( cmd_pause, false, true );
+}
+
+//=============================================================================
+// METHOD    : SPELLexecutorImpl::interrupt
+//=============================================================================
+void SPELLexecutorImpl::interrupt()
+{
+    SPELLmonitor m(m_cmdLock);
+	ExecutorCommand cmd_int;
+	cmd_int.id = CMD_INTERRUPT;
+	m_controller->command( cmd_int, false, true );
 }
 
 //=============================================================================
@@ -1301,21 +1318,12 @@ const bool SPELLexecutorImpl::goLabel( const std::string& label, bool programmed
 //=============================================================================
 const bool SPELLexecutorImpl::goLine( const int new_lineno )
 {
-	if (m_frameManager->getAST().isInsideBlock(new_lineno))
-	{
-		DEBUG("[E] Cannot go to line " + ISTR(new_lineno));
-        m_cif->warning("Unable to go to line '" + ISTR(new_lineno) + "'", LanguageConstants::SCOPE_SYS );
-		return false;
-	}
+	// The frame manager will go to the given line only if possible, checks done inside
     bool result = m_frameManager->goLine( new_lineno, true );
     if (result)
     {
     	// When we skip the line, we dont want the callstack and trace model to register the current line
     	m_callstack->skipCurrentLine();
-    }
-    else
-    {
-        m_cif->warning("Unable to go to line '" + ISTR(new_lineno) + "'", LanguageConstants::SCOPE_SYS );
     }
     return result;
 }
@@ -1359,13 +1367,16 @@ void SPELLexecutorImpl::clearBreakpoints()
 //=============================================================================
 const bool SPELLexecutorImpl::checkByStep( const int& frameLine )
 {
+    // Only if we are not in background (headless)
+    if (getConfiguration().isHeadless()) return false;
+
     if (m_frameManager->getModel().isLabel(frameLine))
     {
         DEBUG("[BYSTEP] Pausing procedure");
         pause();
         return true;
     }
-    return false;
+   return false;
 }
 
 //=============================================================================
@@ -1381,12 +1392,13 @@ const bool SPELLexecutorImpl::checkInitStep( const int& frameLine )
         abortDispatching = true;
         if(m_frameManager->getModel().isInitStep( frameLine ))
         {
-            LOG_INFO("Pausing on INIT step on line " + ISTR(frameLine));
-            m_initStepDone = true;
-            pause();
-            // Continue dispatching so that the
-            // controller holds the execution in PAUSE
-            abortDispatching = false;
+			LOG_INFO("Pausing on INIT step on line " + ISTR(frameLine));
+			m_initStepDone = true;
+			// Only if we are not in background (headless)
+			if (!getConfiguration().isHeadless()) pause();
+			// Continue dispatching so that the
+			// controller holds the execution in PAUSE
+			abortDispatching = false;
         }
     }
     return abortDispatching;
@@ -1417,33 +1429,35 @@ const bool SPELLexecutorImpl::runScript( const std::string& script )
 //=============================================================================
 void SPELLexecutorImpl::executeUserAction()
 {
-    if (m_userActionFunction != "")
+    if (m_userAction.isEnabled())
     {
-    	DEBUG("[E] Executing user action function '" + m_userActionFunction + "'");
+    	LOG_INFO("Executing user action function '" + m_userAction.getAction() + "'");
         try
         {
         	SPELLpythonHelper::instance().checkError();
-            m_cif->warning("Running user action '" + m_userActionFunction + "'", LanguageConstants::SCOPE_SYS );
-            std::string actionScript = m_userActionFunction + "()";
+            m_cif->warning("Running user action '" + m_userAction.getAction() + "'", LanguageConstants::SCOPE_SYS );
+            std::string actionScript = m_userAction.getAction() + "()";
             m_frameManager->runScript( actionScript );
         }
         catch(SPELLcoreException& ex)
         {
+        	LOG_ERROR("Failed to execute user action: " + ex.what());
             m_cif->error("Failed to execute user action: " + ex.what(), LanguageConstants::SCOPE_SYS );
         }
+    }
+    else
+    {
+    	LOG_WARN("Cannot execute user action, not enabled");
     }
 }
 
 //=============================================================================
 // METHOD    : SPELLexecutorImpl::setUserAction()
 //=============================================================================
-void SPELLexecutorImpl::setUserAction( const std::string& functionName, const std::string& actionLabel, const unsigned int severity )
+void SPELLexecutorImpl::setUserAction( const SPELLuserAction& action )
 {
-    m_userActionFunction = functionName;
-    m_userActionLabel = actionLabel;
-    m_userActionEnabled = true;
-    m_userActionSeverity = severity;
-    m_cif->notifyUserActionSet(actionLabel,severity);
+    m_userAction = action;
+    m_cif->notifyUserActionSet(action.getLabel(),action.getSeverity());
 }
 
 //=============================================================================
@@ -1451,7 +1465,7 @@ void SPELLexecutorImpl::setUserAction( const std::string& functionName, const st
 //=============================================================================
 void SPELLexecutorImpl::enableUserAction( bool enable )
 {
-    m_userActionEnabled = enable;
+    m_userAction.enable(enable);
     m_cif->notifyUserActionEnable(enable);
 }
 
@@ -1460,10 +1474,7 @@ void SPELLexecutorImpl::enableUserAction( bool enable )
 //=============================================================================
 void SPELLexecutorImpl::dismissUserAction()
 {
-    m_userActionFunction = "";
-    m_userActionLabel = "";
-    m_userActionEnabled = false;
-    m_userActionSeverity = LanguageConstants::INFORMATION;
+    m_userAction.reset();
     m_cif->notifyUserActionUnset();
 }
 

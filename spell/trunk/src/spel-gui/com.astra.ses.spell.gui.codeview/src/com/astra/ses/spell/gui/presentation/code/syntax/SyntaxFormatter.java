@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -159,9 +159,9 @@ public class SyntaxFormatter implements ISyntaxFormatter
 	 * #applyScheme(org.eclipse.swt.graphics.TextLayout)
 	 */
 	@Override
-	public void applyScheme(TextLayout layout, int rowIndex, boolean highlighted)
+	public void applyScheme(TextLayout layout, int rowIndex, boolean selected, boolean highlighted)
 	{
-		m_parser.parseSyntax(layout, rowIndex, highlighted);
+		m_parser.parseSyntax(layout, rowIndex, selected, highlighted);
 	}
 
 	/*

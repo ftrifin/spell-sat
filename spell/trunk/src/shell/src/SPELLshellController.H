@@ -5,7 +5,7 @@
 // DESCRIPTION: Fake controller model for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -151,11 +151,6 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLcontrollerIF.
 		**////////////////////////////////////////////////////////////////////
 		void setAutoRun() {;};
-
-		//////////////////////////////////////////////////////////////////////
-		/** \see SPELLcontrollerIF.
-		**////////////////////////////////////////////////////////////////////
-		void setExecutionDelay( const long delay ) {;};
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcontrollerIF.

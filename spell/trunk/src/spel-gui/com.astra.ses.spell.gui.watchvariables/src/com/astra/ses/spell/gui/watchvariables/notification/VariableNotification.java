@@ -6,7 +6,7 @@
 //
 // DATE      : Nov 28, 2011
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -56,15 +56,11 @@ import com.astra.ses.spell.gui.core.model.notification.NotificationData;
  ******************************************************************************/
 public class VariableNotification extends NotificationData
 {
-	// =========================================================================
-	// INSTANCE DATA MEMBERS
-	// =========================================================================
-	// PRIVATE -----------------------------------------------------------------
-	// PROTECTED ---------------------------------------------------------------
-	// PUBLIC ------------------------------------------------------------------
-
+	private ArrayList<VariableData>	m_addedVariables	= new ArrayList<VariableData>();
 	private ArrayList<VariableData>	m_changedVariables	= new ArrayList<VariableData>();
-
+	private ArrayList<VariableData>	m_deletedVariables	= new ArrayList<VariableData>();
+	private String m_scopeName = "";
+	
 	/***************************************************************************
 	 * Constructor
 	 * 
@@ -78,13 +74,67 @@ public class VariableNotification extends NotificationData
 		super(procId, "");
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public void addChangedVariable(VariableData data)
 	{
 		m_changedVariables.add(data);
 	}
 
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void addNewVariable(VariableData data)
+	{
+		m_addedVariables.add(data);
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void addDeletedVariable(VariableData data)
+	{
+		m_deletedVariables.add(data);
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
 	public VariableData[] getChangedVariables()
 	{
 		return m_changedVariables.toArray(new VariableData[0]);
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public VariableData[] getAddedVariables()
+	{
+		return m_addedVariables.toArray(new VariableData[0]);
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public VariableData[] getDeletedVariables()
+	{
+		return m_deletedVariables.toArray(new VariableData[0]);
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public String getScopeName()
+	{
+		return m_scopeName;
+	}
+
+	/**************************************************************************
+	 * 
+	 *************************************************************************/
+	public void setScopeName( String name )
+	{
+		m_scopeName = name;
 	}
 }

@@ -6,7 +6,7 @@
 //
 // DATE      : Jan 11, 2012
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -49,8 +49,8 @@ package com.astra.ses.spell.gui.core.interfaces;
 import com.astra.ses.spell.gui.core.model.notification.ErrorData;
 import com.astra.ses.spell.gui.core.model.server.ExecutorInfo;
 import com.astra.ses.spell.gui.core.model.types.ClientMode;
-import com.astra.ses.spell.gui.core.model.types.ExecutorStatus;
 import com.astra.ses.spell.gui.core.model.types.Severity;
+import com.astra.ses.spell.gui.types.ExecutorStatus;
 
 public interface IExecutorInfo
 {
@@ -69,6 +69,26 @@ public interface IExecutorInfo
 	 * 
 	 **************************************************************************/
 	public String getName();
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public String getAsRunName();
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public String getTimeId();
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public String getGroupId();
+
+	/***************************************************************************
+	 * 
+	 **************************************************************************/
+	public String getOriginId();
 
 	/***************************************************************************
 	 * 
@@ -101,9 +121,29 @@ public interface IExecutorInfo
 	public void setParent(String parentId);
 
 	/***************************************************************************
+	 * Assign the group id
+	 **************************************************************************/
+	public void setGroupId(String groupId);
+
+	/***************************************************************************
+	 * Assign the origin id
+	 **************************************************************************/
+	public void setOriginId(String originId);
+
+	/***************************************************************************
+	 * Assign the parent procedure calling line
+	 **************************************************************************/
+	public void setParentCallingLine( int line );
+
+	/***************************************************************************
 	 * Get the parent procedure if any
 	 **************************************************************************/
 	public String getParent();
+
+	/***************************************************************************
+	 * Get the parent procedure calling line if any
+	 **************************************************************************/
+	public int getParentCallingLine();
 
 	/***************************************************************************
 	 * Obtain the execution condition
@@ -149,6 +189,16 @@ public interface IExecutorInfo
 	 * Assing the current controlling client
 	 **************************************************************************/
 	public void setControllingClient(IProcedureClient client);
+
+	/***************************************************************************
+	 * Set the procedure to background
+	 **************************************************************************/
+	public void setBackground( boolean isBackground );
+
+	/***************************************************************************
+	 * Check if the procedure runs in background
+	 **************************************************************************/
+	public boolean isBackground();
 
 	/***************************************************************************
 	 * Assign the list of current monitoring clients
@@ -206,6 +256,21 @@ public interface IExecutorInfo
 	public void setStage(String id, String title);
 
 	/***************************************************************************
+	 * Set the current stage
+	 **************************************************************************/
+	public void setStack(String csp, String codeName);
+
+	/***************************************************************************
+	 * Obtain the current stack
+	 **************************************************************************/
+	public String getStack();
+
+	/***************************************************************************
+	 * Obtain the current code name
+	 **************************************************************************/
+	public String getCodeName();
+
+	/***************************************************************************
 	 * Set user action label
 	 **************************************************************************/
 	public void setUserAction(String actionLabel);
@@ -214,6 +279,16 @@ public interface IExecutorInfo
 	 * Set user action status
 	 **************************************************************************/
 	public void setUserActionEnabled(boolean enabled);
+
+	/***************************************************************************
+	 * Set asrun name
+	 **************************************************************************/
+	public void setAsRunName( String asrunName );
+
+	/***************************************************************************
+	 * Set time Id
+	 **************************************************************************/
+	public void setTimeId( String timeId );
 
 	/***************************************************************************
 	 * Get user action label

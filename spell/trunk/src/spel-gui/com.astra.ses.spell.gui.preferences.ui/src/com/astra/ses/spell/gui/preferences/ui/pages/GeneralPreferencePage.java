@@ -6,7 +6,7 @@
 //
 // DATE      : 2010-05-27
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -59,6 +59,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.FileDialog;
@@ -66,29 +67,42 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
+import com.astra.ses.spell.gui.core.model.server.AuthenticationData;
 import com.astra.ses.spell.gui.preferences.Activator;
 import com.astra.ses.spell.gui.preferences.initializer.GUIPreferencesLoader;
 import com.astra.ses.spell.gui.preferences.initializer.GUIPreferencesSaver;
 import com.astra.ses.spell.gui.preferences.interfaces.IConfigurationManager;
 import com.astra.ses.spell.gui.preferences.keys.PropertyKey;
+import com.astra.ses.spell.gui.preferences.values.AutoClosePref;
+import com.astra.ses.spell.gui.preferences.values.YesNoPromptPref;
 
 public class GeneralPreferencePage extends BasicPreferencesPage
 {
 
 	/** Connect at startup */
 	private Button	m_startupConnect;
-	/** SCP connections user */
-	private Text	m_scpUser;
-	/** SCP connections pwd */
-	private Text	m_scpPassword;
+	/** Auto close */
+	private Combo   m_autoClose;
+	/** Authentication user */
+	private Text	m_authUser;
+	/** Authentication pwd */
+	private Text	m_authPassword;
+	/** Authentication key */
+	private Text	m_authKey;
 	/** Response timeout */
 	private Text	m_responseTimeout;
 	/** Open timeout */
 	private Text	m_openTimeout;
-	/** Prompt blink/sound delay */
-	private Text	m_promptDelay;
 	/** Prompt sound file */
 	private Text	m_soundFile;
+	/** Confirm abort */
+	private Button  m_confirmAbort;
+	/** Prompt for multiple attach */
+	private Combo  m_multiAttach;
+	/** Prompt for ASRUN when controlling */
+	private Combo  m_asrunControl;
+	/** Prompt for ASRUN when monitoring */
+	private Combo  m_asrunMonitor;
 
 	@Override
 	protected Control createContents(Composite parent)
@@ -112,26 +126,52 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 		Composite startupConnection = new Composite(container, SWT.NONE);
 		startupConnection.setLayout(new GridLayout(2, false));
 		startupConnection.setLayoutData(GridDataFactory.copyData(expand));
-		// Button
-		m_startupConnect = new Button(startupConnection, SWT.CHECK);
 		// Label
 		Label startupDesc = new Label(startupConnection, SWT.NONE);
 		startupDesc.setText("Connect to server at startup");
+		// Button
+		m_startupConnect = new Button(startupConnection, SWT.CHECK);
 
 		// Label
-		Label scpUser = new Label(startupConnection, SWT.NONE);
-		scpUser.setText("User for SCP connections");
+		Label authUser = new Label(startupConnection, SWT.NONE);
+		authUser.setText("User for server authentication");
 		// Text
-		m_scpUser = new Text(startupConnection, SWT.BORDER);
-		m_scpUser.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
+		m_authUser = new Text(startupConnection, SWT.BORDER);
+		m_authUser.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
 
 		// Label
-		Label scpPwd = new Label(startupConnection, SWT.NONE);
-		scpPwd .setText("Password for SCP connections");
+		Label authPwd = new Label(startupConnection, SWT.NONE);
+		authPwd.setText("Password for server authentication");
 		// Text
-		m_scpPassword = new Text(startupConnection, SWT.BORDER | SWT.PASSWORD );
-		m_scpPassword.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
+		m_authPassword = new Text(startupConnection, SWT.BORDER | SWT.PASSWORD );
+		m_authPassword.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
 
+		// Label
+		Label authKey = new Label(startupConnection, SWT.NONE);
+		authKey.setText("Key file for server authentication");
+
+		Composite two = new Composite(startupConnection,SWT.NONE);
+		two.setLayout( new GridLayout(2,false) );
+		// Text
+		m_authKey = new Text(two, SWT.BORDER );
+		m_authKey.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ));
+		// Browse
+		Button browse = new Button(two,SWT.PUSH);
+		browse.setText("Browse");
+		browse.addSelectionListener( new SelectionAdapter()
+		{
+			public void widgetSelected( SelectionEvent event )
+			{
+				FileDialog dialog = new FileDialog(GeneralPreferencePage.this.getShell(),SWT.OPEN);
+				dialog.setText("Select a SSH private key file");
+				String file = dialog.open();
+				if (file != null && !file.trim().isEmpty())
+				{
+					m_authKey.setText(file);
+				}
+			}
+		});
+		
 		/*
 		 * Communication group
 		 */
@@ -173,17 +213,7 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 		userGroup.setText("User settings");
 		userGroup.setLayout(userLayout);
 		userGroup.setLayoutData(GridDataFactory.copyData(expand));
-		/*
-		 * Prompt delay
-		 */
-		// Label
-		Label promptDelayLabel = new Label(userGroup, SWT.NONE);
-		promptDelayLabel.setText("Prompt blinking delay");
-		m_promptDelay = new Text(userGroup, SWT.BORDER | SWT.RIGHT);
-		m_promptDelay.setLayoutData(GridDataFactory.copyData(expand));
-		// Label
-		Label promptDelayUnitsLabel = new Label(userGroup, SWT.NONE);
-		promptDelayUnitsLabel.setText("seconds");
+
 		/*
 		 * Prompt sound file
 		 */
@@ -193,14 +223,14 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 		m_soundFile = new Text(userGroup, SWT.BORDER);
 		m_soundFile.setLayoutData(GridDataFactory.copyData(expand));
 		// Browse button
-		final Button browse = new Button(userGroup, SWT.PUSH);
-		browse.setText("Browse...");
-		browse.addSelectionListener(new SelectionAdapter()
+		final Button browse2 = new Button(userGroup, SWT.PUSH);
+		browse2.setText("Browse...");
+		browse2.addSelectionListener(new SelectionAdapter()
 		{
 			@Override
 			public void widgetSelected(SelectionEvent arg0)
 			{
-				FileDialog dialog = new FileDialog(browse.getShell());
+				FileDialog dialog = new FileDialog(browse2.getShell());
 				dialog.setFilterExtensions(new String[] { "*.wav" });
 				dialog.setText("Select prompt sound file");
 				dialog.setFilterNames(new String[] { "Waveform files (*.wav)" });
@@ -211,6 +241,43 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 				}
 			}
 		});
+		
+		/** Automatic close of procedures */
+		Label autoCloseLabel = new Label(userGroup, SWT.NONE);
+		autoCloseLabel.setText("Close finished procedures");
+		// Browse button
+		m_autoClose = new Combo(userGroup, SWT.READ_ONLY);
+		for(AutoClosePref ac : AutoClosePref.values()) m_autoClose.add(ac.title);
+		new Label(userGroup, SWT.NONE);
+
+		/** Confirm abort */
+		Label confirmAbortLabel = new Label(userGroup, SWT.NONE);
+		confirmAbortLabel.setText("Confirm abort");
+		// Browse button
+		m_confirmAbort = new Button(userGroup, SWT.CHECK);
+		m_confirmAbort.setText("(show confirmation dialog before aborting execution)");
+		new Label(userGroup, SWT.NONE);
+
+		/** Multiple attach */
+		Label multiAttachLabel = new Label(userGroup, SWT.NONE);
+		multiAttachLabel.setText("Auto attach to related procedures");
+		m_multiAttach = new Combo(userGroup, SWT.READ_ONLY);
+		for(YesNoPromptPref ynp : YesNoPromptPref.values()) m_multiAttach.add(ynp.title);
+		new Label(userGroup, SWT.NONE);
+
+		/** AsRun control */
+		Label arcLabel = new Label(userGroup, SWT.NONE);
+		arcLabel.setText("Use ASRUN when controlling");
+		m_asrunControl = new Combo(userGroup, SWT.READ_ONLY);
+		for(YesNoPromptPref ynp : YesNoPromptPref.values()) m_asrunControl.add(ynp.title);
+		new Label(userGroup, SWT.NONE);
+
+		/** AsRun monitor */
+		Label armLabel = new Label(userGroup, SWT.NONE);
+		armLabel.setText("Use ASRUN when monitoring");
+		m_asrunMonitor = new Combo(userGroup, SWT.READ_ONLY);
+		for(YesNoPromptPref ynp : YesNoPromptPref.values()) m_asrunMonitor.add(ynp.title);
+		new Label(userGroup, SWT.NONE);
 
 		/*
 		 * Save group
@@ -320,8 +387,7 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 			@Override
 			public void widgetSelected(SelectionEvent event)
 			{
-				FileDialog dialog = new FileDialog(loadPrefsBtn.getShell(),
-				        SWT.OPEN);
+				FileDialog dialog = new FileDialog(loadPrefsBtn.getShell(),SWT.OPEN);
 				dialog.setFilterExtensions(new String[] { "*.xml", "*.XML" });
 				String selected = dialog.open();
 				if (selected != null)
@@ -369,12 +435,31 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 		// startup connection
 		boolean startup = m_startupConnect.getSelection();
 		conf.setBooleanProperty(PropertyKey.STARTUP_CONNECT, startup);
+
+		conf.setProperty(PropertyKey.AUTOMATIC_CLOSE, AutoClosePref.values()[m_autoClose.getSelectionIndex()].name());
 		
-		String scpUser = m_scpUser.getText();
-		conf.setProperty(PropertyKey.SCP_CONNECTION_USER, scpUser);
-		
-		String scpPassword = m_scpPassword.getText();
-		conf.setProperty(PropertyKey.SCP_CONNECTION_PWD, scpPassword);
+		// Confirm abort
+		conf.setBooleanProperty(PropertyKey.CONFIRM_ABORT, m_confirmAbort.getSelection());
+
+		// Multi attach
+		conf.setProperty(PropertyKey.MULTIPLE_ATTACH, YesNoPromptPref.values()[m_multiAttach.getSelectionIndex()].name());
+
+		// AsRun 
+		conf.setProperty(PropertyKey.ASRUN_CONTROL, YesNoPromptPref.values()[m_asrunControl.getSelectionIndex()].name());
+		conf.setProperty(PropertyKey.ASRUN_MONITOR, YesNoPromptPref.values()[m_asrunMonitor.getSelectionIndex()].name());
+
+		// Update connectivity settings
+		String user = m_authUser.getText();
+		String pwd = m_authPassword.getText();
+		String key = m_authKey.getText();
+		if (user != null && user.trim().isEmpty()) user = null;
+		if (pwd != null && pwd.trim().isEmpty()) pwd = null;
+		if (key != null && key.trim().isEmpty()) key= null;
+		if (user != null)
+		{
+			AuthenticationData auth = new AuthenticationData(user,pwd,key);
+			conf.updateConnectivityDefaults(auth);
+		}
 		
 		// response timeout
 		String timeout = m_responseTimeout.getText();
@@ -382,9 +467,6 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 		// open timeout
 		String openTimeout = m_openTimeout.getText();
 		conf.setProperty(PropertyKey.OPEN_TIMEOUT, openTimeout);
-		// prompt delay
-		String delay = m_promptDelay.getText();
-		conf.setProperty(PropertyKey.PROMPT_SOUND_DELAY, delay);
 		// prompt file
 		String file = m_soundFile.getText();
 		conf.setProperty(PropertyKey.PROMPT_SOUND_FILE, file);
@@ -394,13 +476,10 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 	public void performDefaults()
 	{
 		IConfigurationManager conf = getConfigurationManager();
-		conf.resetProperty(PropertyKey.STARTUP_CONNECT);
-		conf.resetProperty(PropertyKey.SCP_CONNECTION_USER);
-		conf.resetProperty(PropertyKey.SCP_CONNECTION_PWD);
-		conf.resetProperty(PropertyKey.RESPONSE_TIMEOUT);
-		conf.resetProperty(PropertyKey.OPEN_TIMEOUT);
-		conf.resetProperty(PropertyKey.PROMPT_SOUND_DELAY);
-		conf.resetProperty(PropertyKey.PROMPT_SOUND_FILE);
+		for(PropertyKey key : PropertyKey.values())
+		{
+			conf.resetProperty(key);
+		}
 		refreshPage();
 	}
 
@@ -411,16 +490,53 @@ public class GeneralPreferencePage extends BasicPreferencesPage
 
 		boolean value = conf.getBooleanProperty(PropertyKey.STARTUP_CONNECT);
 		m_startupConnect.setSelection(value);
+
+		// Auto close
+		String svalue = conf.getProperty(PropertyKey.AUTOMATIC_CLOSE);
+		try
+		{
+			m_autoClose.select( AutoClosePref.valueOf(svalue).ordinal() );
+		}
+		catch(Exception ex) { m_autoClose.select(AutoClosePref.NO.ordinal()); }
+
+		// Multiple attach
+		String avalue = conf.getProperty(PropertyKey.MULTIPLE_ATTACH);
+		try
+		{
+			m_multiAttach.select(YesNoPromptPref.valueOf(avalue).ordinal());
+		}
+		catch(Exception ex) { m_multiAttach.select(YesNoPromptPref.NO.ordinal()); }
+
+		// ASRUN
+		String acvalue = conf.getProperty(PropertyKey.ASRUN_CONTROL);
+		String amvalue = conf.getProperty(PropertyKey.ASRUN_MONITOR);
+		try
+		{
+			m_asrunControl.select(YesNoPromptPref.valueOf(acvalue).ordinal());
+			m_asrunMonitor.select(YesNoPromptPref.valueOf(amvalue).ordinal());
+		}
+		catch(Exception ex) 
+		{ 
+			m_asrunControl.select(YesNoPromptPref.YES.ordinal());
+			m_asrunMonitor.select(YesNoPromptPref.YES.ordinal());
+		}
+
 		
-		m_scpUser.setText( conf.getProperty(PropertyKey.SCP_CONNECTION_USER));
-		m_scpPassword.setText( conf.getProperty(PropertyKey.SCP_CONNECTION_PWD));
+		// Confirm abort
+		m_confirmAbort.setSelection(conf.getBooleanProperty(PropertyKey.CONFIRM_ABORT));
+
+		AuthenticationData auth = conf.getConnectivityDefaults();
+		if (auth != null)
+		{
+			m_authUser.setText( auth.getUsername() != null ? auth.getUsername() : "");
+			m_authPassword.setText( auth.getPassword() != null ? auth.getPassword() : "");
+			m_authKey.setText( auth.getKeyFile() != null ? auth.getKeyFile() : "");
+		}
 		
 		String timeout = conf.getProperty(PropertyKey.RESPONSE_TIMEOUT);
 		m_responseTimeout.setText(timeout);
 		String openTimeout = conf.getProperty(PropertyKey.OPEN_TIMEOUT);
 		m_openTimeout.setText(openTimeout);
-		String delay = conf.getProperty(PropertyKey.PROMPT_SOUND_DELAY);
-		m_promptDelay.setText(delay);
 		String file = conf.getProperty(PropertyKey.PROMPT_SOUND_FILE);
 		m_soundFile.setText(file);
 	}

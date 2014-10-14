@@ -5,7 +5,7 @@
 ## DESCRIPTION: Database based on local SPB files
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -56,7 +56,9 @@ class DatabaseFileSPB(DatabaseFile):
             orig_value = orig_value.strip()
             
             if (re.search("[0-5][0-9]:[0-5][0-9]:[0-5][0-9]", orig_value) is not None):
-                orig_value = "+" + orig_value
+                # ensure it is not an absolute date, this is just for relative times
+                if('-' not in orig_value) and ('/' not in orig_value):
+                    orig_value = "+" + orig_value
                 
             value,vtype = ImportValue(orig_value)
             

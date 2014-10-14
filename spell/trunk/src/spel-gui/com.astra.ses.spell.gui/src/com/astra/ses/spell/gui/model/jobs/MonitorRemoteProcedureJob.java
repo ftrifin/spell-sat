@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -52,7 +52,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.ui.PlatformUI;
+import org.eclipse.swt.widgets.Display;
 
 import com.astra.ses.spell.gui.core.interfaces.ServiceManager;
 import com.astra.ses.spell.gui.model.commands.CommandResult;
@@ -64,9 +64,23 @@ import com.astra.ses.spell.gui.procs.interfaces.model.AsRunReplayResult;
 
 public class MonitorRemoteProcedureJob extends AbstractProcedureJob
 {
-	public MonitorRemoteProcedureJob(String instanceId)
+	private boolean m_downloadData;
+	
+	public MonitorRemoteProcedureJob(String instanceId, boolean downloadData )
 	{
 		super(instanceId);
+		m_downloadData = downloadData;
+	}
+
+	private void warning(final String message)
+	{
+		Display.getDefault().syncExec(new Runnable()
+		{
+			public void run()
+			{
+				MessageDialog.openWarning(Display.getDefault().getActiveShell(), "Monitor Procedure", message);
+			}
+		});
 	}
 
 	@Override
@@ -79,29 +93,37 @@ public class MonitorRemoteProcedureJob extends AbstractProcedureJob
 		{
 			monitor.setTaskName("Monitoring procedure " + m_instanceId);
 			
-			AsRunReplayResult ar = new AsRunReplayResult();
+			AsRunReplayResult ar = null;
+			if (m_downloadData) 
+			{
+				ar = new AsRunReplayResult();
+			}
 			mgr.monitorProcedure(m_instanceId, ar, monitor);
 
-			if (ar.status.equals(AsRunProcessing.PARTIAL))
+			if (m_downloadData)
 			{
-				if (monitor.isCanceled())
+				if (ar.status.equals(AsRunProcessing.PARTIAL))
 				{
-					String message = "Retrieval of ASRUN information was not complete: canceled by user";
-					MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Monitor Procedure", message);
-					result = CommandResult.CANCELLED;
+					if (monitor.isCanceled())
+					{
+						warning("Retrieval of ASRUN information was not complete: canceled by user");
+						result = CommandResult.CANCELLED;
+					}
+					else
+					{
+						warning("Retrieval of ASRUN information was not complete: " + ar.message);
+						result = CommandResult.SUCCESS;
+					}
+				}
+				else if (ar.status.equals(AsRunProcessing.FAILED))
+				{
+					warning("Retrieval of ASRUN information failed: " + ar.message);
+					result = CommandResult.FAILED;
 				}
 				else
 				{
-					String message = "Retrieval of ASRUN information was not complete: " + ar.message;
-					MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Monitor Procedure", message);
 					result = CommandResult.SUCCESS;
 				}
-			}
-			else if (ar.status.equals(AsRunProcessing.FAILED))
-			{
-				String message = "Retrieval of ASRUN information failed: " + ar.message;
-				MessageDialog.openWarning(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Monitor Procedure", message);
-				result = CommandResult.FAILED;
 			}
 			else
 			{

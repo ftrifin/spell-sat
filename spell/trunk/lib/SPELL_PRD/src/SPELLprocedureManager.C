@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of procedure manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -261,9 +261,11 @@ void SPELLprocedureManager::findProcedures( const std::string& basePath, const s
     for( it = files.begin(); it != end; it++ )
     {
         if ((*it) == "__init__.py") continue;
-        std::size_t idx = (*it).find(".py");
+
+
+        std::size_t idx = (*it).find_last_of(".py");
         std::size_t idxb = (*it).find(".py~"); // Filter out backup files
-        if ((idx != std::string::npos && idx > 0 ) && ( idxb == std::string::npos ))
+        if ((idx != std::string::npos && idx == ((*it).length() - 1)  ) && ( idxb == std::string::npos ))
         {
             std::string procFile = basePath + PATH_SEPARATOR + (*it);
             SPELLprocedure* proc = NULL;

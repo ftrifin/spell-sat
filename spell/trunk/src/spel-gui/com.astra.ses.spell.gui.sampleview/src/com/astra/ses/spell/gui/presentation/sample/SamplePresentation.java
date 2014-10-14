@@ -6,7 +6,7 @@
 //
 // DATE      : 2008-11-21 08:55
 //
-// Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+// Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 // By using this software in any way, you are agreeing to be bound by
 // the terms of this license.
@@ -56,9 +56,10 @@ import org.eclipse.swt.widgets.Composite;
 
 import com.astra.ses.spell.gui.interfaces.IPresentationNotifier;
 import com.astra.ses.spell.gui.interfaces.IProcedurePresentation;
+import com.astra.ses.spell.gui.interfaces.ProcedurePresentationAdapter;
 import com.astra.ses.spell.gui.procs.interfaces.model.IProcedure;
 
-public class SamplePresentation implements IProcedurePresentation
+public class SamplePresentation extends ProcedurePresentationAdapter implements IProcedurePresentation
 {
 	/** Holds the presentation identifier */
 	private static final String	ID	               = "com.astra.ses.spell.gui.presentation.Sample";

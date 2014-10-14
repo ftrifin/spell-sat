@@ -5,7 +5,7 @@
 ## DESCRIPTION: TM item for the simulation model
 ## -------------------------------------------------------------------------------- 
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -29,7 +29,9 @@
 #*******************************************************************************
 from spell.utils.log import *
 from spell.lib.exception import *
+from spell.lib.adapter.utctime import TIME,NOW
 from spell.lib.adapter.tm_item import TmItemClass
+from spell.lang.functions import RAW_VALUE,ENG_VALUE
 
 #*******************************************************************************
 # Local imports
@@ -40,7 +42,7 @@ from spell.lib.adapter.tm_item import TmItemClass
 #*******************************************************************************
 from math import *
 from threading import Event
-import sys,os,time
+import sys,os,time,traceback
 
 #*******************************************************************************
 # Import definition
@@ -50,6 +52,11 @@ __all__ = ['TmItemSimClass']
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
+UPDATE_NONE        = 0
+UPDATE_TIME        = 1
+UPDATE_ACQUISITION = 2
+__update_strings__ = ["None","Time","Acquisition"]
+RAISE_EXCEPTION    = "__raise_exception__"
 
 ################################################################################
 class TmItemSimClass(TmItemClass):
@@ -57,13 +64,16 @@ class TmItemSimClass(TmItemClass):
     model = None
     rawExpression = None
     engExpression = None
-    period = None
     timerCount = 0
     currentPosition = 0
-    updateEvent = None
+    updateEvent  = None
+    updateType   = None
+    updatePeriod = None
+    rawValue = None
+    engValue = None
     
     #==========================================================================    
-    def __init__(self, model, name, description, rawExpression, engExpression, period = 0):
+    def __init__(self, model, name, description, rawExpression, engExpression, updateType = UPDATE_NONE, updatePeriod = 0 ):
         TmItemClass.__init__(self,model.tmClass,name,description)
         self._status = True
         self.model = model
@@ -71,15 +81,18 @@ class TmItemSimClass(TmItemClass):
         self.engExpression = engExpression
         self.rawValue = None
         self.engValue = None
-        self.period = period
-        self.timerCount = 0
+        self.updateType = updateType
+        self.updatePeriod = updatePeriod
         self.currentPosition = -1
         LOG("NAME: " + repr(name) + ", DESC:" + repr(description))
-        self.updateEvent = Event()
+        if self.updateType == UPDATE_TIME:
+            self.timerCount = 0
+            self.updateEvent = Event()
         self._recalculate()
 
     #==========================================================================
     def waitUpdate(self, timeout = None):
+        if self.updateType != UPDATE_TIME: return
         self.updateEvent.clear()
         if timeout:
             startTime = time.time()
@@ -90,17 +103,23 @@ class TmItemSimClass(TmItemClass):
         else:
             self.updateEvent.wait()
 
+    #==========================================================================
+    def abortUpdate(self):
+        if self.updateType != UPDATE_TIME: return
+        self.updateEvent.set()
+
     #==========================================================================    
     def refreshSimulatedValue(self):    
-        if self.period == 0: return
+        if self.updateType != UPDATE_TIME: return
         self.timerCount = self.timerCount + 1
-        if self.timerCount == self.period:
+        if self.timerCount == self.updatePeriod:
             self.timerCount = 0
             self._recalculate()
             self.updateEvent.set()
 
     #==========================================================================    
     def change(self, changeDef):
+
         raw,eng = self._evaluate()
         
         # Changes for shitfting values of a list
@@ -109,9 +128,8 @@ class TmItemSimClass(TmItemClass):
             amount = eval(changeDef[1:])
             if type(raw)==list or type(eng)==list:
                 # Shift the position as requested
-                max = len(raw)
                 self.currentPosition = self.currentPosition + int(amount)
-                if self.currentPosition>=max: self.currentPosition = 0
+                if self.currentPosition>=len(raw): self.currentPosition = 0
                 # Update values
                 if type(raw)==list:
                     self._setRaw(raw[self.currentPosition])
@@ -125,9 +143,8 @@ class TmItemSimClass(TmItemClass):
         elif type(changeDef) == str and changeDef.startswith('-'):
             amount = eval(changeDef[1:])
             if type(raw)==list or type(eng)==list:
-                max = len(raw)
                 self.currentPosition = self.currentPosition - int(amount)
-                if self.currentPosition<0: self.currentPosition = max-1
+                if self.currentPosition<0: self.currentPosition = len(raw)-1
                 if type(raw)==list:
                     self._setRaw(raw[self.currentPosition])
                 if type(eng)==list:
@@ -169,16 +186,52 @@ class TmItemSimClass(TmItemClass):
                         self._setRaw(eval("'" + str(changeDef) + "'"))
         if eng is None:
             self._setEng(self._getRaw())
+        self._setTime(TIME(NOW))
     
+    #==========================================================================    
+    def eng(self, *args, **kargs ):
+        value = TmItemClass.eng(self,*args,**kargs)
+        if self.updateType == UPDATE_ACQUISITION:
+            self._recalculate()
+        if value == RAISE_EXCEPTION:
+            raise DriverException("Preconfigured error")
+        return value
+
+    #==========================================================================    
+    def raw(self, *args, **kargs ):
+        value = TmItemClass.raw(self,*args,**kargs)
+        if self.updateType == UPDATE_ACQUISITION:
+            self._recalculate()
+        if value == RAISE_EXCEPTION:
+            raise DriverException("Preconfigured error")
+        return value
+    
+    #==========================================================================    
+    def status(self, *args, **kargs ):
+        value = TmItemClass.status(self,*args,**kargs)
+        if self.updateType == UPDATE_ACQUISITION:
+            self._recalculate()
+        if value == RAISE_EXCEPTION:
+            raise DriverException("Preconfigured error")
+        return value
+
+    #==========================================================================    
+    def value(self,*args,**kargs):
+        value = TmItemClass.value(self,*args,**kargs)
+        if self.updateType == UPDATE_ACQUISITION:
+            self._recalculate()
+        if value == RAISE_EXCEPTION:
+            raise DriverException("Preconfigured error")
+        return value
+
     #==========================================================================    
     def _recalculate(self):
         # First change the wildcards in the expressions
         raw,eng = self._evaluate()
 
         if type(raw)==list or type(eng)==list:
-            max = len(raw)
             self.currentPosition = self.currentPosition +1
-            if self.currentPosition==max: self.currentPosition = 0
+            if self.currentPosition==len(raw): self.currentPosition = 0
             if raw is not None:
                 self._setRaw(raw[self.currentPosition])
             if eng is not None:
@@ -189,19 +242,26 @@ class TmItemSimClass(TmItemClass):
                 self._setEng(eng)
         if eng is None:
             self._setEng(self._getRaw())            
+        self._setTime(TIME(NOW))
 
     #==========================================================================    
     def _evaluate(self):
         try:
             rawExpression = self._changeWildcards(self.rawExpression)
             raw = eval(rawExpression)
+        except BaseException,ex:
+            traceback.print_exc(file = sys.stderr)
+            raise DriverException("Malformed RAW expression (" + repr(rawExpression) + ")")
+        try:
             engExpression = self._changeWildcards(self.engExpression)
             eng = eval(engExpression)
         except BaseException,ex:
-            raise DriverException("Malformed simulation expression (" + repr(ex) + ")")
+            traceback.print_exc(file = sys.stderr)
+            raise DriverException("Malformed ENG expression (" + repr(engExpression) + ")")
+        
         if type(raw)==list and type(eng)==list:
             if len(raw)!=len(eng):
-                raise DriverException("Malformed simulation expression")
+                raise DriverException("Malformed simulation expression (different list lengths)")
         return [raw,eng]
                 
     #==========================================================================    
@@ -214,5 +274,13 @@ class TmItemSimClass(TmItemClass):
     #==========================================================================    
     def _setLimit(self, limitName, limitValue ):
         LOG("Limit " + limitName + " value set to " + str(limitValue))
+
+    #==========================================================================    
+    def __str__(self):
+        return "[TM=" + repr(self.name()) + ", DESC=" + repr(self.description()) + ", RAW=" + repr(self.rawExpression) + ", ENG=" + repr(self.engExpression) + ", UPD=" + repr(__update_strings__[self.updateType]) + ", P=" + repr(self.updatePeriod) + "]" 
+
+    #==========================================================================    
+    def __repr__(self):
+        return "[TM=" + repr(self.name()) + ", DESC=" + repr(self.description()) + ", RAW=" + repr(self.rawExpression) + ", ENG=" + repr(self.engExpression) + ", UPD=" + repr(__update_strings__[self.updateType]) + ", P=" + repr(self.updatePeriod) + "]" 
 
 ################################################################################

@@ -5,7 +5,7 @@
 // DESCRIPTION: Call stack interface.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2014 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -141,6 +141,13 @@ public: //--------------------------------------------------------------------
 		 * \returns True if stepping over.
 		**////////////////////////////////////////////////////////////////////
 		virtual const bool isSteppingOver() = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Needed when doing error recovery to avoid processing dispatcher
+		 * calls at the beginning of the reload
+		 *
+		**////////////////////////////////////////////////////////////////////
+		virtual void setRecoveryMode() = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Move stack view position to the given level
